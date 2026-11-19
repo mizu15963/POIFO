@@ -30,9 +30,9 @@ variable "availability_zone" {
 }
 
 variable "lightsail_bundle_id" {
-  description = "small_3_0 = 2GB メモリ・2vCPU・SSD 60GB（$12/月）。変更するとサーバが作り直しになるので注意"
+  description = "micro_3_0 = 1GB メモリ・2vCPU・SSD 40GB（$7/月）。DB はマネージドデータベースに分けたので 1GB。変更するとサーバが作り直しになるので注意"
   type        = string
-  default     = "small_3_0"
+  default     = "micro_3_0"
 }
 
 variable "lightsail_blueprint_id" {
