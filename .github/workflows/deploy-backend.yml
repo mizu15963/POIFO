@@ -85,7 +85,7 @@ jobs:
           composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
           echo "$sha" > REVISION
           # .env と storage はサーバの共有ディレクトリを使うので入れない
-          tar -czf "$RUNNER_TEMP/release.tar.gz" \
+          tar -czf "$RUNNER_TEMP/release.tar.gz" --exclude-vcs \
             --exclude=./.env --exclude=./.env.* --exclude=./storage --exclude=./tests \
             --exclude=./node_modules --exclude=./database/database.sqlite --exclude=./.phpunit.cache \
             .
