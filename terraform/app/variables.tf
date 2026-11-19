@@ -41,6 +41,29 @@ variable "lightsail_blueprint_id" {
   default     = "ubuntu_24_04"
 }
 
+variable "api_instance_count" {
+  description = "API サーバの台数。2台以上にするときは enable_load_balancer = true にする。GitHub Variables: API_SERVER_COUNT（デプロイもこの台数分の結果を待つ）"
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.api_instance_count >= 1 && var.api_instance_count <= 5
+    error_message = "api_instance_count は 1〜5 にしてください。"
+  }
+}
+
+variable "enable_load_balancer" {
+  description = "true で API サーバの前に Lightsail ロードバランサー（$18/月、HTTPS 終端）を置く。独自ドメインが必要。GitHub Variables: ENABLE_LOAD_BALANCER"
+  type        = bool
+  default     = false
+}
+
+variable "lb_health_check_path" {
+  description = "ロードバランサーのヘルスチェック先（秘密ヘッダーなしで 200 を返すパス。nginx で許可する）"
+  type        = string
+  default     = "/up"
+}
+
 variable "auto_snapshot_time" {
   description = "自動スナップショットの時刻（UTC、HH:00）。18:00 UTC = 3:00 JST"
   type        = string

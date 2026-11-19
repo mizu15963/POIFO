@@ -1,6 +1,8 @@
 # API サーバ（nginx＋PHP-FPM＋Laravel）。DB は base スタックの Lightsail マネージドデータベース。
-# 注意: サーバを消す・作り直す変更（bundle_id / blueprint_id / availability_zone など）は、サーバ上の設定・ログ・アップロードファイルが消える。
-#       更新ワークフローはサーバの削除を含む plan を止める。サイズ変更はスナップショットから作り直す（docs/infra 参照）
+# 台数は api_instance_count（既定 1）。2台以上にするときはロードバランサー（loadbalancer.tf）を前に置く。
+#   1台目 poifo-api、2台目以降 poifo-api-2, poifo-api-3 ...（アプリは状態を DB に持つので、どの台も同じ）
+# 注意: 1台目を消す・作り直す変更（bundle_id / blueprint_id / availability_zone など）は、サーバ上の設定・ログが消える。
+#       更新ワークフローは1台目の削除を含む plan を止める。サイズ変更はスナップショットから作り直す（docs/infra 参照）
 resource "aws_lightsail_key_pair" "main" {
   count      = var.ssh_public_key != "" ? 1 : 0
   name       = "${var.project}-key"
@@ -8,7 +10,8 @@ resource "aws_lightsail_key_pair" "main" {
 }
 
 resource "aws_lightsail_instance" "api" {
-  name              = "${var.project}-api"
+  count             = var.api_instance_count
+  name              = count.index == 0 ? "${var.project}-api" : "${var.project}-api-${count.index + 1}"
   availability_zone = var.availability_zone
   blueprint_id      = var.lightsail_blueprint_id
   bundle_id         = var.lightsail_bundle_id
@@ -24,6 +27,11 @@ resource "aws_lightsail_instance" "api" {
   lifecycle {
     # 鍵は作成時にしか反映されないので、後から変えてもサーバは作り直さない
     ignore_changes = [key_pair_name]
+
+    precondition {
+      condition     = var.api_instance_count == 1 || var.enable_load_balancer
+      error_message = "API サーバを2台以上にするときは ENABLE_LOAD_BALANCER=true にしてください（LB なしでは2台目以降にリクエストが届きません）。"
+    }
   }
 }
 
@@ -31,16 +39,29 @@ resource "aws_lightsail_static_ip" "api" {
   name = "${var.project}-api-ip"
 }
 
+# 固定 IP は1台目だけ（LB なしのとき origin.<domain> がこの IP を指す）
 resource "aws_lightsail_static_ip_attachment" "api" {
   static_ip_name = aws_lightsail_static_ip.api.name
-  instance_name  = aws_lightsail_instance.api.name
+  instance_name  = aws_lightsail_instance.api[0].name
+}
+
+# 1台構成だったときの state をそのまま引き継ぐ
+moved {
+  from = aws_lightsail_instance.api
+  to   = aws_lightsail_instance.api[0]
+}
+
+moved {
+  from = aws_lightsail_instance_public_ports.api
+  to   = aws_lightsail_instance_public_ports.api[0]
 }
 
 # ファイアウォール。ここに書いたポートだけが開く
 resource "aws_lightsail_instance_public_ports" "api" {
-  instance_name = aws_lightsail_instance.api.name
+  count         = var.api_instance_count
+  instance_name = aws_lightsail_instance.api[count.index].name
 
-  # HTTPS: CloudFront から。直接アクセスは nginx が秘密ヘッダーの有無で拒否する
+  # HTTPS: CloudFront から（LB なしのとき）。直接アクセスは nginx が秘密ヘッダーの有無で拒否する
   port_info {
     protocol  = "tcp"
     from_port = 443
@@ -48,7 +69,8 @@ resource "aws_lightsail_instance_public_ports" "api" {
     cidrs     = ["0.0.0.0/0"]
   }
 
-  # HTTP: Let's Encrypt の証明書発行・更新（HTTP-01）用。nginx は ACME 以外を HTTPS へ転送
+  # HTTP: LB なしのときは Let's Encrypt の証明書発行・更新（HTTP-01）用。
+  #       LB ありのときは LB → インスタンスの通信（LB が HTTPS を終端し、インスタンスには HTTP で届く）
   port_info {
     protocol  = "tcp"
     from_port = 80

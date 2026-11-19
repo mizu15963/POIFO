@@ -1,5 +1,5 @@
-output "instance_name" {
-  value = aws_lightsail_instance.api.name
+output "instance_names" {
+  value = aws_lightsail_instance.api[*].name
 }
 
 # 固定 IP はオリジンの所在を明かすので、公開ログ（ジョブサマリー）には出さない。

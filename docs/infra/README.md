@@ -32,7 +32,7 @@ terraform/
 AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `poifo-apply` で承認されるまで止まる。
 スマホの GitHub アプリからも承認できる。
 
-**誤削除の防止**: plan / apply で、Lightsail インスタンス・固定IP・DB・ホストゾーン・バックアップ用バケットを
+**誤削除の防止**: plan / apply で、1台目の Lightsail インスタンス・固定IP・DB・ホストゾーン・バックアップ用バケットを
 消す（作り直す）変更が含まれると止まる。これらを消せるのは「構築・削除」の `destroy` だけ。
 
 | ロール | 使う場面 | 権限 |
@@ -288,7 +288,7 @@ server {
 2. 差分を確認して main にマージ → 自動で plan → 変更があれば承認待ち → Approve で apply
 3. Variables / Secrets だけを変えたとき（例: `ADMIN_ALLOWED_CIDRS` の変更、`WAF_COUNT_MODE` を `false` に）は、**更新（Terraform）** を手動実行
 
-サーバ・固定IP・DB・ホストゾーン・バックアップ用バケットを消す（作り直す）変更は止まる。
+1台目のサーバ・固定IP・DB・ホストゾーン・バックアップ用バケットを消す（作り直す）変更は止まる（台数を減らして2台目以降が消えるのは止めない）。
 例えば `lightsail_bundle_id`（プラン）や `lightsail_blueprint_id`（OS）、`db_bundle_id` を変えると作り直しになるので止まる。
 
 ### サーバのプランを上げる（1GB → 2GB）
@@ -300,6 +300,38 @@ Lightsail はプラン変更＝別インスタンスへの作り直しになる�
 
 DB のプランを上げるときも同じく作り直しになる（DB のスナップショットから新しいプランで作る）。
 MySQL のマイナー更新は Lightsail のメンテナンス時間（月曜 4:00 JST）に自動で入る。
+
+### API サーバを増やす（ロードバランサー）
+
+負荷が増えたら、手動で台数を増やし、API サーバの直前に Lightsail ロードバランサー（LB）を置く。
+アプリは状態（セッション・キャッシュ・キュー・ロック）を DB に持つので、どの台に振り分けられても同じように動く。
+
+```text
+CloudFront（WAF）→ https://origin.<domain> ─┬ LB なし: 1台目の固定 IP
+                                            └ LB あり: LB（HTTPS を終端）→ http://各サーバ:80
+```
+
+CloudFront のオリジンは最初から `origin.<domain>` なので、LB を入れる・外すときは DNS の向き先が変わるだけ。
+
+| Variables | 既定 | 内容 |
+|---|---|---|
+| `API_SERVER_COUNT` | `1` | API サーバの台数（1〜5）。2台目以降は `poifo-api-2`、`poifo-api-3`…。デプロイもこの台数分の結果を待つ |
+| `ENABLE_LOAD_BALANCER` | `false` | `true` で LB（$18/月、約2,700円）を作る。独自ドメインが必要。2台以上なら必須 |
+
+費用は1台増やすごとに $7/月（約1,050円）、LB が $18/月。
+
+手順:
+1. Variables の `ENABLE_LOAD_BALANCER` を `true`、`API_SERVER_COUNT` を `2` にして、**更新（Terraform）** を手動実行 → 承認
+   - LB の証明書（`origin.<domain>`）の検証に数分かかる。`certificate_attachment` が失敗したら、少し待って再実行する
+2. 新しいサーバを1台目と同じように準備する（[../deploy/README.md](../deploy/README.md) の「サーバ（1回だけ）」）。
+   **`.env` は全台同じ内容にする**（`APP_KEY` は口座番号の暗号化に使うので、違うと復号できない）。
+   deploy agent の設定は `SERVER_NAME=api-2`、`MIGRATE=false`（migrate は1台目だけが行う）
+3. nginx を LB 用に変える: LB からは HTTP（80番）で届くので、80番でもアプリを動かす（秘密ヘッダーの確認はそのまま）。
+   ヘルスチェック（`/up`）は秘密ヘッダーなしで来るので、そのパスだけヘッダーなしでも通す
+4. 「デプロイ（バックエンド）」を手動実行し、全台が同じリリースになることを確認する
+5. Lightsail コンソールで LB のターゲットがすべて「正常」になっていることを確認する
+
+減らすときは `API_SERVER_COUNT` を下げて更新を実行する（番号の大きいサーバから消える）。1台に戻したら `ENABLE_LOAD_BALANCER` も `false` にできる。
 
 ## 8. 削除
 

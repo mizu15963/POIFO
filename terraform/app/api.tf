@@ -124,13 +124,24 @@ resource "aws_cloudfront_distribution" "api" {
 }
 
 # ---------------- DNS レコード ----------------
+# origin.<domain>: CloudFront のオリジン。LB なしなら1台目の固定 IP、LB ありなら LB を指す。
+# CloudFront 側はこの名前のままなので、LB を入れる・外すときは DNS の向き先が変わるだけ
 resource "aws_route53_record" "origin" {
-  count   = local.custom_domain ? 1 : 0
+  count   = local.custom_domain && !var.enable_load_balancer ? 1 : 0
   zone_id = data.aws_route53_zone.main[0].zone_id
   name    = local.origin_host
   type    = "A"
   ttl     = 300
   records = [aws_lightsail_static_ip.api.ip_address]
+}
+
+resource "aws_route53_record" "origin_lb" {
+  count   = local.custom_domain && var.enable_load_balancer ? 1 : 0
+  zone_id = data.aws_route53_zone.main[0].zone_id
+  name    = local.origin_host
+  type    = "CNAME"
+  ttl     = 300
+  records = [aws_lightsail_lb.api[0].dns_name]
 }
 
 locals {
