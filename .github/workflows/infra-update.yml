@@ -3,7 +3,7 @@
 #   main へ push: plan → 変更があれば Environment「poifo-apply」の承認後に apply
 #   手動実行    : GitHub の Variables / Secrets を変えたとき（push が起きないので）に使う
 #
-# サーバ（Lightsail）・固定IP・ホストゾーン・DBバックアップ用バケットを消す／作り直す変更は止める（--guard）。
+# サーバ（Lightsail）・固定IP・DB・ホストゾーン・DBバックアップ用バケットを消す／作り直す変更は止める（--guard）。
 # それらは「構築・削除」ワークフローで、手順書に沿って行う。
 name: 更新（Terraform）
 
@@ -48,6 +48,7 @@ env:
   TF_VAR_admin_allowed_cidrs: ${{ secrets.ADMIN_ALLOWED_CIDRS || '[]' }}
   TF_VAR_postback_allowed_cidrs: ${{ secrets.POSTBACK_ALLOWED_CIDRS || '[]' }}
   TF_VAR_origin_verify_secret: ${{ secrets.ORIGIN_VERIFY_SECRET }}
+  TF_VAR_db_master_password: ${{ secrets.DB_MASTER_PASSWORD }}
 
 jobs:
   plan:
