@@ -32,7 +32,11 @@ GF Rewards ─ https://api.<domain>/postback/gf-rewards（WAF で送信元 IP �
 | `GET /v1/me/points` | api. | 会員 | ポイント履歴 |
 | `POST /v1/logout` | api. | 会員 | ログアウト |
 | `GET/POST /postback/gf-rewards` | api. | hash 検証 | GF Rewards の成果通知。本文 `0`/`1`/`2` を返す |
-| `GET /` | admin. | （予定）管理者＋2FA | 管理画面（いまは準備中ページだけ） |
+| `GET /login` → `/two-factor/challenge` | admin. | — | 管理者ログイン（パスワード → 認証アプリの6桁コード）。初回は `/two-factor/setup` で登録 |
+| `GET /` | admin. | 管理者 | ホーム（未確認・振込待ちの件数） |
+| `GET /withdrawals` | admin. | 管理者 | 換金申請の一覧（申請月・状態で絞り込み、同一口座・同一名義の警告） |
+| `POST /withdrawals/bulk` | admin. | 管理者 | 選んだ申請を承認／却下（ポイントを戻す）／振込済みにする |
+| `GET /withdrawals/export` | admin. | 管理者 | 振込用 CSV（UTF-8 BOM 付き・CRLF。Excel で開ける） |
 | `GET /up` | どちらも | — | ヘルスチェック |
 
 スケジューラ: `gf:sync-campaigns`（15分ごと。GF Rewards 案件連携API → `campaigns`。API は1時間60回まで）
@@ -49,6 +53,25 @@ GF Rewards ─ https://api.<domain>/postback/gf-rewards（WAF で送信元 IP �
 | `events` | イベント（みんなでポイ活） |
 | `admins` / `admin_audit_logs` | 管理者（2FA 用の列あり）と操作ログ |
 
+### 換金（当面は月1回・手作業で振込）
+
+1. 会員が換金を申請 → 申請時点の口座情報を保存し、ポイントを台帳から引く（審査期間 `POIFO_WITHDRAWAL_REVIEW_DAYS` 日は承認できない）
+2. 月末に管理者が `admin.<domain>/withdrawals` でその月の申請を確認し、承認する（不審なものは却下 → ポイントを会員に戻す）
+3. 状態「承認済み（振込待ち）」で CSV を出力（氏名・口座名義カナ・銀行／支店コードと名前・種別・口座番号・振込額）
+4. 銀行で人の手で振り込む → 振り込んだ申請を選んで「振込済みにする」
+
+CSV の出力・承認・却下・振込済み・ログインは `admin_audit_logs` に記録する。
+会員側の口座登録・申請の画面と API はまだない（`WithdrawalService::request()` と `BankAccount::register()` は用意済み）。
+
+### 管理者の追加
+
+```sh
+php artisan admin:create admin@example.com "山田"   # パスワードは対話で入力（12文字以上）
+php artisan admin:reset-two-factor admin@example.com  # スマホ紛失などで二要素認証をやり直すとき
+```
+
+初回ログイン時に二要素認証（Google Authenticator などの認証アプリ）を登録する。登録しないとログインできない。
+
 ### ポイントの流れ
 
 1. 会員が案件を押す → `/go/{id}` で計測リンクに `user_id=<uid>` を付けて遷移
@@ -64,7 +87,7 @@ GF Rewards ─ https://api.<domain>/postback/gf-rewards（WAF で送信元 IP �
 cd backend
 composer setup              # composer install・.env 作成・APP_KEY 生成・マイグレーション
 php artisan test
-php artisan db:seed         # サンプルの案件・イベント（任意）
+php artisan db:seed         # サンプルの案件・イベント・換金申請（任意）
 composer dev                # http://localhost:8000
 ```
 
@@ -107,8 +130,8 @@ main に `backend/` の変更が入ると、ワークフロー「デプロイ（
 
 ## まだやっていないこと
 
-- 管理画面のログイン（パスワード＋二要素認証）と各機能（会員検索・停止、ポイント手動調整、換金審査・全銀CSV、ポストバックログ、案件の表示設定、イベント登録）
-- 口座登録・換金申請の API と画面
+- 管理画面の残りの機能（会員検索・停止、ポイント手動調整、ポストバックログ、案件の表示設定、イベント登録）
+- 会員側の口座登録・換金申請の API と画面
 - 退会 API
 - サーバの初期設定手順（nginx・PHP のインストールなど。デプロイに必要な分は docs/deploy/README.md にある）
 - GF Rewards に確認すること: 判定中（未承認）の通知への応答を `0` にしているが、それでよいか

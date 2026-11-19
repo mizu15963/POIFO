@@ -1,20 +1,11 @@
-<!doctype html>
-<html lang="ja">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="noindex, nofollow">
-    <title>POIFO 管理画面</title>
-    <style>
-        body { font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif; color: #1A1E21; margin: 0; background: #F7FAFA; }
-        main { max-width: 720px; margin: 64px auto; padding: 0 16px; }
-        h1 { font-weight: 600; font-size: 1.4rem; border-left: 6px solid #3AD1CE; padding-left: 12px; }
-    </style>
-</head>
-<body>
-<main>
-    <h1>POIFO 管理画面</h1>
-    <p>準備中です。ログイン（パスワード＋二要素認証）と各機能はこれから追加します。</p>
-</main>
-</body>
-</html>
+@extends('admin.layouts.app')
+@section('title', 'ホーム')
+@section('content')
+<h1>ホーム</h1>
+<div class="card">
+    <h2 style="font-size:1.05rem;margin-top:0">換金申請</h2>
+    <p>申請中（未確認）: <strong>{{ number_format($requestedCount) }}</strong> 件 ／ 承認済み（振込待ち）: <strong>{{ number_format($approvedCount) }}</strong> 件</p>
+    <p><a class="btn" href="{{ route('admin.withdrawals.index') }}">換金申請を確認する</a></p>
+    <p class="muted">月末の流れ: ① その月の申請を確認して承認（不審なものは却下）→ ② 「承認済み」で CSV を出力 → ③ 銀行で振込 → ④ 振り込んだ申請を「振込済みにする」</p>
+</div>
+@endsection
