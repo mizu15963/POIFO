@@ -125,10 +125,19 @@ class AuthController extends Controller
         }
 
         $code = (string) $request->validate(['code' => ['required', 'string']])['code'];
+        $throttleKey = 'admin-2fa:'.$admin->id;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            return back()->withErrors(['code' => '試行回数が多すぎます。しばらくしてからお試しください。']);
+        }
 
         if (! $this->twoFactor->verifySecret($secret, $code)) {
+            RateLimiter::hit($throttleKey, 300);
+
             return back()->withErrors(['code' => 'コードが正しくありません。認証アプリに表示されている6桁を入力してください。']);
         }
+
+        RateLimiter::clear($throttleKey);
 
         $admin->forceFill(['two_factor_secret' => $secret, 'two_factor_confirmed_at' => now()])->save();
         $request->session()->forget(self::SETUP_SECRET_KEY);

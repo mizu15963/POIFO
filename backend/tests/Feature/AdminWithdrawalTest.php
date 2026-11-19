@@ -122,6 +122,22 @@ class AdminWithdrawalTest extends TestCase
         $this->assertSame($this->admin->id, $request->fresh()->paid_by);
     }
 
+    public function test_csv_neutralizes_formula_like_values(): void
+    {
+        $user = $this->member(5000, ['holder_name' => '=HYPERLINK("https://evil.example","x")', 'bank_name' => '+SUM(1,1)', 'branch_name' => '@cmd']);
+        $request = $this->service()->request($user, 3000);
+
+        $csv = $this->actingAs($this->admin, 'admin')->asAdminHost()
+            ->get('/withdrawals/export?status=all&month='.$request->created_at->format('Y-m'))
+            ->assertOk()->streamedContent();
+
+        $this->assertStringContainsString('"\'=HYPERLINK(""https://evil.example"",""x"")"', $csv);
+        $this->assertStringContainsString("'+SUM(1,1)", $csv);
+        $this->assertStringContainsString("'@cmd", $csv);
+        $this->assertStringNotContainsString(',=HYPERLINK', $csv);
+        $this->assertStringNotContainsString(',"=HYPERLINK', $csv);
+    }
+
     public function test_paid_request_cannot_be_rejected(): void
     {
         $user = $this->member(5000);

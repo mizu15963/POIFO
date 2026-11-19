@@ -103,7 +103,7 @@ class WithdrawalController extends Controller
 
             foreach ($requests as $r) {
                 $bank = $r->bank_snapshot;
-                fputcsv($out, [
+                fputcsv($out, array_map(self::csvCell(...), [
                     $r->id,
                     $r->created_at->format('Y-m-d H:i'),
                     $r->user?->uid,
@@ -122,11 +122,24 @@ class WithdrawalController extends Controller
                     $r->transferYen(),
                     $r->statusLabel(),
                     implode(' / ', $warnings[$r->id] ?? []),
-                ], escape: '', eol: "\r\n");
+                ]), escape: '', eol: "\r\n");
             }
 
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8', 'Cache-Control' => 'no-store']);
+    }
+
+    /**
+     * CSV の数式インジェクション対策。氏名・銀行名などは会員の入力値なので、Excel で開いたときに
+     * 数式として実行されないよう、先頭が = + - @ タブ CR の文字列には ' を付ける。
+     */
+    public static function csvCell(mixed $value): mixed
+    {
+        if (is_string($value) && $value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'".$value;
+        }
+
+        return $value;
     }
 
     /** @return array{0: CarbonImmutable, 1: ?string} */
