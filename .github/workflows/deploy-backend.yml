@@ -1,0 +1,161 @@
+# バックエンドのデプロイ（プル型）: backend/ をテスト・ビルドしてリリースを S3 に置き、サーバが取り込むのを待つ
+#   1. テスト → composer install --no-dev → tar.gz にまとめる
+#   2. S3（<PROJECT>-deploy-<アカウントID>）の releases/ に tar.gz と latest.json を置く
+#   3. サーバの deploy agent（deploy/backend/server/）が1分以内に取り込み、migrate・切り替えを行い、status/ に結果を書く
+#   4. このジョブは結果を待ち、失敗ならジョブも失敗にする
+# main に backend/ の変更が入ると自動で動く。手動実行では過去のコミットを指定して戻すこともできる（DB の migrate は戻らない）
+name: デプロイ（バックエンド）
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "デプロイするコミット・タグ（空なら main の最新）。戻すときに使う。main の履歴にあるものだけ"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  deploy:
+    name: テスト・ビルド・配置
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: poifo-deploy
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: セットアップ済みか確認
+        id: ready
+        working-directory: .
+        env:
+          ROLE: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ -n "$ROLE" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::AWS_DEPLOY_ROLE_ARN が未登録のためデプロイをスキップしました（docs/deploy/README.md）"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7.0.1
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0 # main の履歴にあるか確かめるため
+          persist-credentials: false
+
+      # レビュー前のコード（main に入っていないブランチ・コミット）を本番に出さない
+      - name: main の履歴にあるコミットか確認
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          sha=$(git rev-parse HEAD)
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::${sha::7} は main の履歴にありません。main にマージ済みのコミット・タグだけデプロイできます"
+            exit 1
+          fi
+
+      # サーバと同じ PHP 8.4・同じ拡張でそろえる（composer の依存解決がサーバと食い違わないように）
+      - uses: shivammathur/setup-php@2.40.0
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_sqlite, pdo_mysql, intl, xml, curl
+          coverage: none
+
+      - name: テスト
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          composer install --no-interaction --no-progress --prefer-dist
+          cp .env.example .env
+          php artisan key:generate
+          php artisan test
+
+      - name: リリースを作る
+        id: build
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          sha=$(git rev-parse HEAD)
+          rm -f .env
+          composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+          echo "$sha" > REVISION
+          # .env と storage はサーバの共有ディレクトリを使うので入れない
+          tar -czf "$RUNNER_TEMP/release.tar.gz" --exclude-vcs \
+            --exclude=./.env --exclude=./.env.* --exclude=./storage --exclude=./tests \
+            --exclude=./node_modules --exclude=./database/database.sqlite --exclude=./.phpunit.cache \
+            .
+          sha256=$(sha256sum "$RUNNER_TEMP/release.tar.gz" | cut -d' ' -f1)
+          deploy_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          jq -n --arg sha "$sha" --arg sha256 "$sha256" --arg deploy_id "$deploy_id" --arg actor "$GITHUB_ACTOR" \
+            --arg at "$(date -u +%FT%TZ)" '{sha: $sha, sha256: $sha256, deploy_id: $deploy_id, actor: $actor, created_at: $at}' \
+            > "$RUNNER_TEMP/latest.json"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "deploy_id=$deploy_id" >> "$GITHUB_OUTPUT"
+          ls -lh "$RUNNER_TEMP/release.tar.gz"
+
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - name: S3 に置く
+        id: upload
+        if: steps.ready.outputs.ok == 'true'
+        env:
+          PROJECT: ${{ vars.PROJECT }}
+          SHA: ${{ steps.build.outputs.sha }}
+        run: |
+          account=$(aws sts get-caller-identity --query Account --output text)
+          echo "::add-mask::${account}"
+          bucket="${PROJECT}-deploy-${account}"
+          aws s3 cp --only-show-errors "$RUNNER_TEMP/release.tar.gz" "s3://${bucket}/releases/${SHA}.tar.gz"
+          # latest.json は最後に置く（サーバはこれを見て取り込む）
+          aws s3 cp --only-show-errors "$RUNNER_TEMP/latest.json" "s3://${bucket}/releases/latest.json"
+          echo "bucket=${bucket}" >> "$GITHUB_OUTPUT"
+
+      - name: サーバの取り込みを待つ（最大10分）
+        if: steps.ready.outputs.ok == 'true'
+        env:
+          BUCKET: ${{ steps.upload.outputs.bucket }}
+          SHA: ${{ steps.build.outputs.sha }}
+          DEPLOY_ID: ${{ steps.build.outputs.deploy_id }}
+        run: |
+          for i in $(seq 1 60); do
+            if aws s3 cp --only-show-errors "s3://${BUCKET}/status/${DEPLOY_ID}.json" status.json 2> /dev/null; then
+              result=$(jq -r .result status.json)
+              message=$(jq -r .message status.json)
+              {
+                echo "## バックエンドのデプロイ: ${result}"
+                echo "- コミット: \`${SHA::7}\`（デプロイID ${DEPLOY_ID}）"
+                echo "- ${message}"
+              } >> "$GITHUB_STEP_SUMMARY"
+              if [ "$result" = "success" ]; then
+                echo "$message"
+                exit 0
+              fi
+              echo "::error::${message}"
+              exit 1
+            fi
+            echo "[$i] 待機中..."
+            sleep 10
+          done
+          echo "::error::10分待ってもサーバが取り込みませんでした。サーバで systemctl status poifo-deploy-agent.timer を確認してください"
+          exit 1

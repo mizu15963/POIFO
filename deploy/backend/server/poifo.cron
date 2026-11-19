@@ -1,0 +1,2 @@
+# /etc/cron.d/poifo: Laravel のスケジューラ（案件同期など）
+* * * * * www-data cd /var/www/poifo/current && php artisan schedule:run >> /dev/null 2>&1

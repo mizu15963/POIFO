@@ -35,3 +35,13 @@ output "origin_host" {
   description = "Let's Encrypt の証明書をこの名前で取る（nginx の server_name）"
   value       = local.custom_domain ? local.origin_host : null
 }
+
+output "deploy_bucket" {
+  description = "バックエンドのリリース置き場（サーバの deploy agent の DEPLOY_BUCKET）"
+  value       = aws_s3_bucket.deploy.bucket
+}
+
+output "deploy_agent_user" {
+  description = "このユーザーのアクセスキーをコンソールで発行し、サーバの /etc/poifo/deploy-agent.env に置く"
+  value       = aws_iam_user.deploy_agent.name
+}

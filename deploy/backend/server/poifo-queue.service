@@ -1,0 +1,15 @@
+# Laravel のキューワーカー（QUEUE_CONNECTION=database）。デプロイ時の queue:restart で終了し、ここで新しいコードで起動し直す
+[Unit]
+Description=POIFO Laravel queue worker
+After=network-online.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/poifo/current
+ExecStart=/usr/bin/php /var/www/poifo/current/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
