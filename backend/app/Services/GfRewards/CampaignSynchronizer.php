@@ -5,6 +5,7 @@ namespace App\Services\GfRewards;
 use App\Models\Campaign;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * 案件連携API の結果を campaigns テーブルに反映する。
@@ -53,10 +54,17 @@ class CampaignSynchronizer
             }
         });
 
+        if ($seen === []) {
+            // 0件は ASP 側の一時的な不具合の可能性があるので、全案件を掲載終了にしない
+            Log::warning('GF Rewards campaigns API returned no campaigns; skipped marking removed campaigns.');
+
+            return ['upserted' => 0, 'removed' => 0];
+        }
+
         $removed = Campaign::query()
             ->where('provider', 'gf_rewards')
             ->whereNotIn('external_id', $seen)
-            ->where('external_status', '!=', 'removed')
+            ->where(fn ($q) => $q->whereNull('external_status')->orWhere('external_status', '!=', 'removed'))
             ->update(['external_status' => 'removed', 'synced_at' => $now]);
 
         return ['upserted' => count($seen), 'removed' => $removed];

@@ -7,14 +7,15 @@ use PHPUnit\Framework\TestCase;
 
 class PostbackHashTest extends TestCase
 {
-    public function test_hash_matches_the_example_in_the_asp_spec(): void
+    public function test_hash_is_hmac_sha256_of_user_action_and_datetime(): void
     {
-        $hash = PostbackHandler::hash('test', [
-            'user_id' => 'user123',
-            'cv_action_id' => 'gfr3715491',
-            'cv_datetime' => '2021-01-01T00:00:00+09:00',
+        // 自前で作ったテスト値（期待値は hash_hmac('sha256', 'member-01:action-42:2026-11-20T09:30:00+09:00', 'poifo-test-key')）
+        $hash = PostbackHandler::hash('poifo-test-key', [
+            'user_id' => 'member-01',
+            'cv_action_id' => 'action-42',
+            'cv_datetime' => '2026-11-20T09:30:00+09:00',
         ]);
 
-        $this->assertSame('e64ab9be1d7a72aba954b05e371e1c0950f81051460151258ad9e4b4456e9fc4', $hash);
+        $this->assertSame('33944bdeecea1995ffacb714ae22f6a2203a0f96081c59f194ad8817e89ce555', $hash);
     }
 }

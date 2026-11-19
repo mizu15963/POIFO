@@ -16,6 +16,7 @@ class CampaignSyncTest extends TestCase
         config(['poifo.gf_rewards.ad_channel_id' => 'ch1']);
         $existing = Campaign::create(['external_id' => 'gfr1', 'name' => '旧名', 'click_url' => 'https://old', 'is_featured' => true, 'sort_order' => 5]);
         Campaign::create(['external_id' => 'gone', 'name' => '終了', 'click_url' => 'https://x', 'external_status' => 'started']);
+        Campaign::create(['external_id' => 'gone-null', 'name' => '状態なし', 'click_url' => 'https://x', 'external_status' => null]);
 
         Http::fake(['api.gf-rewards.com/*' => Http::response(['code' => 200, 'data' => [[
             'campaign_id' => 'gfr1',
@@ -40,5 +41,18 @@ class CampaignSyncTest extends TestCase
         $this->assertTrue($existing->is_featured);
         $this->assertSame(5, $existing->sort_order);
         $this->assertSame('removed', Campaign::firstWhere('external_id', 'gone')->external_status);
+        $this->assertSame('removed', Campaign::firstWhere('external_id', 'gone-null')->external_status);
+    }
+
+    public function test_empty_response_does_not_remove_existing_campaigns(): void
+    {
+        config(['poifo.gf_rewards.ad_channel_id' => 'ch1']);
+        Campaign::create(['external_id' => 'gfr1', 'name' => '掲載中', 'click_url' => 'https://x', 'external_status' => 'started']);
+
+        Http::fake(['api.gf-rewards.com/*' => Http::response(['code' => 200, 'data' => []])]);
+
+        $this->artisan('gf:sync-campaigns')->assertSuccessful();
+
+        $this->assertSame('started', Campaign::firstWhere('external_id', 'gfr1')->external_status);
     }
 }
