@@ -1,3 +1,16 @@
 # ASPから受領した資料（Confidential）はリポジトリに入れない
 docs/partners/*/pdf/
 docs/partners/*/text/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+# provider のロックは Windows と Linux の両方のハッシュが要るので当面コミットしない
+.terraform.lock.hcl
+crash.log
+.env
+*.pem

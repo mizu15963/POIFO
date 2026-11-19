@@ -1,0 +1,25 @@
+# 依存バージョンの更新 PR を Dependabot に作らせる（月1回、まとめて1PR）
+version: 2
+updates:
+  # ワークフローの uses: のアクション（更新 PR では actions.lock も更新されているか確認する）
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
+
+  # Terraform の provider。マージ前に「更新」ワークフローの plan で差分が出ないことを確認する
+  - package-ecosystem: "terraform"
+    directories:
+      - "/terraform/*"
+    schedule:
+      interval: "monthly"
+    groups:
+      terraform:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
