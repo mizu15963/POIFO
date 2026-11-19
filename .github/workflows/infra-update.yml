@@ -1,0 +1,108 @@
+# 更新（Terraform）: terraform/ の変更を AWS に反映する
+#   PR        : plan だけ実行し、ジョブサマリーに差分を出す（fork からの PR は OIDC が使えないので動かない）
+#   main へ push: plan → 変更があれば Environment「poifo-apply」の承認後に apply
+#   手動実行    : GitHub の Variables / Secrets を変えたとき（push が起きないので）に使う
+#
+# サーバ（Lightsail）・固定IP・ホストゾーン・DBバックアップ用バケットを消す／作り直す変更は止める（--guard）。
+# それらは「構築・削除」ワークフローで、手順書に沿って行う。
+name: 更新（Terraform）
+
+on:
+  pull_request:
+    paths:
+      - "terraform/base/**"
+      - "terraform/app/**"
+      - ".github/scripts/terraform.sh"
+      - ".github/workflows/infra-update.yml"
+  push:
+    branches: [main]
+    paths:
+      - "terraform/base/**"
+      - "terraform/app/**"
+      - ".github/scripts/terraform.sh"
+      - ".github/workflows/infra-update.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC トークンの発行に必須
+  contents: read
+
+# main への反映は「構築・削除」と同じグループで1本ずつ。PR の plan は PR ごとに別グループ
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('terraform-pr-{0}', github.event.pull_request.number) || 'terraform' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TF_VERSION: "1.13.4"
+  AWS_REGION: ap-northeast-1
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+  # ---- Terraform の変数（「構築・削除」ワークフローと同じものにする） ----
+  TF_VAR_project: ${{ vars.PROJECT }}
+  TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+  TF_VAR_enable_custom_domain: ${{ vars.ENABLE_CUSTOM_DOMAIN || 'false' }}
+  TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+  TF_VAR_waf_managed_rules_count_mode: ${{ vars.WAF_COUNT_MODE || 'true' }}
+  TF_VAR_ssh_allowed_cidrs: ${{ secrets.SSH_ALLOWED_CIDRS || '[]' }}
+  TF_VAR_admin_allowed_cidrs: ${{ secrets.ADMIN_ALLOWED_CIDRS || '[]' }}
+  TF_VAR_postback_allowed_cidrs: ${{ secrets.POSTBACK_ALLOWED_CIDRS || '[]' }}
+  TF_VAR_origin_verify_secret: ${{ secrets.ORIGIN_VERIFY_SECRET }}
+
+jobs:
+  plan:
+    name: plan
+    # fork からの PR には Secrets も OIDC トークンも渡らないので実行しない
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      changed: ${{ steps.plan.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform plan（base → app）
+        id: plan
+        run: |
+          for s in base app; do
+            .github/scripts/terraform.sh plan "$s" --guard
+          done
+
+  apply:
+    name: apply
+    needs: plan
+    if: github.event_name != 'pull_request' && needs.plan.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: poifo-apply
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      # 承認時点の状態で plan し直し、同じガードをかけてから適用する
+      - name: terraform apply（base → app）
+        run: |
+          for s in base app; do
+            .github/scripts/terraform.sh apply "$s" --guard
+          done

@@ -1,0 +1,8 @@
+# copy terraform.tfvars.example terraform.tfvars で複製して値を埋める（tfvars は .gitignore 済み）
+project           = "poifo"
+github_repo       = "<OWNER>/<REPO>"
+github_owner_id   = "<OWNER_ID>"
+github_repo_id    = "<REPO_ID>"
+apply_environment = "poifo-apply"
+# 同じアカウントで別プロジェクトが OIDC プロバイダを作成済みなら false
+create_github_oidc_provider = true

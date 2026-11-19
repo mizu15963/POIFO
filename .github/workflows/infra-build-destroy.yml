@@ -1,0 +1,166 @@
+# Actions → 「構築・削除（Terraform）」→ Run workflow（main ブランチ）
+#   plan ジョブ : plan ロール（読み取り専用）で plan → ジョブサマリーで差分を確認
+#   run ジョブ  : Environment「poifo-apply」の承認後、apply ロールで構築（apply）／削除（destroy）
+#
+# スタックの順番: 構築は base → app、削除は app → base（all のとき）
+#   base: DB バックアップ用 S3・バックアップ送信用 IAM ユーザー・Route 53 ホストゾーン（消すと困るもの）
+#   app : Lightsail（API サーバ）・フロント用 S3＋CloudFront・証明書・WAF
+#
+# apply でもサーバ・固定IP・ホストゾーン・バックアップ用バケットを消す／作り直す変更は止める。
+# 作り直すときは destroy → apply の順に、手順書（docs/infra/README.md）に沿って行う。
+name: 構築・削除（Terraform）
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "plan=確認のみ / apply=構築・変更 / destroy=削除"
+        required: true
+        type: choice
+        options: [plan, apply, destroy]
+      stack:
+        description: "対象スタック（all は base と app の両方）"
+        required: true
+        type: choice
+        default: all
+        options: [all, base, app]
+      confirm:
+        description: "destroy のときだけ、対象スタック名（all / base / app）をもう一度入力"
+        required: false
+        type: string
+        default: ""
+      snapshot_before_destroy:
+        description: "app を削除する前に Lightsail の手動スナップショットを取る（自動スナップショットはサーバと一緒に消えるため）"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write # OIDC トークンの発行に必須
+  contents: read
+
+# 更新ワークフローとも同時に動かさない
+concurrency:
+  group: terraform
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.13.4"
+  AWS_REGION: ap-northeast-1
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+  # ---- Terraform の変数（GitHub の Variables / Secrets から） ----
+  TF_VAR_project: ${{ vars.PROJECT }}
+  TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+  TF_VAR_enable_custom_domain: ${{ vars.ENABLE_CUSTOM_DOMAIN || 'false' }}
+  TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+  TF_VAR_waf_managed_rules_count_mode: ${{ vars.WAF_COUNT_MODE || 'true' }}
+  TF_VAR_ssh_allowed_cidrs: ${{ secrets.SSH_ALLOWED_CIDRS || '[]' }}
+  TF_VAR_admin_allowed_cidrs: ${{ secrets.ADMIN_ALLOWED_CIDRS || '[]' }}
+  TF_VAR_postback_allowed_cidrs: ${{ secrets.POSTBACK_ALLOWED_CIDRS || '[]' }}
+  TF_VAR_origin_verify_secret: ${{ secrets.ORIGIN_VERIFY_SECRET }}
+
+jobs:
+  plan:
+    name: plan (${{ inputs.stack }} / ${{ inputs.action }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      stacks: ${{ steps.order.outputs.stacks }}
+    steps:
+      - name: 入力の確認と実行順
+        id: order
+        env:
+          ACTION: ${{ inputs.action }}
+          STACK: ${{ inputs.stack }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$ACTION" = "destroy" ] && [ "$CONFIRM" != "$STACK" ]; then
+            echo "::error::destroy のときは confirm に「${STACK}」と入力してください"
+            exit 1
+          fi
+          case "$STACK" in
+            all) if [ "$ACTION" = "destroy" ]; then s="app base"; else s="base app"; fi ;;
+            *)   s="$STACK" ;;
+          esac
+          echo "stacks=$s" >> "$GITHUB_OUTPUT"
+          echo "実行順: $s"
+
+      - uses: actions/checkout@v7.0.1
+
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      # plan ロールは state に書けないので -lock=false。書き込みは承認後の run ジョブだけ
+      - name: terraform plan
+        env:
+          ACTION: ${{ inputs.action }}
+          STACKS: ${{ steps.order.outputs.stacks }}
+        run: |
+          mode=plan
+          [ "$ACTION" = "destroy" ] && mode=plan-destroy
+          for s in $STACKS; do
+            .github/scripts/terraform.sh "$mode" "$s" --guard
+          done
+
+  run:
+    name: ${{ inputs.action }} (${{ inputs.stack }})
+    needs: plan
+    if: inputs.action != 'plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Required reviewers を設定した Environment。sub が ...:environment:poifo-apply になり apply ロールに入れる
+    environment: poifo-apply
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      # 自動スナップショットはインスタンスと一緒に消えるので、削除前に手動スナップショットを残す
+      # （手動スナップショットは自分で消すまで残り、$0.05/GB・月かかる）
+      - name: 削除前のスナップショット
+        if: inputs.action == 'destroy' && contains(needs.plan.outputs.stacks, 'app') && inputs.snapshot_before_destroy
+        run: |
+          name="${TF_VAR_project}-api"
+          if ! aws lightsail get-instance --instance-name "$name" > /dev/null 2>&1; then
+            echo "インスタンス $name はありません。スキップします"
+            exit 0
+          fi
+          snap="${name}-before-destroy-$(date -u +%Y%m%d-%H%M%S)"
+          aws lightsail create-instance-snapshot --instance-name "$name" --instance-snapshot-name "$snap" > /dev/null
+          for i in $(seq 1 90); do
+            state=$(aws lightsail get-instance-snapshot --instance-snapshot-name "$snap" --query instanceSnapshot.state --output text)
+            echo "[$i] $snap: $state"
+            [ "$state" = "available" ] && break
+            [ "$state" = "error" ] && { echo "::error::スナップショットの作成に失敗しました"; exit 1; }
+            sleep 20
+          done
+          [ "$state" = "available" ] || { echo "::error::スナップショットが30分で完了しませんでした"; exit 1; }
+          echo "## スナップショット: \`$snap\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: terraform ${{ inputs.action }}
+        env:
+          ACTION: ${{ inputs.action }}
+          STACKS: ${{ needs.plan.outputs.stacks }}
+        run: |
+          for s in $STACKS; do
+            .github/scripts/terraform.sh "$ACTION" "$s" --guard
+          done
