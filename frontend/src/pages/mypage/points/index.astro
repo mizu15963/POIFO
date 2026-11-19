@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ポイント履歴" requireLogin noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">ポイント履歴</h1>
+      <ul id="history" class="history" aria-live="polite"><li class="loading">読み込み中…</li></ul>
+      <p><button id="more" class="btn btn--outline" type="button" hidden>もっと見る</button></p>
+      <p><a class="more-link" href="/mypage/">マイページへ戻る</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { fetchPointHistory, type PointHistoryItem } from '../../../lib/api';
+  import { escapeHtml, formatDate, formatPoints } from '../../../lib/format';
+
+  // 状態は色だけでなく文字でも示す（仕様 7-3）
+  const statusLabel = { pending: '判定中', confirmed: '確定', rejected: '否認' } as const;
+  const list = document.getElementById('history')!;
+  const more = document.getElementById('more') as HTMLButtonElement;
+  let page = 1;
+
+  const row = (t: PointHistoryItem) => `
+    <li class="history__item history__item--${t.status}">
+      <span class="history__date">${escapeHtml(formatDate(t.created_at))}</span>
+      <span class="history__desc">${escapeHtml(t.description ?? '')}</span>
+      <span class="history__points">${t.points > 0 ? '+' : ''}${escapeHtml(formatPoints(t.points))}</span>
+      <span class="badge">${statusLabel[t.status]}</span>
+    </li>`;
+
+  async function load() {
+    try {
+      const res = await fetchPointHistory(page);
+      if (page === 1) list.innerHTML = res.data.length ? '' : '<li class="empty">まだポイントの履歴はありません。</li>';
+      list.insertAdjacentHTML('beforeend', res.data.map(row).join(''));
+      more.hidden = res.meta.current_page >= res.meta.last_page;
+    } catch {
+      list.innerHTML = '<li class="empty">履歴を読み込めませんでした。</li>';
+    }
+  }
+  more.addEventListener('click', () => {
+    page += 1;
+    load();
+  });
+  load();
+</script>
+
+<style is:global>
+  .history {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .history__item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .history__date {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .history__points {
+    font-weight: 700;
+    text-align: right;
+    grid-row: 1 / 3;
+    grid-column: 2;
+    align-self: center;
+  }
+  .history__item--rejected .history__points {
+    text-decoration: line-through;
+    color: var(--color-muted);
+  }
+  .history__item .badge {
+    justify-self: start;
+    margin-left: 0;
+  }
+</style>

@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { LINE_LOGIN_URL } from '../../lib/config';
+---
+
+<BaseLayout title="ログイン・無料会員登録" noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">ログイン・無料会員登録</h1>
+      <p>ポイフォはLINEアカウントでログインします。初めての方は、そのまま会員登録になります。</p>
+      <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>LINEでログイン</a>
+      <p class="lead">メールアドレスやパスワードの登録はありません。ログイン画面で公式LINEの友だち追加も案内されますが、追加は任意です。</p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  .narrow {
+    max-width: 520px;
+  }
+</style>

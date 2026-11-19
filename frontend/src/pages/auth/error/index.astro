@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { LINE_LOGIN_URL } from '../../../lib/config';
+---
+
+<BaseLayout title="ログインできませんでした" noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">ログインできませんでした</h1>
+      <p id="reason">時間をおいて、もう一度お試しください。</p>
+      <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>もう一度LINEでログイン</a>
+      <p><a class="more-link" href="/contact/">お問い合わせ</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const messages: Record<string, string> = {
+    cancelled: 'LINEでのログインがキャンセルされました。',
+    invalid_state: 'ログインの有効期限が切れました。もう一度お試しください。',
+    line_error: 'LINEとの通信に失敗しました。時間をおいてもう一度お試しください。',
+    withdrawn: 'このLINEアカウントは退会済みのため、ご利用いただけません。お心当たりがない場合はお問い合わせください。',
+    suspended: 'このアカウントは利用を停止しています。詳しくはお問い合わせください。',
+  };
+  const reason = new URLSearchParams(location.search).get('reason') ?? '';
+  if (messages[reason]) document.getElementById('reason')!.textContent = messages[reason];
+</script>

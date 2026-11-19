@@ -19,6 +19,8 @@ POIFO（ポイフォ）の仕様書・連携資料・ブランド資産をまと
 ## インフラ
 
 サーバ構成計画書は Claude Docs で管理しています（[サーバ構成計画書](https://claude.ai/artifact/Li3ceqNda1GbgupeQTfVNZ)）。
-概要は、フロントが Astro 静的出力を S3＋CloudFront、バックエンドが Lightsail 1台（nginx＋Laravel＋MySQL）、入口は CloudFront＋AWS WAF です。
+概要は、フロントが Astro 静的出力を S3＋CloudFront、バックエンドが Lightsail（nginx＋Laravel）＋ Lightsail マネージドDB（MySQL）、入口は CloudFront＋AWS WAF です（2026-11-20 に DB をマネージドDBへ外出しする方針に変更。Terraform は未反映）。
+
+アプリのコードは [frontend/](../frontend/README.md) と [backend/](../backend/README.md) にあります。
 
 AWS 環境の構築・更新・削除（Terraform＋GitHub Actions）の手順は [infra/README.md](infra/README.md)。

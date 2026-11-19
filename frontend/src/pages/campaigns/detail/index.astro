@@ -1,0 +1,71 @@
+---
+// 静的サイトなので詳細は /campaigns/detail/?id=123 の形で、ブラウザから API で取得する
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="案件詳細">
+  <section class="section">
+    <div class="container" id="campaign" aria-live="polite">
+      <p class="loading">読み込み中…</p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { fetchCampaign } from '../../../lib/api';
+  import { campaignGoUrl, LINE_LOGIN_URL } from '../../../lib/config';
+  import { escapeHtml, formatPoints, safeUrl } from '../../../lib/format';
+  import { emptyState } from '../../../lib/render';
+  import { whenMe } from '../../../lib/session';
+
+  const root = document.getElementById('campaign')!;
+  const id = new URLSearchParams(location.search).get('id');
+
+  async function render() {
+    if (!id) {
+      root.innerHTML = emptyState('案件が見つかりません。');
+      return;
+    }
+    try {
+      const [c, me] = await Promise.all([fetchCampaign(id), whenMe()]);
+      document.title = `${c.name}｜ポイフォ`;
+      const icon = safeUrl(c.icon_url);
+      const actions = c.actions
+        .map((a) => `<li><strong>${escapeHtml(a.name)}</strong>${a.points != null ? `：${formatPoints(a.points)}` : ''}${a.approve_days != null ? `（判定まで約${a.approve_days}日）` : ''}${a.description ? `<br><span class="prose">${escapeHtml(a.description)}</span>` : ''}</li>`)
+        .join('');
+      root.innerHTML = `
+        <div class="detail-head">
+          ${icon ? `<img src="${escapeHtml(icon)}" alt="" width="96" height="96">` : ''}
+          <div><h1>${escapeHtml(c.name)}</h1><p class="lead">${escapeHtml(c.category)}</p></div>
+        </div>
+        ${c.points != null ? `<p class="detail-points">最大 ${formatPoints(c.points)}</p>` : ''}
+        ${me ? `<a class="btn btn--block" href="${campaignGoUrl(c.id)}" rel="noopener">この案件に進む</a>` : `<a class="btn btn--line btn--block" href="${LINE_LOGIN_URL}">LINEでログインして進む</a><p class="lead">ログインしないとポイントが付きません。</p>`}
+        ${actions ? `<h2>獲得条件とポイント</h2><ul>${actions}</ul>` : ''}
+        ${c.conversion_condition ? `<h2>成果の条件・注意事項</h2><p class="prose">${escapeHtml(c.conversion_condition)}</p>` : ''}
+        ${c.description ? `<h2>案件の説明</h2><p class="prose">${escapeHtml(c.description)}</p>` : ''}
+        <p class="lead">ポイントは成果の発生後に「判定中」として表示され、広告主の承認後に利用できるようになります。</p>`;
+    } catch {
+      root.innerHTML = emptyState('この案件は現在掲載されていません。');
+    }
+  }
+  render();
+</script>
+
+<style is:global>
+  .detail-head {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .detail-head img {
+    border-radius: 16px;
+  }
+  .detail-head h1 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+  .detail-points {
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+</style>

@@ -1,0 +1,33 @@
+---
+// LINE ログイン後に API から戻ってくるページ（?new=1 は初回登録）
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { LINE_OFFICIAL_URL } from '../../../lib/config';
+---
+
+<BaseLayout title="ログインしました" noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title" id="complete-title">ログインしました</h1>
+      <div id="welcome" hidden>
+        <p>ポイフォへようこそ！会員登録が完了しました。</p>
+        {
+          LINE_OFFICIAL_URL && (
+            <div class="card">
+              <p>ポイントの貯め方や案件の進め方を、担当スタッフにLINEで相談できます（友だち追加は任意です）。</p>
+              <a class="btn btn--line btn--block" href={LINE_OFFICIAL_URL} rel="noopener">ポイフォ公式LINEを追加</a>
+            </div>
+          )
+        }
+      </div>
+      <p><a class="btn btn--block" href="/campaigns/">ポイントを貯める</a></p>
+      <p><a class="more-link" href="/mypage/">マイページへ</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  if (new URLSearchParams(location.search).get('new') === '1') {
+    document.getElementById('welcome')!.hidden = false;
+    document.getElementById('complete-title')!.textContent = '会員登録が完了しました';
+  }
+</script>

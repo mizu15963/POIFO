@@ -1,0 +1,118 @@
+---
+// トップページ（docs/specs/top-page-spec.md の 3. 構成）
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
+---
+
+<BaseLayout>
+  <!-- ② ファーストビュー -->
+  <section class="hero">
+    <div class="container">
+      <h1 class="hero__copy">ひとりじゃない、<br />あたらしいポイ活。</h1>
+      <p class="hero__lead">ポイントを貯める楽しさに、相談できる安心と、みんなで取り組むワクワクを。</p>
+      <div data-show="guest">
+        <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
+      </div>
+      <div data-show="member">
+        <a class="btn" href="/campaigns/">ポイントを貯める</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 案件を探す -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section__title">おすすめ案件</h2>
+      <div id="featured-campaigns" class="grid grid--2" aria-live="polite">
+        <p class="loading">読み込み中…</p>
+      </div>
+      <a class="more-link" href="/campaigns/">すべての案件を見る</a>
+    </div>
+  </section>
+
+  <!-- ④ 担当サポート -->
+  <section class="section section--soft">
+    <div class="container">
+      <h2 class="section__title">困ったときは、担当スタッフに相談。</h2>
+      <p>ポイントの貯め方や案件の進め方を、LINEで気軽に相談できます。初回面談の日程もLINEで調整します。</p>
+      {LINE_OFFICIAL_URL ? <a class="btn btn--line" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline" href="/support/">担当サポートについて</a>}
+    </div>
+  </section>
+
+  <!-- ⑤ みんなでポイ活（イベント） -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section__title">みんなでポイ活！</h2>
+      <p class="lead">ゲーム案件などに、みんなで楽しく挑戦。イベント情報をチェックしよう！</p>
+      <div id="upcoming-events" class="grid grid--3" aria-live="polite">
+        <p class="loading">読み込み中…</p>
+      </div>
+      <a class="more-link" href="/events/">イベント一覧を見る</a>
+    </div>
+  </section>
+
+  <!-- ⑥ ポイフォの特徴 -->
+  <section class="section section--soft">
+    <div class="container">
+      <h2 class="section__title">ポイフォの特徴</h2>
+      <div class="grid grid--3">
+        <div class="card"><h3>自由にポイ活</h3><p>興味のある案件を、自分のペースで利用できます。</p></div>
+        <div class="card"><h3>担当者に相談</h3><p>公式LINEで気軽にサポートを受けられます。</p></div>
+        <div class="card"><h3>みんなで楽しむ</h3><p>イベントやオープンチャットで一緒に取り組めます。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑦ 初めての方へ -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section__title">初めての方へ</h2>
+      <ul class="faq-links">
+        <li><a href="/guide/#earn">ポイントの貯め方</a></li>
+        <li><a href="/guide/#status">ポイントの獲得条件・反映について</a></li>
+        <li><a href="/guide/#support">担当サポートの利用方法</a></li>
+        <li><a href="/guide/#events">イベントへの参加方法</a></li>
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { fetchCampaigns, fetchEvents } from '../lib/api';
+  import { campaignCard, emptyState, eventCard } from '../lib/render';
+
+  const campaigns = document.getElementById('featured-campaigns')!;
+  fetchCampaigns({ featured: true, perPage: 6 })
+    .then(async (res) => {
+      // おすすめが未設定なら新着を出す
+      const items = res.data.length ? res.data : (await fetchCampaigns({ perPage: 6 })).data;
+      campaigns.innerHTML = items.length ? items.map(campaignCard).join('') : emptyState('現在掲載中の案件はありません。');
+    })
+    .catch(() => (campaigns.innerHTML = emptyState('案件を読み込めませんでした。時間をおいて再度お試しください。')));
+
+  const events = document.getElementById('upcoming-events')!;
+  fetchEvents({ upcoming: true, limit: 3 })
+    .then((items) => (events.innerHTML = items.length ? items.map(eventCard).join('') : emptyState('開催予定のイベントは準備中です。')))
+    .catch(() => (events.innerHTML = emptyState('イベントを読み込めませんでした。')));
+</script>
+
+<style>
+  .hero {
+    background: linear-gradient(180deg, var(--color-brand-bg), #fff);
+    padding: 48px 0 40px;
+  }
+  .hero__copy {
+    font-size: clamp(1.8rem, 6vw, 2.6rem);
+    margin: 0 0 12px;
+  }
+  .hero__lead {
+    margin: 0 0 24px;
+    color: var(--color-muted);
+  }
+  .faq-links {
+    padding-left: 1.2em;
+  }
+  .faq-links li {
+    margin: 8px 0;
+  }
+</style>

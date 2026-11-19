@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { LINE_OFFICIAL_URL } from '../../lib/config';
+---
+
+<BaseLayout title="担当サポート">
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">困ったときは、担当スタッフに相談。</h1>
+      <p>ポイントの貯め方や案件の進め方を、ポイフォ公式LINEで担当スタッフに気軽に相談できます。初回面談の日程調整もLINEで行います。</p>
+      {LINE_OFFICIAL_URL ? <a class="btn btn--line btn--block" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <p class="lead">公式LINEは準備中です。</p>}
+    </div>
+  </section>
+</BaseLayout>

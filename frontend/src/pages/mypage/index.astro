@@ -1,0 +1,61 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="マイページ" requireLogin noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">マイページ</h1>
+      <p id="greeting" class="lead"></p>
+      <div class="grid grid--2">
+        <div class="card"><div class="lead">利用可能ポイント</div><div class="big" id="available">—</div></div>
+        <div class="card"><div class="lead">判定中ポイント</div><div class="big" id="pending">—</div></div>
+      </div>
+      <p class="lead">判定中のポイントは、広告主の承認後に利用可能になります。</p>
+      <ul class="menu-list">
+        <li><a href="/mypage/points/">ポイント履歴</a></li>
+        <li><span>ポイント交換（銀行振込）… 準備中</span></li>
+        <li id="line-friend" hidden><a href="#" rel="noopener">公式LINEで担当スタッフに相談する</a></li>
+      </ul>
+      <button id="logout" class="btn btn--outline" type="button">ログアウト</button>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { logout } from '../../lib/api';
+  import { formatPoints, safeUrl } from '../../lib/format';
+  import { whenMe } from '../../lib/session';
+
+  whenMe().then((me) => {
+    if (!me) return;
+    document.getElementById('greeting')!.textContent = me.display_name ? `${me.display_name} さん` : '';
+    document.getElementById('available')!.textContent = formatPoints(me.points.available);
+    document.getElementById('pending')!.textContent = formatPoints(me.points.pending);
+    const friend = safeUrl(me.line_friend_url);
+    if (friend) {
+      const li = document.getElementById('line-friend')!;
+      li.querySelector('a')!.href = friend;
+      li.hidden = false;
+    }
+  });
+
+  document.getElementById('logout')!.addEventListener('click', async () => {
+    await logout().catch(() => undefined);
+    location.href = '/';
+  });
+</script>
+
+<style is:global>
+  .big {
+    font-size: 1.6rem;
+    font-weight: 700;
+  }
+  .menu-list {
+    padding-left: 1.2em;
+    margin: 24px 0;
+  }
+  .menu-list li {
+    margin: 8px 0;
+  }
+</style>
