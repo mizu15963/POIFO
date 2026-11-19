@@ -1,0 +1,81 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="振込先口座の登録" requireLogin noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">振込先口座の登録</h1>
+      <p id="current" class="lead" hidden></p>
+      <p class="lead">ポイントの換金（銀行振込）に使います。ご本人名義の口座を登録してください。同じ口座を複数のアカウントで使うことはできません。</p>
+      <div id="form-errors" class="form-errors" role="alert" hidden></div>
+      <form id="bank-form" class="form" novalidate>
+        <label>氏名（漢字）<input name="holder_name" required maxlength="60" autocomplete="name" placeholder="山田 太郎" /></label>
+        <label>金融機関名<input name="bank_name" required maxlength="60" placeholder="〇〇銀行" /></label>
+        <label>金融機関コード（4桁）<input name="bank_code" required inputmode="numeric" pattern="\d{4}" maxlength="4" placeholder="0001" /></label>
+        <label>支店名<input name="branch_name" required maxlength="60" placeholder="〇〇支店" /></label>
+        <label>支店コード（3桁）<input name="branch_code" required inputmode="numeric" pattern="\d{3}" maxlength="3" placeholder="001" /></label>
+        <label>口座種別
+          <select name="account_type" required>
+            <option value="ordinary">普通</option>
+            <option value="checking">当座</option>
+            <option value="savings">貯蓄</option>
+          </select>
+        </label>
+        <label>口座番号（7桁以内）<input name="account_number" required inputmode="numeric" pattern="\d{1,7}" maxlength="7" autocomplete="off" /></label>
+        <label>口座名義（カタカナ）<input name="account_holder_kana" required maxlength="60" placeholder="ヤマダ タロウ" /></label>
+        <p class="lead">金融機関コード・支店コードは、通帳やキャッシュカード、各金融機関のサイトで確認できます。</p>
+        <button class="btn btn--block" type="submit">登録する</button>
+      </form>
+      <p><a class="more-link" href="/mypage/">マイページへ戻る</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { ApiError, fetchBankAccount, saveBankAccount, type BankAccountInput } from '../../../lib/api';
+  import { escapeHtml } from '../../../lib/format';
+  import { whenMe } from '../../../lib/session';
+
+  const form = document.getElementById('bank-form') as HTMLFormElement;
+  const errors = document.getElementById('form-errors')!;
+  const current = document.getElementById('current')!;
+
+  function showCurrent(b: Awaited<ReturnType<typeof fetchBankAccount>>) {
+    if (!b) return;
+    current.hidden = false;
+    current.textContent = `登録中の口座: ${b.bank_name ?? ''} ${b.branch_name ?? ''} ${b.account_type_label} ${b.account_number_masked}（${b.account_holder_kana}）。変更する場合は、下のフォームに入力し直してください。`;
+    const set = (name: string, value: string | null) => {
+      const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+      if (el && value) el.value = value;
+    };
+    set('holder_name', b.holder_name);
+    set('bank_name', b.bank_name);
+    set('bank_code', b.bank_code);
+    set('branch_name', b.branch_name);
+    set('branch_code', b.branch_code);
+    set('account_type', b.account_type);
+    set('account_holder_kana', b.account_holder_kana);
+  }
+
+  whenMe().then((me) => me && fetchBankAccount().then(showCurrent).catch(() => undefined));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errors.hidden = true;
+    const input = Object.fromEntries(new FormData(form)) as unknown as BankAccountInput;
+    const button = form.querySelector('button')!;
+    button.disabled = true;
+    try {
+      await saveBankAccount(input);
+      location.href = '/mypage/withdraw/?bank=saved';
+    } catch (err) {
+      const messages = err instanceof ApiError && err.status === 422 ? Object.values(err.errors).flat() : ['登録できませんでした。時間をおいてもう一度お試しください。'];
+      errors.innerHTML = `<ul>${messages.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
+      errors.hidden = false;
+      errors.scrollIntoView({ block: 'center' });
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

@@ -14,7 +14,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <p class="lead">判定中のポイントは、広告主の承認後に利用可能になります。</p>
       <ul class="menu-list">
         <li><a href="/mypage/points/">ポイント履歴</a></li>
-        <li><span>ポイント交換（銀行振込）… 準備中</span></li>
+        <li><a href="/mypage/withdraw/">ポイント交換（銀行振込）</a></li>
+        <li><a href="/mypage/bank/">振込先口座の登録・変更</a></li>
         <li id="line-friend" hidden><a href="#" rel="noopener">公式LINEで担当スタッフに相談する</a></li>
       </ul>
       <button id="logout" class="btn btn--outline" type="button">ログアウト</button>
@@ -46,16 +47,3 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   });
 </script>
 
-<style is:global>
-  .big {
-    font-size: 1.6rem;
-    font-weight: 700;
-  }
-  .menu-list {
-    padding-left: 1.2em;
-    margin: 24px 0;
-  }
-  .menu-list li {
-    margin: 8px 0;
-  }
-</style>

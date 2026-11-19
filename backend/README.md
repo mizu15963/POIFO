@@ -31,6 +31,8 @@ GF Rewards ─ https://api.<domain>/postback/gf-rewards（WAF で送信元 IP �
 | `GET /v1/me` | api. | 会員 | 表示名・ポイント（利用可能／判定中）・公式LINE の友だち追加URL |
 | `GET /v1/me/points` | api. | 会員 | ポイント履歴 |
 | `POST /v1/logout` | api. | 会員 | ログアウト |
+| `GET/PUT /v1/me/bank-account` | api. | 会員 | 振込先口座の表示（口座番号は末尾3桁以外伏せ字）・登録／変更。同じ口座がほかの会員にあれば登録できない |
+| `GET/POST /v1/me/withdrawals` | api. | 会員 | 換金申請の履歴（残高・最低ポイント・口座登録の有無つき）・申請 |
 | `GET/POST /postback/gf-rewards` | api. | hash 検証 | GF Rewards の成果通知。本文 `0`/`1`/`2` を返す |
 | `GET /login` → `/two-factor/challenge` | admin. | — | 管理者ログイン（パスワード → 認証アプリの6桁コード）。初回は `/two-factor/setup` で登録 |
 | `GET /` | admin. | 管理者 | ホーム（未確認・振込待ちの件数） |
@@ -61,7 +63,7 @@ GF Rewards ─ https://api.<domain>/postback/gf-rewards（WAF で送信元 IP �
 4. 銀行で人の手で振り込む → 振り込んだ申請を選んで「振込済みにする」
 
 CSV の出力・承認・却下・振込済み・ログインは `admin_audit_logs` に記録する。
-会員側の口座登録・申請の画面と API はまだない（`WithdrawalService::request()` と `BankAccount::register()` は用意済み）。
+会員は frontend の `/mypage/bank/`（口座登録）と `/mypage/withdraw/`（申請）から使う。
 
 ### 管理者の追加
 
@@ -131,7 +133,6 @@ main に `backend/` の変更が入ると、ワークフロー「デプロイ（
 ## まだやっていないこと
 
 - 管理画面の残りの機能（会員検索・停止、ポイント手動調整、ポストバックログ、案件の表示設定、イベント登録）
-- 会員側の口座登録・換金申請の API と画面
 - 退会 API
 - サーバの初期設定手順（nginx・PHP のインストールなど。デプロイに必要な分は docs/deploy/README.md にある）
 - GF Rewards に確認すること: 判定中（未承認）の通知への応答を `0` にしているが、それでよいか
