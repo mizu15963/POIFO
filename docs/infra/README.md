@@ -53,7 +53,7 @@ WAF の従量課金は時間割りなので、段階2の apply の後は早め�
 片付けの順番:
 1. CloudFront の定額プランを解約する（加入中のディストリビューションは削除できない）
 2. 「構築・削除」→ `destroy` / `app`（削除前に Lightsail の手動スナップショットを自動で取る）
-3. 必要ならデータを退避してから、バックアップ用バケットの中身を空にし、IAM ユーザー `poifo-backup-writer` のアクセスキーを削除して、`destroy` / `base`（DB は最終スナップショット `poifo-db-final-日時` を残して消える）
+3. 必要ならデータを退避してから、バックアップ用バケットの中身を空にし、IAM ユーザー `poifo-backup-writer` のアクセスキーを削除して、`destroy` / `base`（DB は最終スナップショット `poifo-db-final-<DB作成日時>` を残して消える）
 4. 手元PCで `terraform/bootstrap` を `terraform destroy`
 5. Terraform 管理外のもの（サーバの削除前スナップショット、DB の最終スナップショット）を Lightsail コンソールで削除
 
@@ -130,7 +130,7 @@ gh variable set PROJECT --body "poifo"
 
 | 名前 | 種類 | 値の例 | 用途 |
 |---|---|---|---|
-| `DB_MASTER_PASSWORD` | Secrets | 32文字のランダム値 | マネージドDB のマスターユーザー（`dbadmin`）のパスワード。16文字以上。Laravel 用には権限を絞った別ユーザーを DB 内で作る |
+| `DB_MASTER_PASSWORD` | Secrets | 32文字のランダム値 | マネージドDB のマスターユーザー（`dbadmin`）のパスワード。16〜41文字（Lightsail の上限）、`/` `"` `@` は使えない。Laravel 用には権限を絞った別ユーザーを DB 内で作る |
 | `SSH_PUBLIC_KEY` | Variables | `ssh-ed25519 AAAA... poifo` | Lightsail に入れる公開鍵。空なら Lightsail のデフォルト鍵。**サーバ作成時にしか反映されない** |
 | `SSH_ALLOWED_CIDRS` | Secrets | `["203.0.113.10/32"]` | SSH を許可する運用者の IP。空でも Lightsail コンソールのブラウザ SSH は使える |
 
@@ -157,8 +157,24 @@ gh secret set ORIGIN_VERIFY_SECRET --body $s
 $s   # nginx の設定に使う。パスワードマネージャーに保存
 ```
 
-`DB_MASTER_PASSWORD` も同じ方法で作る（`ORIGIN_VERIFY_SECRET` を `DB_MASTER_PASSWORD` に読み替える）。
-値はパスワードマネージャーに保存する。Terraform の state（非公開の S3）にも残る。
+`DB_MASTER_PASSWORD` は Lightsail の上限（41文字まで）に合わせて16バイト（32文字の16進）で作る:
+
+```powershell
+$b = New-Object byte[] 16; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+$p = ($b | ForEach-Object { $_.ToString("x2") }) -join ""
+gh secret set DB_MASTER_PASSWORD --body $p
+$p   # パスワードマネージャーに保存。Terraform の state（非公開の S3）にも残る
+```
+
+### DB のプランと MySQL バージョンの確認（初回 apply 前に1回）
+
+`db_bundle_id = micro_2_0`（標準 $15）と `db_blueprint_id = mysql_8_4` が東京リージョンで使えるかを確かめる。
+一覧になければ、`terraform/base/variables.tf` の既定値を一覧にある ID に変える。
+
+```powershell
+aws lightsail get-relational-database-bundles --region ap-northeast-1 --query "bundles[?isActive].[bundleId,price,ramSizeInGb]" --output table
+aws lightsail get-relational-database-blueprints --region ap-northeast-1 --query "blueprints[?engine=='mysql'].[blueprintId,engineVersion]" --output table
+```
 
 ### Environment
 
@@ -290,7 +306,7 @@ MySQL のマイナー更新は Lightsail のメンテナンス時間（月曜 4:
    - 削除前に Lightsail の手動スナップショット（`poifo-api-before-destroy-日時`）を自動で取る。自動スナップショットはインスタンスと一緒に消えるため
    - 手動スナップショットは自分で消すまで残り、$0.05/GB・月かかる
 3. base も消すときは、バックアップ用バケットを空にし、`poifo-backup-writer` のアクセスキーを削除してから、`destroy` / `base`（confirm に `base`）。
-   DB は最終スナップショット（`poifo-db-final-日時`）を残してから消える。
+   DB は最終スナップショット（`poifo-db-final-<DB作成日時>`）を残してから消える。名前の日時は削除日ではなく DB を作った日時。
    ホストゾーンを消すとネームサーバが変わるので、再構築時はドメイン側の設定もやり直しになる
 
 ## うまくいかない時

@@ -21,15 +21,15 @@ resource "aws_lightsail_database" "main" {
   apply_immediately            = true
 
   skip_final_snapshot = false
-  # 作成時点の日時で一意な名前にする（削除時に使われる）
+  # 作成時点の日時で一意な名前にする（削除時に使われる。名前の日時は削除日ではなく DB の作成日時）
   final_snapshot_name = "${var.project}-db-final-${formatdate("YYYYMMDDhhmm", timestamp())}"
 
   lifecycle {
     ignore_changes = [final_snapshot_name]
 
     precondition {
-      condition     = length(var.db_master_password) >= 16
-      error_message = "DB_MASTER_PASSWORD（16文字以上）を GitHub Secrets に登録してください。"
+      condition     = length(var.db_master_password) >= 16 && length(var.db_master_password) <= 41 && !can(regex("[/\"@]", var.db_master_password))
+      error_message = "DB_MASTER_PASSWORD（16〜41文字、/ \" @ を含まない）を GitHub Secrets に登録してください。"
     }
   }
 }

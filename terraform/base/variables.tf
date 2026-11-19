@@ -49,7 +49,7 @@ variable "db_master_username" {
 }
 
 variable "db_master_password" {
-  description = "マスターユーザーのパスワード（16文字以上）。GitHub Secrets: DB_MASTER_PASSWORD。state にも保存される"
+  description = "マスターユーザーのパスワード（16〜41文字、/ \" @ 不可）。GitHub Secrets: DB_MASTER_PASSWORD。state にも保存される"
   type        = string
   default     = ""
   sensitive   = true
