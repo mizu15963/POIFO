@@ -121,6 +121,7 @@ composer dev                # http://localhost:8000
 
 cron に `* * * * * cd /var/www/poifo/current && php artisan schedule:run >> /dev/null 2>&1` を入れる。
 キューは当面 `database`（`php artisan queue:work` を systemd で常駐）。
+どちらも設定ファイルを [../deploy/backend/server/](../deploy/backend/server/) に用意してある。
 
 ### API サーバを増やすとき（スケールアウト）
 
@@ -132,7 +133,6 @@ cron に `* * * * * cd /var/www/poifo/current && php artisan schedule:run >> /de
 4. マイグレーションは同時に1台だけが実行するようにする（`php artisan migrate --force --isolated`。共有 DB のロックで2台目以降は待たずに抜ける）
 5. ロードバランサを CloudFront と API サーバの間に入れ、`origin.<domain>` をロードバランサに向ける。オリジン確認ヘッダー（`X-Origin-Verify`）と `x-poifo-viewer-host` はそのまま各サーバへ渡す
 6. ログは各サーバの `storage/logs` に出る。台数が増えたら CloudWatch Logs などに集める
-どちらも設定ファイルを [../deploy/backend/server/](../deploy/backend/server/) に用意してある。
 
 ## デプロイ
 
