@@ -12,6 +12,28 @@ updates:
     commit-message:
       prefix: "deps"
 
+  # バックエンドの PHP パッケージ（マージ前にアプリ CI が通ることを確認する）
+  - package-ecosystem: "composer"
+    directory: "/backend"
+    schedule:
+      interval: "monthly"
+    groups:
+      composer:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
+
+  # フロントの npm パッケージ
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "monthly"
+    groups:
+      npm:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
+
   # Terraform の provider。マージ前に「更新」ワークフローの plan で差分が出ないことを確認する
   - package-ecosystem: "terraform"
     directories:

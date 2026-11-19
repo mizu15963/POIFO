@@ -1,0 +1,242 @@
+/* ブランドカラーはロゴから抽出した値（docs/brand/README.md）。
+   ティファニーブルーは白背景のアクセントとして使い、白文字を載せない（コントラスト不足）。 */
+:root {
+  --color-brand: #3ad1ce;
+  --color-brand-soft: #86e4e4;
+  --color-brand-bg: #e9f9f9;
+  --color-text: #1a1e21;
+  --color-muted: #5f6b70;
+  --color-border: #e3e9ea;
+  --color-bg: #ffffff;
+  --color-logo-bg: #fcfcfc;
+  --color-danger: #c4353a;
+  --radius: 12px;
+  --content-width: 960px;
+  --font-sans: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.7;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.section {
+  padding: 40px 0;
+}
+
+.section--soft {
+  background: var(--color-brand-bg);
+}
+
+.section__title {
+  font-size: 1.3rem;
+  margin: 0 0 16px;
+  padding-left: 12px;
+  border-left: 5px solid var(--color-brand);
+}
+
+.lead {
+  color: var(--color-muted);
+  margin-top: 0;
+}
+
+/* ボタン: 主要 CTA は濃色背景に白文字、副はブランド色の枠 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 2px solid var(--color-text);
+  background: var(--color-text);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn--outline {
+  background: #fff;
+  color: var(--color-text);
+  border-color: var(--color-brand);
+}
+
+.btn--line {
+  background: #06c755;
+  border-color: #06c755;
+  color: #fff;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.card {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-decoration: none;
+}
+
+a.card:hover {
+  border-color: var(--color-brand);
+}
+
+.campaign-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.campaign-card img,
+.campaign-card__noicon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--color-brand-bg);
+}
+
+.campaign-card__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.campaign-card__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaign-card__meta,
+.event-card__meta {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.campaign-card__points {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.event-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.event-card__date {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.event-card__title {
+  font-weight: 600;
+}
+
+.event-card__summary {
+  font-size: 0.9rem;
+}
+
+.event-card__more {
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-decoration-color: var(--color-brand);
+  text-underline-offset: 4px;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--color-brand-bg);
+}
+
+.badge--muted {
+  background: var(--color-border);
+}
+
+.empty,
+.loading {
+  color: var(--color-muted);
+  padding: 16px 0;
+}
+
+.more-link {
+  display: inline-block;
+  margin-top: 16px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--color-brand);
+  text-underline-offset: 4px;
+}
+
+.prose {
+  white-space: pre-wrap;
+}
+
+/* ログイン状態で出し分ける要素（BaseLayout のスクリプトが body に data-auth を付ける） */
+body:not([data-auth='member']) [data-show='member'],
+body:not([data-auth='guest']) [data-show='guest'] {
+  display: none !important;
+}

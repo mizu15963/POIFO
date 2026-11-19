@@ -1,0 +1,93 @@
+---
+import { LINE_LOGIN_URL } from '../lib/config';
+---
+
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a href="/" class="site-header__logo" aria-label="ポイフォ トップへ">
+      <img src="/images/poifo-logo-header.png" alt="POIFO ポイフォ" width="94" height="40" />
+    </a>
+    <nav class="site-header__actions">
+      <span data-show="guest">
+        <a class="btn btn--outline site-header__btn" href={LINE_LOGIN_URL}>ログイン</a>
+      </span>
+      <span data-show="member">
+        <a class="btn site-header__btn" href="/mypage/">マイページ</a>
+      </span>
+      <details class="menu">
+        <summary aria-label="メニュー">メニュー</summary>
+        <ul>
+          <li><a href="/campaigns/">案件を探す</a></li>
+          <li><a href="/events/">イベント</a></li>
+          <li><a href="/support/">担当サポート</a></li>
+          <li data-show="member"><a href="/mypage/points/">ポイント履歴</a></li>
+          <li data-show="member"><a href="/mypage/">ポイント交換</a></li>
+          <li><a href="/guide/">ヘルプ</a></li>
+        </ul>
+      </details>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    background: var(--color-logo-bg);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 60px;
+  }
+  .site-header__logo img {
+    display: block;
+  }
+  .site-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .site-header__btn {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 0.9rem;
+  }
+  .menu {
+    position: relative;
+  }
+  .menu summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+  .menu summary::-webkit-details-marker {
+    display: none;
+  }
+  .menu ul {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    min-width: 200px;
+    margin: 0;
+    padding: 8px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+  }
+  .menu li a {
+    display: block;
+    padding: 10px 16px;
+    text-decoration: none;
+  }
+  .menu li a:hover {
+    background: var(--color-brand-bg);
+  }
+</style>

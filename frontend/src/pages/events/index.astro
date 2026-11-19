@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="イベント">
+  <section class="section">
+    <div class="container">
+      <h1 class="section__title">みんなでポイ活！イベント</h1>
+      <p class="lead">イベントへの参加は、各イベントの「オープンチャットで参加する」から。会話や案内はオープンチャットで行います。</p>
+      <div id="events" class="grid grid--2" aria-live="polite"><p class="loading">読み込み中…</p></div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { fetchEvents } from '../../lib/api';
+  import { emptyState, eventCard } from '../../lib/render';
+
+  const list = document.getElementById('events')!;
+  fetchEvents()
+    .then((items) => (list.innerHTML = items.length ? items.map(eventCard).join('') : emptyState('イベントは準備中です。')))
+    .catch(() => (list.innerHTML = emptyState('イベントを読み込めませんでした。')));
+</script>

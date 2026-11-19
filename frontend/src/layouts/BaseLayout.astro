@@ -1,0 +1,62 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** ログイン必須のページ。未ログインなら /login/ へ移動する */
+  requireLogin?: boolean;
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description = 'ひとりじゃない、あたらしいポイ活。案件を探して、担当スタッフに相談して、みんなでポイ活。',
+  requireLogin = false,
+  noindex = false,
+} = Astro.props;
+const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなたのポイ活を、フォロー。';
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="icon" type="image/png" href="/images/poifo-logo-header.png" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body data-auth="unknown" data-require-login={requireLogin ? 'true' : undefined}>
+    <Header />
+    <main>
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      import { fetchMe } from '../lib/api';
+      import { setMe } from '../lib/session';
+
+      // ログイン状態を API に問い合わせて、ヘッダーなどの表示を切り替える
+      fetchMe()
+        .then((me) => {
+          document.body.dataset.auth = me ? 'member' : 'guest';
+          if (!me && document.body.dataset.requireLogin === 'true') {
+            location.replace('/login/');
+            return;
+          }
+          setMe(me);
+        })
+        .catch(() => {
+          document.body.dataset.auth = 'guest';
+          setMe(null);
+        });
+    </script>
+  </body>
+</html>

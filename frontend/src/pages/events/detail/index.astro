@@ -1,0 +1,50 @@
+---
+// /events/detail/?id=123（静的サイトなのでブラウザから API で取得する）
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="イベント詳細">
+  <section class="section">
+    <div class="container" id="event" aria-live="polite"><p class="loading">読み込み中…</p></div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { fetchEvent } from '../../../lib/api';
+  import { escapeHtml, formatDateTime, safeUrl } from '../../../lib/format';
+  import { emptyState } from '../../../lib/render';
+
+  const root = document.getElementById('event')!;
+  const id = new URLSearchParams(location.search).get('id');
+
+  async function render() {
+    if (!id) {
+      root.innerHTML = emptyState('イベントが見つかりません。');
+      return;
+    }
+    try {
+      const e = await fetchEvent(id);
+      document.title = `${e.title}｜ポイフォ`;
+      const thumb = safeUrl(e.thumbnail_url);
+      const openchat = safeUrl(e.openchat_url);
+      root.innerHTML = `
+        ${thumb ? `<img src="${escapeHtml(thumb)}" alt="" class="event-thumb">` : ''}
+        <h1>${escapeHtml(e.title)}</h1>
+        <p><strong>日時：</strong>${escapeHtml(formatDateTime(e.starts_at))}${e.ends_at ? ` 〜 ${escapeHtml(formatDateTime(e.ends_at))}` : ''}<br>
+        ${e.format ? `<strong>開催方法：</strong>${escapeHtml(e.format)}` : ''}</p>
+        ${e.body ? `<p class="prose">${escapeHtml(e.body)}</p>` : e.summary ? `<p class="prose">${escapeHtml(e.summary)}</p>` : ''}
+        ${e.notes ? `<h2>注意事項</h2><p class="prose">${escapeHtml(e.notes)}</p>` : ''}
+        ${e.status === 'ended' ? '<p class="lead">このイベントは終了しました。</p>' : openchat ? `<a class="btn btn--line btn--block" href="${escapeHtml(openchat)}" rel="noopener">オープンチャットで参加する</a>` : ''}`;
+    } catch {
+      root.innerHTML = emptyState('イベントが見つかりません。');
+    }
+  }
+  render();
+</script>
+
+<style is:global>
+  .event-thumb {
+    border-radius: var(--radius);
+    width: 100%;
+  }
+</style>

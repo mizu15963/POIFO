@@ -1,0 +1,18 @@
+# ローカル開発用の MySQL（本番は Lightsail マネージドDB の MySQL 8.4）
+# 使い方: docker compose up -d → .env の DB_CONNECTION=mysql
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: poifo
+      MYSQL_USER: poifo
+      MYSQL_PASSWORD: poifo
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Tokyo
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+volumes:
+  mysql-data:
