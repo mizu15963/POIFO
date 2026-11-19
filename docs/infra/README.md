@@ -38,6 +38,7 @@ AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `p
 | ロール | 使う場面 | 権限 |
 |---|---|---|
 | `poifo-gha-plan` | plan・whoami（main ブランチ、同じリポジトリからの PR） | ReadOnlyAccess |
+| `poifo-gha-deploy` | アプリのデプロイ（Environment `poifo-deploy` のジョブだけ） | フロントの S3 同期・CloudFront のキャッシュ削除・バックエンドのリリース置き場への配置だけ（[../deploy/README.md](../deploy/README.md)） |
 | `poifo-gha-apply` | apply・destroy（`poifo-apply` の承認後だけ） | Lightsail・CloudFront・WAF・ACM・Route 53（東京と us-east-1 のみ）、`poifo-*` の S3 バケット、`poifo-*` の IAM ユーザー |
 
 ## 費用と片付け（先に読む）
@@ -106,7 +107,7 @@ terraform plan
 terraform apply
 ```
 
-作られるもの: state 用バケット `poifo-tfstate-<アカウントID>`、OIDC プロバイダ、ロール `poifo-gha-plan` と `poifo-gha-apply`。
+作られるもの: state 用バケット `poifo-tfstate-<アカウントID>`、OIDC プロバイダ、ロール `poifo-gha-plan`・`poifo-gha-apply`・`poifo-gha-deploy`。
 費用はほぼ0円（S3 の数KB）。
 
 - OIDC プロバイダはアカウントに1つだけ。同じアカウントに既にあれば `create_github_oidc_provider = false`
@@ -123,6 +124,7 @@ bootstrap の出力を Secrets に入れる（アカウントIDを含むので V
 gh secret set TF_STATE_BUCKET    --body (terraform output -raw tf_state_bucket)
 gh secret set AWS_PLAN_ROLE_ARN  --body (terraform output -raw plan_role_arn)
 gh secret set AWS_APPLY_ROLE_ARN --body (terraform output -raw apply_role_arn)
+gh secret set AWS_DEPLOY_ROLE_ARN --body (terraform output -raw deploy_role_arn)   # アプリのデプロイ用
 gh variable set PROJECT --body "poifo"
 ```
 
@@ -260,7 +262,7 @@ server {
     # 閲覧者のアクセス先（api. / admin.）は $http_x_poifo_viewer_host で分かる。
     # CloudFront Function が必ず上書きするので偽装できない。Laravel 側でこの値を見て
     # 管理画面のルートは admin. からのアクセスだけに限る（api. からは届かないようにする）
-    root /var/www/poifo/public;
+    root /var/www/poifo/current/public;   # デプロイで切り替わるリンク（docs/deploy/README.md）
     location / { try_files $uri /index.php?$query_string; }
     location ~ \.php$ {
         include fastcgi_params;
@@ -340,6 +342,6 @@ terraform output -raw static_ip
 
 ## まだやっていないこと
 
-- アプリのデプロイ（フロントの S3 同期＋キャッシュ削除、API の配置）は別のワークフローで用意する
+- アプリのデプロイは [../deploy/README.md](../deploy/README.md)（app スタックにリリース置き場 `poifo-deploy-<アカウントID>` とサーバ用 IAM ユーザー `poifo-deploy-agent` がある）
 - サーバの初期設定（nginx・PHP・バックアップ cron・監視）と、DB 内のアプリ用ユーザー作成は Terraform の対象外。手順書を別に用意する
 - Lightsail のメトリクスアラーム（CPU・ステータスチェック）の通知先メールは未設定

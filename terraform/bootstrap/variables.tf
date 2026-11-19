@@ -32,6 +32,12 @@ variable "apply_environment" {
   default     = "poifo-apply"
 }
 
+variable "deploy_environment" {
+  description = "アプリのデプロイジョブの GitHub Environment 名"
+  type        = string
+  default     = "poifo-deploy"
+}
+
 variable "create_github_oidc_provider" {
   description = "OIDC プロバイダを作るか。アカウントに既にあれば false（1アカウント1つ）"
   type        = bool

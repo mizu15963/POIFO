@@ -4,6 +4,7 @@
 #   - Actions 用 IAM ロール
 #       plan  : 読み取り専用。main ブランチと PR（同じリポジトリのブランチ）から使える
 #       apply : Environment（承認者あり）を通ったジョブだけが使える
+#       deploy: アプリのデプロイ用。Environment「poifo-deploy」のジョブだけが使える（S3 への配置と CloudFront のキャッシュ削除のみ）
 # この state は手元PC（.gitignore 済み）。state を置くバケットを作るスタックの state はそこに置けないため。
 terraform {
   required_version = ">= 1.10.0"
@@ -44,6 +45,7 @@ locals {
   sub_main_branch  = "${local.sub_repo}:ref:refs/heads/main"
   sub_pull_request = "${local.sub_repo}:pull_request"
   sub_apply_env    = "${local.sub_repo}:environment:${var.apply_environment}"
+  sub_deploy_env   = "${local.sub_repo}:environment:${var.deploy_environment}"
 
   # CloudFront・WAF(CLOUDFRONT)・ACM(CloudFront 用)・Route 53 は us-east-1 扱いになる
   allowed_regions = distinct([var.region, "us-east-1"])
@@ -133,8 +135,9 @@ locals {
 data "aws_iam_policy_document" "trust" {
   for_each = {
     # fork からの PR には OIDC トークンが発行されないので、pull_request は同じリポジトリのブランチだけ
-    plan  = [local.sub_main_branch, local.sub_pull_request]
-    apply = [local.sub_apply_env]
+    plan   = [local.sub_main_branch, local.sub_pull_request]
+    apply  = [local.sub_apply_env]
+    deploy = [local.sub_deploy_env]
   }
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -252,4 +255,54 @@ resource "aws_iam_role_policy" "apply" {
   name   = "${var.project}-stacks"
   role   = aws_iam_role.apply.id
   policy = data.aws_iam_policy_document.apply.json
+}
+
+# ---------------- deploy ロール（アプリのデプロイ。Environment「poifo-deploy」のジョブだけ） ----------------
+# インフラは変えられない。フロントの S3 同期・CloudFront のキャッシュ削除・バックエンドのリリース置き場への配置だけ
+resource "aws_iam_role" "deploy" {
+  name                 = "${var.project}-gha-deploy"
+  assume_role_policy   = data.aws_iam_policy_document.trust["deploy"].json
+  max_session_duration = 3600
+}
+
+data "aws_iam_policy_document" "deploy" {
+  # フロント: dist/ を S3 に同期（--delete で古いファイルも消す）
+  statement {
+    sid       = "FrontBucketList"
+    actions   = ["s3:ListBucket"]
+    resources = ["arn:aws:s3:::${var.project}-front-*"]
+  }
+  statement {
+    sid       = "FrontObjects"
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    resources = ["arn:aws:s3:::${var.project}-front-*/*"]
+  }
+  statement {
+    sid       = "FrontInvalidation"
+    actions   = ["cloudfront:ListDistributions", "cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
+    resources = ["*"]
+  }
+
+  # バックエンド: リリース（tar.gz と latest.json）を置き、サーバが書いた結果（status/）を読む
+  statement {
+    sid       = "DeployBucketList"
+    actions   = ["s3:ListBucket"]
+    resources = ["arn:aws:s3:::${var.project}-deploy-*"]
+  }
+  statement {
+    sid       = "DeployReleases"
+    actions   = ["s3:PutObject"]
+    resources = ["arn:aws:s3:::${var.project}-deploy-*/releases/*"]
+  }
+  statement {
+    sid       = "DeployStatus"
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::${var.project}-deploy-*/status/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "deploy" {
+  name   = "${var.project}-deploy"
+  role   = aws_iam_role.deploy.id
+  policy = data.aws_iam_policy_document.deploy.json
 }

@@ -51,7 +51,8 @@ API を使う画面はバックエンドも起動しておく（[../backend/READ
 
 ## デプロイ
 
-`npm run build` の出力 `dist/` を、フロント用 S3 バケットに同期して CloudFront のキャッシュを削除する（ワークフローは別途用意）。
+main に `frontend/` の変更が入ると、ワークフロー「デプロイ（フロント）」が `dist/` を S3 に同期して CloudFront のキャッシュを削除する。
+本番の `PUBLIC_*` は GitHub Variables に置く。詳しくは [../docs/deploy/README.md](../docs/deploy/README.md)。
 `404.html` は CloudFront のカスタムエラーページに使える。
 
 ## まだやっていないこと

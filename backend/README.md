@@ -94,13 +94,21 @@ composer dev                # http://localhost:8000
 | `LINE_OFFICIAL_FRIEND_URL` | 公式アカウントの友だち追加URL |
 | `GF_REWARDS_API_KEY` / `GF_REWARDS_AD_CHANNEL_ID` | GF Rewards から受け取った値 |
 
-cron に `* * * * * cd /var/www/poifo/backend && php artisan schedule:run >> /dev/null 2>&1` を入れる。
+cron に `* * * * * cd /var/www/poifo/current && php artisan schedule:run >> /dev/null 2>&1` を入れる。
 キューは当面 `database`（`php artisan queue:work` を systemd で常駐）。
+どちらも設定ファイルを [../deploy/backend/server/](../deploy/backend/server/) に用意してある。
+
+## デプロイ
+
+main に `backend/` の変更が入ると、ワークフロー「デプロイ（バックエンド）」がテスト・ビルドしたリリースを S3 に置き、
+サーバの deploy agent が取り込む（migrate・キャッシュ作成・切り替えまで自動）。サーバ上の配置は
+`/var/www/poifo/current`（最新リリースへのリンク）、`.env` と `storage` は `/var/www/poifo/shared/`。
+詳しくは [../docs/deploy/README.md](../docs/deploy/README.md)。
 
 ## まだやっていないこと
 
 - 管理画面のログイン（パスワード＋二要素認証）と各機能（会員検索・停止、ポイント手動調整、換金審査・全銀CSV、ポストバックログ、案件の表示設定、イベント登録）
 - 口座登録・換金申請の API と画面
 - 退会 API
-- デプロイ（GitHub Actions からサーバへの配置）とサーバの初期設定手順
+- サーバの初期設定手順（nginx・PHP のインストールなど。デプロイに必要な分は docs/deploy/README.md にある）
 - GF Rewards に確認すること: 判定中（未承認）の通知への応答を `0` にしているが、それでよいか

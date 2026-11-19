@@ -13,3 +13,8 @@ output "apply_role_arn" {
   description = "Secrets: AWS_APPLY_ROLE_ARN"
   value       = aws_iam_role.apply.arn
 }
+
+output "deploy_role_arn" {
+  description = "Secrets: AWS_DEPLOY_ROLE_ARN"
+  value       = aws_iam_role.deploy.arn
+}

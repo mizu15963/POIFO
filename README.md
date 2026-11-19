@@ -20,6 +20,7 @@ frontend/ と backend/ はそれぞれ直下の `AGENTS.md`（Claude Code は `C
 ## インフラ
 
 AWS 環境は `terraform/` で定義し、GitHub Actions から承認付きで構築・更新・削除します。手順は [docs/infra/README.md](docs/infra/README.md)。
+フロント（`frontend/`）とバックエンド（`backend/`）は、main に入ると別々のワークフローでデプロイされます。手順は [docs/deploy/README.md](docs/deploy/README.md)。
 
 ## ドキュメント
 

@@ -1,0 +1,119 @@
+# フロントのデプロイ: frontend/ をビルドして S3 に同期し、CloudFront のキャッシュを削除する
+#   main に frontend/ の変更が入ると自動で動く。手動実行もできる（Variables を変えたときなど）
+#   AWS には deploy ロール（Environment「poifo-deploy」）で入る。インフラは変えられない
+name: デプロイ（フロント）
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# 同じものを同時に配置しない（後から来たものは前のが終わるまで待つ）
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-northeast-1
+
+jobs:
+  deploy:
+    name: ビルド・配置
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: poifo-deploy
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      # インフラと Secrets の準備ができるまではスキップする（docs/deploy/README.md）
+      - name: セットアップ済みか確認
+        id: ready
+        working-directory: .
+        env:
+          ROLE: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ -n "$ROLE" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::AWS_DEPLOY_ROLE_ARN が未登録のためデプロイをスキップしました（docs/deploy/README.md）"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7.0.1
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7.1.0
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # PUBLIC_* はビルド時に埋め込まれる公開値（GitHub Variables）
+      - name: ビルド
+        if: steps.ready.outputs.ok == 'true'
+        env:
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+          PUBLIC_LINE_OFFICIAL_URL: ${{ vars.PUBLIC_LINE_OFFICIAL_URL }}
+        run: |
+          if [ -z "$PUBLIC_SITE_URL" ] || [ -z "$PUBLIC_API_BASE_URL" ]; then
+            echo "::warning::Variables の PUBLIC_SITE_URL / PUBLIC_API_BASE_URL が未設定です。画面は出ますが API を呼べません"
+          fi
+          npm ci
+          npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      # 配置先は Terraform が作った名前から求める（バケット: <PROJECT>-front-<アカウントID>、配信: コメント「<PROJECT> front」）
+      - name: S3 に同期
+        if: steps.ready.outputs.ok == 'true'
+        env:
+          PROJECT: ${{ vars.PROJECT }}
+        run: |
+          account=$(aws sts get-caller-identity --query Account --output text)
+          echo "::add-mask::${account}"
+          bucket="${PROJECT}-front-${account}"
+          # ファイル名にハッシュが付くもの（_astro/）は長くキャッシュ。古いものは消さない（開いたままの画面が参照するため）
+          if [ -d dist/_astro ]; then
+            aws s3 sync dist/_astro "s3://${bucket}/_astro" --only-show-errors \
+              --cache-control "public, max-age=31536000, immutable"
+          fi
+          # HTML などは毎回確認させる。消えたページは S3 からも消す
+          aws s3 sync dist "s3://${bucket}" --only-show-errors --delete --exclude "_astro/*" \
+            --cache-control "public, max-age=0, must-revalidate"
+          echo "同期しました"
+
+      - name: CloudFront のキャッシュ削除
+        if: steps.ready.outputs.ok == 'true'
+        env:
+          PROJECT: ${{ vars.PROJECT }}
+        run: |
+          dist_id=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Comment=='${PROJECT} front'].Id | [0]" --output text)
+          if [ -z "$dist_id" ] || [ "$dist_id" = "None" ]; then
+            echo "::error::CloudFront（コメント「${PROJECT} front」）が見つかりません。インフラを構築済みか確認してください"
+            exit 1
+          fi
+          inv=$(aws cloudfront create-invalidation --distribution-id "$dist_id" --paths "/*" --query Invalidation.Id --output text)
+          aws cloudfront wait invalidation-completed --distribution-id "$dist_id" --id "$inv"
+          {
+            echo "## フロントをデプロイしました"
+            echo "- コミット: \`${GITHUB_SHA::7}\`"
+            echo "- 公開URL: ${{ vars.PUBLIC_SITE_URL || '（PUBLIC_SITE_URL 未設定）' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
