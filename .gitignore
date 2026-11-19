@@ -9,6 +9,8 @@ docs/partners/*/text/
 *.tfvars
 !*.tfvars.example
 *.tfplan
+# provider のロックは Windows と Linux の両方のハッシュが要るので当面コミットしない
+.terraform.lock.hcl
 crash.log
 .env
 *.pem
