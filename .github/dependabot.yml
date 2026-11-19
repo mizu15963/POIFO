@@ -28,6 +28,13 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "monthly"
+    ignore:
+      # @astrojs/check の peer が typescript ^5 || ^6 のため、対応版が出るまでメジャー更新はしない
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # CI・開発の Node（22）に型を合わせる。Node を上げるときに手で上げる
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         patterns: ["*"]
