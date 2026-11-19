@@ -19,7 +19,7 @@ AWS の認証はアクセスキーを使わず OIDC（GitHub が発行する一�
   dependabot.yml             # アクションと provider の更新 PR（月1回）
 terraform/
   bootstrap/  # 手元PCから1回だけ apply（state 用 S3・OIDC・Actions 用ロール）。state は手元
-  base/       # 消すと困るもの: DB バックアップ用 S3、バックアップ送信用 IAM ユーザー、Route 53 ホストゾーン
+  base/       # 消すと困るもの: DB（Lightsail マネージドデータベース）、DB バックアップ用 S3、バックアップ送信用 IAM ユーザー、Route 53 ホストゾーン
   app/        # 本体: Lightsail、フロント用 S3＋CloudFront、（ドメイン設定後）証明書・API 用 CloudFront・WAF
 ```
 
@@ -32,7 +32,7 @@ terraform/
 AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `poifo-apply` で承認されるまで止まる。
 スマホの GitHub アプリからも承認できる。
 
-**誤削除の防止**: plan / apply で、Lightsail インスタンス・固定IP・ホストゾーン・バックアップ用バケットを
+**誤削除の防止**: plan / apply で、Lightsail インスタンス・固定IP・DB・ホストゾーン・バックアップ用バケットを
 消す（作り直す）変更が含まれると止まる。これらを消せるのは「構築・削除」の `destroy` だけ。
 
 | ロール | 使う場面 | 権限 |
@@ -44,18 +44,18 @@ AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `p
 
 | 段階 | 主な費用（月額・税別、1ドル=150円） |
 |---|---|
-| 段階1: ドメインなし | Lightsail 2GB $12（約1,800円）＋自動スナップショット（数十〜150円）＋S3 少額。フロントの CloudFront は従量課金だが常時無料枠内 |
+| 段階1: ドメインなし | Lightsail 1GB $7（約1,050円）＋マネージドDB 標準 $15（約2,250円、自動バックアップ込み）＋自動スナップショット（数十円）＋S3 少額。フロントの CloudFront は従量課金だが常時無料枠内 |
 | 段階2: ドメインあり（定額プラン加入前） | 上記＋Route 53 ホストゾーン $0.50＋WAF 従量（API 用 $5＋ルール5個 $5、フロント用 $5＋ルール2個 $2、時間割り） |
-| 段階2: 定額プラン（Free）加入後 | WAF は定額プランに含まれて $0。合計は計画書どおり約2,000円 |
+| 段階2: 定額プラン（Free）加入後 | WAF は定額プランに含まれて $0。合計は約3,400円 |
 
 WAF の従量課金は時間割りなので、段階2の apply の後は早めに定額プランへ加入する（手順6）。
 
 片付けの順番:
 1. CloudFront の定額プランを解約する（加入中のディストリビューションは削除できない）
 2. 「構築・削除」→ `destroy` / `app`（削除前に Lightsail の手動スナップショットを自動で取る）
-3. 必要ならデータを退避してから、バックアップ用バケットの中身を空にし、IAM ユーザー `poifo-backup-writer` のアクセスキーを削除して、`destroy` / `base`
+3. 必要ならデータを退避してから、バックアップ用バケットの中身を空にし、IAM ユーザー `poifo-backup-writer` のアクセスキーを削除して、`destroy` / `base`（DB は最終スナップショット `poifo-db-final-日時` を残して消える）
 4. 手元PCで `terraform/bootstrap` を `terraform destroy`
-5. Terraform 管理外のもの（削除前スナップショットなど）を Lightsail コンソールで削除
+5. Terraform 管理外のもの（サーバの削除前スナップショット、DB の最終スナップショット）を Lightsail コンソールで削除
 
 ## 0. 事前準備（リポジトリ管理者の作業）
 
@@ -126,10 +126,11 @@ gh secret set AWS_APPLY_ROLE_ARN --body (terraform output -raw apply_role_arn)
 gh variable set PROJECT --body "poifo"
 ```
 
-段階1で使うもの（なくても動く）:
+段階1で使うもの（`DB_MASTER_PASSWORD` は必須、ほかはなくても動く）:
 
 | 名前 | 種類 | 値の例 | 用途 |
 |---|---|---|---|
+| `DB_MASTER_PASSWORD` | Secrets | 32文字のランダム値 | マネージドDB のマスターユーザー（`dbadmin`）のパスワード。16文字以上。Laravel 用には権限を絞った別ユーザーを DB 内で作る |
 | `SSH_PUBLIC_KEY` | Variables | `ssh-ed25519 AAAA... poifo` | Lightsail に入れる公開鍵。空なら Lightsail のデフォルト鍵。**サーバ作成時にしか反映されない** |
 | `SSH_ALLOWED_CIDRS` | Secrets | `["203.0.113.10/32"]` | SSH を許可する運用者の IP。空でも Lightsail コンソールのブラウザ SSH は使える |
 
@@ -155,6 +156,9 @@ $s = ($b | ForEach-Object { $_.ToString("x2") }) -join ""
 gh secret set ORIGIN_VERIFY_SECRET --body $s
 $s   # nginx の設定に使う。パスワードマネージャーに保存
 ```
+
+`DB_MASTER_PASSWORD` も同じ方法で作る（`ORIGIN_VERIFY_SECRET` を `DB_MASTER_PASSWORD` に読み替える）。
+値はパスワードマネージャーに保存する。Terraform の state（非公開の S3）にも残る。
 
 ### Environment
 
@@ -183,14 +187,19 @@ gh actions-lock                               # .github/workflows/actions.lock �
 3. action `apply`、stack `all` → 承認待ちで Approve
 
 できるもの:
-- base: バックアップ用バケット `poifo-backup-<アカウントID>`、IAM ユーザー `poifo-backup-writer`
-- app: Lightsail `poifo-api`（Ubuntu 24.04、2GB、自動スナップショット毎日 3:00 JST）、固定IP、ファイアウォール（443・80・22）、
+- base: マネージドDB `poifo-db`（MySQL 8.4、標準 1GB、外部非公開、自動バックアップ毎日 3:00 JST・7日分）、
+  バックアップ用バケット `poifo-backup-<アカウントID>`、IAM ユーザー `poifo-backup-writer`
+- app: Lightsail `poifo-api`（Ubuntu 24.04、1GB、自動スナップショット毎日 3:00 JST）、固定IP、ファイアウォール（443・80・22）、
   フロント用バケットと CloudFront（`https://xxxx.cloudfront.net`）
 
-確認: ジョブサマリーの outputs に `front_url` が出る。固定IP はサマリーに出さないので Lightsail コンソールか、
+確認: ジョブサマリーの outputs に `front_url` と `db_endpoint`（Laravel の `DB_HOST`）が出る。
+DB は同じリージョンの Lightsail インスタンスからだけ接続できる（PC から直接はつながらない）。固定IP はサマリーに出さないので Lightsail コンソールか、
 手元PCで `terraform output -raw static_ip`（下の「手元PCから state を見る」）で確認する。
 
-この段階でサーバの初期設定（nginx・PHP・MySQL・Laravel）とアプリ開発を進められる。
+この段階でサーバの初期設定（nginx・PHP・Laravel）とアプリ開発を進められる。
+
+📝 学習メモ: DB をマネージドデータベースに分けたので、サーバを作り直しても DB は残る。
+DB のバックアップ・OS 更新は Lightsail が行う。S3 への mysqldump は「アカウントの外へ持ち出せる形の控え」として続ける。
 
 ## 6. 段階2: 独自ドメインを付ける
 
@@ -261,15 +270,18 @@ server {
 2. 差分を確認して main にマージ → 自動で plan → 変更があれば承認待ち → Approve で apply
 3. Variables / Secrets だけを変えたとき（例: `ADMIN_ALLOWED_CIDRS` の変更、`WAF_COUNT_MODE` を `false` に）は、**更新（Terraform）** を手動実行
 
-サーバ・固定IP・ホストゾーン・バックアップ用バケットを消す（作り直す）変更は止まる。
-例えば `lightsail_bundle_id`（プラン）や `lightsail_blueprint_id`（OS）を変えると作り直しになるので止まる。
+サーバ・固定IP・DB・ホストゾーン・バックアップ用バケットを消す（作り直す）変更は止まる。
+例えば `lightsail_bundle_id`（プラン）や `lightsail_blueprint_id`（OS）、`db_bundle_id` を変えると作り直しになるので止まる。
 
-### サーバのプランを上げる（2GB → 4GB）
+### サーバのプランを上げる（1GB → 2GB）
 
-Lightsail はプラン変更＝別インスタンスへの作り直しになる。DB を失わないように:
+Lightsail はプラン変更＝別インスタンスへの作り直しになる。DB は別なので残るが、サーバ上の設定・アップロードファイルを失わないように:
 1. Lightsail コンソールで手動スナップショットを取る
 2. スナップショットから新しいプランのインスタンスを作り、動作を確認
 3. Terraform の state を新インスタンスに付け替える（`terraform state rm` → `terraform import`）か、相談する
+
+DB のプランを上げるときも同じく作り直しになる（DB のスナップショットから新しいプランで作る）。
+MySQL のマイナー更新は Lightsail のメンテナンス時間（月曜 4:00 JST）に自動で入る。
 
 ## 8. 削除
 
@@ -278,6 +290,7 @@ Lightsail はプラン変更＝別インスタンスへの作り直しになる�
    - 削除前に Lightsail の手動スナップショット（`poifo-api-before-destroy-日時`）を自動で取る。自動スナップショットはインスタンスと一緒に消えるため
    - 手動スナップショットは自分で消すまで残り、$0.05/GB・月かかる
 3. base も消すときは、バックアップ用バケットを空にし、`poifo-backup-writer` のアクセスキーを削除してから、`destroy` / `base`（confirm に `base`）。
+   DB は最終スナップショット（`poifo-db-final-日時`）を残してから消える。
    ホストゾーンを消すとネームサーバが変わるので、再構築時はドメイン側の設定もやり直しになる
 
 ## うまくいかない時
@@ -290,6 +303,7 @@ Lightsail はプラン変更＝別インスタンスへの作り直しになる�
 | `AccessDenied ... <action>` | apply ロールの権限不足。bootstrap の `apply_regional_actions` などに足して手元PCで再 apply |
 | ⛔ 削除・作り直しを含むため止めました | 上の「誤削除の防止」。変数の変更でサーバが作り直しにならないか確認する |
 | ACM 証明書の検証が終わらない | ネームサーバの委任が済んでいない（手順6の2） |
+| `DB_MASTER_PASSWORD ... を登録してください` | base の apply には DB のマスターパスワードが必要 |
 | `ORIGIN_VERIFY_SECRET ... を登録してください` | 独自ドメイン有効時は32文字以上の秘密ヘッダーが必要 |
 | `Error acquiring the state lock` | 別の実行中、または中断でロックが残った。他に動いていないのを確かめて手元PCで `terraform force-unlock <ID>` |
 | ディストリビューションを削除できない | 定額プランに加入中。コンソールで解約してから destroy |
@@ -311,5 +325,5 @@ terraform output -raw static_ip
 ## まだやっていないこと
 
 - アプリのデプロイ（フロントの S3 同期＋キャッシュ削除、API の配置）は別のワークフローで用意する
-- サーバの初期設定（nginx・PHP・MySQL・バックアップ cron・監視）は Terraform の対象外。手順書を別に用意する
+- サーバの初期設定（nginx・PHP・バックアップ cron・監視）と、DB 内のアプリ用ユーザー作成は Terraform の対象外。手順書を別に用意する
 - Lightsail のメトリクスアラーム（CPU・ステータスチェック）の通知先メールは未設定

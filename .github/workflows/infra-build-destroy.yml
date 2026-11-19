@@ -3,10 +3,10 @@
 #   run ジョブ  : Environment「poifo-apply」の承認後、apply ロールで構築（apply）／削除（destroy）
 #
 # スタックの順番: 構築は base → app、削除は app → base（all のとき）
-#   base: DB バックアップ用 S3・バックアップ送信用 IAM ユーザー・Route 53 ホストゾーン（消すと困るもの）
+#   base: DB（Lightsail マネージドデータベース）・DB バックアップ用 S3・バックアップ送信用 IAM ユーザー・Route 53 ホストゾーン（消すと困るもの）
 #   app : Lightsail（API サーバ）・フロント用 S3＋CloudFront・証明書・WAF
 #
-# apply でもサーバ・固定IP・ホストゾーン・バックアップ用バケットを消す／作り直す変更は止める。
+# apply でもサーバ・固定IP・DB・ホストゾーン・バックアップ用バケットを消す／作り直す変更は止める。
 # 作り直すときは destroy → apply の順に、手順書（docs/infra/README.md）に沿って行う。
 name: 構築・削除（Terraform）
 
@@ -60,6 +60,7 @@ env:
   TF_VAR_admin_allowed_cidrs: ${{ secrets.ADMIN_ALLOWED_CIDRS || '[]' }}
   TF_VAR_postback_allowed_cidrs: ${{ secrets.POSTBACK_ALLOWED_CIDRS || '[]' }}
   TF_VAR_origin_verify_secret: ${{ secrets.ORIGIN_VERIFY_SECRET }}
+  TF_VAR_db_master_password: ${{ secrets.DB_MASTER_PASSWORD }}
 
 jobs:
   plan:

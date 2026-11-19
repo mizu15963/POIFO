@@ -6,7 +6,7 @@
 #   terraform.sh apply        <stack>  [--guard]   構築・変更（apply ロール）
 #   terraform.sh destroy      <stack>              削除（apply ロール）
 #
-# --guard: plan / apply で、サーバ（Lightsail）・固定IP・ホストゾーン・DBバックアップ用バケットを
+# --guard: plan / apply で、サーバ（Lightsail）・固定IP・DB・ホストゾーン・DBバックアップ用バケットを
 #          消す・作り直す変更を止める（plan-destroy / destroy では無視）。
 #          これらを消すのは destroy を明示したときだけにする。
 #
@@ -89,13 +89,13 @@ if [[ ${code} -eq 2 && "${guard}" == "--guard" && ("${cmd}" == "plan" || "${cmd}
     .resource_changes[]?
     | select(.change.actions | index("delete"))
     | select(
-        (.type | IN("aws_lightsail_instance", "aws_lightsail_static_ip", "aws_route53_zone"))
+        (.type | IN("aws_lightsail_instance", "aws_lightsail_static_ip", "aws_lightsail_database", "aws_route53_zone"))
         or (.address == "aws_s3_bucket.backup")
       )
     | .address')
   if [[ -n "${blocked}" ]]; then
     summary "### ⛔ 削除・作り直しを含むため止めました（${stack}）" '```' "${blocked}" '```' \
-      "サーバを消すと DB も消えます。本当に必要なら docs/infra/README.md の手順に沿って、「構築・削除」ワークフローの destroy → apply で行ってください。"
+      "サーバ・DB を消すとデータが失われます。本当に必要なら docs/infra/README.md の手順に沿って、「構築・削除」ワークフローの destroy → apply で行ってください。"
     echo "::error::削除・作り直しを含む変更です: ${blocked//$'\n'/, }"
     exit 1
   fi

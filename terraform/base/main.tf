@@ -1,5 +1,6 @@
 # base: 消すと困る・作り直すと面倒なもの。app スタックを destroy しても残す
-#   - DB バックアップ用 S3 バケット（サーバ外のバックアップ先）
+#   - DB（Lightsail マネージドデータベース、database.tf）
+#   - DB バックアップ用 S3 バケット（mysqldump の保管先。Lightsail の自動バックアップとは別にアカウント外へ持ち出せる形で残す）
 #   - バックアップ送信専用の IAM ユーザー（PutObject のみ）
 #   - Route 53 ホストゾーン（作り直すとネームサーバが変わり、ドメイン側の設定をやり直すことになる）
 data "aws_caller_identity" "current" {}

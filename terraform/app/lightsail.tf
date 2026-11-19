@@ -1,5 +1,5 @@
-# API サーバ（nginx＋Laravel＋MySQL を同居）。
-# 注意: サーバを消す・作り直す変更（bundle_id / blueprint_id / availability_zone など）は DB ごと消える。
+# API サーバ（nginx＋PHP-FPM＋Laravel）。DB は base スタックの Lightsail マネージドデータベース。
+# 注意: サーバを消す・作り直す変更（bundle_id / blueprint_id / availability_zone など）は、サーバ上の設定・ログ・アップロードファイルが消える。
 #       更新ワークフローはサーバの削除を含む plan を止める。サイズ変更はスナップショットから作り直す（docs/infra 参照）
 resource "aws_lightsail_key_pair" "main" {
   count      = var.ssh_public_key != "" ? 1 : 0
