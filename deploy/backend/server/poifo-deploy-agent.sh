@@ -57,11 +57,15 @@ report() { # report <success|failed> <message>
   jq -n --arg result "$1" --arg message "$2" --arg sha "$sha" --arg deploy_id "$deploy_id" \
     --arg release "$(basename "$release")" --arg at "$(date -u +%FT%TZ)" \
     '{result: $result, message: $message, sha: $sha, deploy_id: $deploy_id, release: $release, finished_at: $at}' > "$work/status.json"
-  aws s3 cp --only-show-errors "$work/status.json" "s3://${DEPLOY_BUCKET}/status/${deploy_id}.json"
+  # 結果を書けなくても（S3 に届かない等）ここで止めない。Actions 側は待ち時間切れで失敗になる
+  aws s3 cp --only-show-errors "$work/status.json" "s3://${DEPLOY_BUCKET}/status/${deploy_id}.json" \
+    || log "結果を S3 に書けませんでした"
   log "$1: $2"
 }
 
 fail() {
+  trap - ERR # fail の中の失敗で fail が繰り返し呼ばれないように
+  set +e
   # 切り替え後に失敗したら、前のリリースに戻す
   if [[ "$switched" == true && -n "$previous" ]]; then
     ln -sfn "$previous" "$APP_DIR/current.tmp" && mv -Tf "$APP_DIR/current.tmp" "$APP_DIR/current"

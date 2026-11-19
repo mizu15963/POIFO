@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "デプロイするコミット・タグ（空なら main の最新）。戻すときに使う"
+        description: "デプロイするコミット・タグ（空なら main の最新）。戻すときに使う。main の履歴にあるものだけ"
         required: false
         type: string
         default: ""
@@ -58,7 +58,18 @@ jobs:
         if: steps.ready.outputs.ok == 'true'
         with:
           ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0 # main の履歴にあるか確かめるため
           persist-credentials: false
+
+      # レビュー前のコード（main に入っていないブランチ・コミット）を本番に出さない
+      - name: main の履歴にあるコミットか確認
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          sha=$(git rev-parse HEAD)
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::${sha::7} は main の履歴にありません。main にマージ済みのコミット・タグだけデプロイできます"
+            exit 1
+          fi
 
       # サーバと同じ PHP 8.4・同じ拡張でそろえる（composer の依存解決がサーバと食い違わないように）
       - uses: shivammathur/setup-php@2.40.0

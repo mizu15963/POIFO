@@ -270,12 +270,12 @@ data "aws_iam_policy_document" "deploy" {
   statement {
     sid       = "FrontBucketList"
     actions   = ["s3:ListBucket"]
-    resources = ["arn:aws:s3:::${var.project}-front-*"]
+    resources = ["arn:aws:s3:::${var.project}-front-${local.account_id}"]
   }
   statement {
     sid       = "FrontObjects"
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-    resources = ["arn:aws:s3:::${var.project}-front-*/*"]
+    resources = ["arn:aws:s3:::${var.project}-front-${local.account_id}/*"]
   }
   statement {
     sid       = "FrontInvalidation"
@@ -287,17 +287,17 @@ data "aws_iam_policy_document" "deploy" {
   statement {
     sid       = "DeployBucketList"
     actions   = ["s3:ListBucket"]
-    resources = ["arn:aws:s3:::${var.project}-deploy-*"]
+    resources = ["arn:aws:s3:::${var.project}-deploy-${local.account_id}"]
   }
   statement {
     sid       = "DeployReleases"
     actions   = ["s3:PutObject"]
-    resources = ["arn:aws:s3:::${var.project}-deploy-*/releases/*"]
+    resources = ["arn:aws:s3:::${var.project}-deploy-${local.account_id}/releases/*"]
   }
   statement {
     sid       = "DeployStatus"
     actions   = ["s3:GetObject"]
-    resources = ["arn:aws:s3:::${var.project}-deploy-*/status/*"]
+    resources = ["arn:aws:s3:::${var.project}-deploy-${local.account_id}/status/*"]
   }
 }
 
