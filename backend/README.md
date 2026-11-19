@@ -58,7 +58,7 @@ GF Rewards ─ https://api.<domain>/postback/gf-rewards（WAF で送信元 IP �
 
 ## ローカル開発
 
-必要なもの: PHP 8.4（8.3 でも動く）、Composer、（MySQL を使うなら）Docker。
+必要なもの: PHP 8.4 以上（テストの PHPUnit 13 が 8.4 を要求）、Composer、（MySQL を使うなら）Docker。
 
 ```sh
 cd backend
