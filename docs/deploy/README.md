@@ -46,7 +46,7 @@ GitHub Actions                         S3 poifo-deploy-…                サー
 ### API サーバが複数台のとき
 
 - どの台も同じ `latest.json` を見て取り込む。Actions は Variables の `API_SERVER_COUNT` 台分の結果がそろうまで待ち、1台でも失敗ならジョブを失敗にする
-- **migrate は1台だけ**: deploy agent の設定で `MIGRATE=true` は1台（primary）だけ、ほかの台は `MIGRATE=false`。
+- **migrate は1台だけ**: deploy agent の設定で `MIGRATE=true` は**必ず1台**（primary）だけ、ほかの台は `MIGRATE=false`（2台とも true にすると、ロックを取れなかった側がすぐ完了扱いにするため、migrate の完了前にほかの台が切り替わることがある）。
   primary は migrate の結果を `status/<デプロイID>/_migrated.json` に書き、ほかの台はそれが成功になってから切り替える（新しいコードが古いテーブルで動かないように）。
   primary の migrate が失敗したら、どの台も切り替えない。念のため migrate は `--isolated`（共有キャッシュのロック）でも二重実行を防ぐ
 - **`.env` は全台同じ**（`APP_KEY` を含む。口座番号の暗号化に使うので、違うと復号できない）。`APP_MAINTENANCE_DRIVER=cache` にする（メンテナンスモードを全台で共有するため）

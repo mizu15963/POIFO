@@ -320,16 +320,20 @@ CloudFront のオリジンは最初から `origin.<domain>` なので、LB を�
 
 費用は1台増やすごとに $7/月（約1,050円）、LB が $18/月。
 
-手順:
-1. Variables の `ENABLE_LOAD_BALANCER` を `true`、`API_SERVER_COUNT` を `2` にして、**更新（Terraform）** を手動実行 → 承認
-   - LB の証明書（`origin.<domain>`）の検証に数分かかる。`certificate_attachment` が失敗したら、少し待って再実行する
-2. 新しいサーバを1台目と同じように準備する（[../deploy/README.md](../deploy/README.md) の「サーバ（1回だけ）」）。
+手順（API を止めない順番）:
+1. **先に1台目の nginx を LB 用に変える**: LB からは HTTP（80番）で届くので、80番でもアプリを動かす（秘密ヘッダーの確認はそのまま）。
+   ヘルスチェック（`/up`）は秘密ヘッダーなしで来るので、そのパスだけヘッダーなしでも通す。
+   これを先にしないと、LB に切り替わった時点でヘルスチェックが失敗し（80番が HTTPS へのリダイレクトのままだと 301）、API が止まる
+2. Variables の `ENABLE_LOAD_BALANCER` を `true` にし、**`API_SERVER_COUNT` は `1` のまま** **更新（Terraform）** を手動実行 → 承認。
+   `origin.<domain>` が LB に切り替わる。LB の証明書（`origin.<domain>`）の検証に数分かかり、`certificate_attachment` が失敗したら少し待って再実行する。
+   Lightsail コンソールで LB のターゲットが「正常」になり、API が LB 経由で動くことを確認する
+3. `API_SERVER_COUNT` を `2` にして、もう一度 **更新（Terraform）** → 承認。2台目が作られ、LB にもつながる（準備が済むまではヘルスチェックで外される）
+4. 2台目を1台目と同じように準備する（[../deploy/README.md](../deploy/README.md) の「サーバ（1回だけ）」と、手順1の nginx 設定）。
    **`.env` は全台同じ内容にする**（`APP_KEY` は口座番号の暗号化に使うので、違うと復号できない）。
-   deploy agent の設定は `SERVER_NAME=api-2`、`MIGRATE=false`（migrate は1台目だけが行う）
-3. nginx を LB 用に変える: LB からは HTTP（80番）で届くので、80番でもアプリを動かす（秘密ヘッダーの確認はそのまま）。
-   ヘルスチェック（`/up`）は秘密ヘッダーなしで来るので、そのパスだけヘッダーなしでも通す
-4. 「デプロイ（バックエンド）」を手動実行し、全台が同じリリースになることを確認する
-5. Lightsail コンソールで LB のターゲットがすべて「正常」になっていることを確認する
+   deploy agent の設定は `SERVER_NAME=api-2`、**`MIGRATE=false`**（`MIGRATE=true` は必ず1台だけ。2台とも true にすると、migrate の完了前にほかの台が切り替わることがある）
+5. 「デプロイ（バックエンド）」を手動実行し、全台が同じリリースになることを確認する
+
+手順3から4の間（2台目の準備が済むまで）は、デプロイのワークフローが `API_SERVER_COUNT` 台分の結果を待って失敗する。準備が済んでから手順5で出し直せばよい。
 
 減らすときは `API_SERVER_COUNT` を下げて更新を実行する（番号の大きいサーバから消える）。1台に戻したら `ENABLE_LOAD_BALANCER` も `false` にできる。
 
