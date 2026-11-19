@@ -1,0 +1,3 @@
+# ASPから受領した資料（Confidential）はリポジトリに入れない
+docs/partners/*/pdf/
+docs/partners/*/text/
