@@ -79,11 +79,14 @@ gh auth login
 AWS には IAM Identity Center のユーザー（AdministratorAccess の権限セット）で入る。プロファイルは1回だけ作る。
 
 ```powershell
-aws configure sso --profile poifo-admin   # SSO start URL とリージョン ap-northeast-1 を入力
+aws configure sso --profile poifo-admin   # クライアントのアカウントの SSO start URL とリージョン ap-northeast-1 を入力
 $env:AWS_PROFILE = "poifo-admin"            # PowerShell を開くたびに
 aws sso login --profile poifo-admin         # 期限切れのとき
 aws sts get-caller-identity                 # AWSReservedSSO_AdministratorAccess_... なら OK
 ```
+
+AWS アカウントはクライアントが払い出したもの（費用もクライアント負担）。別案件のプロファイルを流用せず、
+apply の前に毎回 `aws sts get-caller-identity` の Account がクライアントのアカウントIDであることを確かめる。
 
 📝 学習メモ: Identity Center のユーザーで入ると、アクセスキーを PC に置かずに済む（数時間で切れる一時的な認証情報）。
 
