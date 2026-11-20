@@ -163,7 +163,7 @@ composer dev                # http://localhost:8000
 | `POIFO_CLIENT_IP_HEADER` / `POIFO_CLIENT_IP_FALLBACK` | `x-poifo-viewer-ip` / `false` |
 | `POIFO_ALERT_EMAILS` | 異常を知らせる管理者のメールアドレス（カンマ区切り） |
 | `MAIL_MAILER` / `MAIL_HOST` / `MAIL_PORT` | `smtp` / `email-smtp.ap-northeast-1.amazonaws.com` / `587`（Amazon SES 東京。Lightsail は 25番が塞がっているので使わない） |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | SES の SMTP 認証情報 |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SES 送信用 IAM ユーザー（`poifo-ses-sender`）のアクセスキー ID / そのシークレットキーから [`../deploy/backend/server/ses-smtp-password.py`](../deploy/backend/server/ses-smtp-password.py) で作った SMTP パスワード |
 | `MAIL_FROM_ADDRESS` | SES で DKIM 認証したドメインのアドレス（例: `noreply@<domain>`）。当面は SES サンドボックスなので、`POIFO_ALERT_EMAILS` の宛先も SES で確認済みにしておく |
 
 cron に `* * * * * cd /var/www/poifo/current && php artisan schedule:run >> /dev/null 2>&1` を入れる。
