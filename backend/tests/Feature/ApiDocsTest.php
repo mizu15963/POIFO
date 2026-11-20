@@ -9,7 +9,8 @@ class ApiDocsTest extends TestCase
 {
     protected function tearDown(): void
     {
-        $this->setDocsEnv(null);
+        // phpunit.xml の既定（false）に戻す
+        $this->setDocsEnv('false');
         parent::tearDown();
     }
 
@@ -44,15 +45,8 @@ class ApiDocsTest extends TestCase
         $this->get('/docs/api')->assertNotFound();
     }
 
-    private function setDocsEnv(?string $value): void
+    private function setDocsEnv(string $value): void
     {
-        if ($value === null) {
-            putenv('POIFO_API_DOCS_ENABLED');
-            unset($_ENV['POIFO_API_DOCS_ENABLED'], $_SERVER['POIFO_API_DOCS_ENABLED']);
-
-            return;
-        }
-
         putenv("POIFO_API_DOCS_ENABLED={$value}");
         $_ENV['POIFO_API_DOCS_ENABLED'] = $_SERVER['POIFO_API_DOCS_ENABLED'] = $value;
     }

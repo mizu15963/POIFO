@@ -101,7 +101,7 @@ composer dev                # http://localhost:8000
 
 ### API 仕様書（Swagger 相当。開発期間中だけ）
 
-`POIFO_API_DOCS_ENABLED=true` のとき、api. に API 仕様書が出る（`.env.example` は true、本番の既定は false）。
+`POIFO_API_DOCS_ENABLED=true` のとき、api. に API 仕様書が出る。`.env.example` と本番は false なので、見るときだけ手元の `.env` を true にする。
 ルートやバリデーション・返却値から自動で作るので、手で書く仕様書はない（[Scramble](https://scramble.dedoc.co/)）。
 
 - 画面: `http://api.localhost:8000/docs/api`（Try It でその場で API を呼べる）
