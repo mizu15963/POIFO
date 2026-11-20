@@ -18,7 +18,7 @@ AWS の認証はアクセスキーを使わず OIDC（GitHub が発行する一�
   scripts/terraform.sh       # 両ワークフロー共通の実行スクリプト
   dependabot.yml             # アクションと provider の更新 PR（月1回）
 terraform/
-  bootstrap/  # 手元PCから1回だけ apply（state 用 S3・OIDC・Actions 用ロール）。state は手元
+  bootstrap/  # 手元PCから apply（state 用 S3・OIDC・Actions 用ロール）。state は state バケットの bootstrap/
   base/       # 消すと困るもの: DB（Lightsail マネージドデータベース）、DB バックアップ用 S3、バックアップ送信用 IAM ユーザー、Route 53 ホストゾーン
   app/        # 本体: Lightsail、フロント用 S3＋CloudFront、（ドメイン設定後）証明書・API 用 CloudFront・WAF
 ```
@@ -55,7 +55,7 @@ WAF の従量課金は時間割りなので、段階2の apply の後は早め�
 1. CloudFront の定額プランを解約する（加入中のディストリビューションは削除できない）
 2. 「構築・削除」→ `destroy` / `app`（削除前に Lightsail の手動スナップショットを自動で取る）
 3. 必要ならデータを退避してから、バックアップ用バケットの中身を空にし、IAM ユーザー `poifo-backup-writer` のアクセスキーを削除して、`destroy` / `base`（DB は最終スナップショット `poifo-db-final-<DB作成日時>` を残して消える）
-4. 手元PCで `terraform/bootstrap` を `terraform destroy`
+4. 手元PCで `terraform/bootstrap` を `terraform destroy`。state を置いているバケット自体を消すので、先に state を手元に戻す（`ren backend.tf backend.tf.off` → `terraform init -migrate-state` → destroy）
 5. Terraform 管理外のもの（サーバの削除前スナップショット、DB の最終スナップショット）を Lightsail コンソールで削除
 
 ## 0. 事前準備（リポジトリ管理者の作業）
@@ -99,19 +99,47 @@ GitHub のリポジトリIDを調べる。2026-07-15 以降に作ったリポジ
 gh api repos/<OWNER>/<REPO> --jq '{id, owner_id: .owner.id, created_at}'
 ```
 
+bootstrap の state も、bootstrap が作る state バケット（`bootstrap/terraform.tfstate`）に置く。手元PCが壊れても困らず、ほかの人に引き継げる。
+ただしバケットはまだ無いので、**初回だけ**は state を手元に置いて apply し、そのあとバケットへ移す。
+
 ```powershell
 cd terraform/bootstrap
 copy terraform.tfvars.example terraform.tfvars   # github_repo / github_owner_id / github_repo_id を埋める
+
+# 1) 初回だけ: backend.tf を外して、手元の state で apply
+ren backend.tf backend.tf.off
 terraform init
 terraform plan
 terraform apply
+$bucket = terraform output -raw tf_state_bucket
+
+# 2) backend.tf を戻して、state をバケットへ移す（「Do you want to copy existing state…?」に yes）
+ren backend.tf.off backend.tf
+terraform init -migrate-state -backend-config="bucket=$bucket" -backend-config="region=ap-northeast-1"
+
+# 3) 移ったことを確認してから、手元の state を消す
+terraform plan            # No changes になれば OK
+del terraform.tfstate, terraform.tfstate.backup
 ```
 
 作られるもの: state 用バケット `poifo-tfstate-<アカウントID>`、OIDC プロバイダ、ロール `poifo-gha-plan`・`poifo-gha-apply`・`poifo-gha-deploy`。
 費用はほぼ0円（S3 の数KB）。
 
 - OIDC プロバイダはアカウントに1つだけ。同じアカウントに既にあれば `create_github_oidc_provider = false`
-- `terraform.tfvars` と bootstrap の state（`terraform.tfstate`）は .gitignore 済み。state は手元PCで保管する（無くすと bootstrap を Terraform で消せなくなる）
+- **すでに手元の state で apply 済みの場合**は、上の 2) と 3) だけやる（`$bucket = terraform output -raw tf_state_bucket` は backend.tf を戻す前に）
+- `terraform.tfvars` は .gitignore 済み。中身（リポジトリ名と ID）は秘密ではないので、引き継ぎのときは上の `gh api` で調べ直せる
+- Actions の apply ロールは `bootstrap/` 配下を書き換えられない（読み取りは plan ロールもできる。state にアクセスキーなどの秘密は入っていない）
+
+### 2回目以降・別のPCから（再 apply・引き継ぎ）
+
+管理者のプロファイルで、バケット名を渡して init するだけ。state はバケットにあるので、どのPCからでも同じ結果になる。
+
+```powershell
+cd terraform/bootstrap
+copy terraform.tfvars.example terraform.tfvars   # 初めてのPCなら埋める
+terraform init -backend-config="bucket=poifo-tfstate-<アカウントID>" -backend-config="region=ap-northeast-1"
+terraform apply
+```
 
 ## 3. GitHub に登録
 
