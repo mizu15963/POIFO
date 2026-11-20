@@ -305,8 +305,25 @@ Terraform の外でやること:
 1. **bootstrap を手元PCで再 apply**（apply ロールに SES の権限を足したため。段階2の apply より前に）
 2. SES コンソール（東京）→ ID → ID の作成 → E メールアドレス で、宛先（yamada さん・クライアント）を登録し、届いたメールのリンクを押してもらう。
    当面はサンドボックスのままなので、**確認済みのアドレスにしか送れない**（1日200通まで）。宛先のアドレスは個人情報なので Terraform（公開される Actions ログ）では扱わない
-3. IAM コンソール → ユーザー → `poifo-ses-sender` → アクセスキーを作成（「AWS の外部で実行されるアプリケーション」）し、サーバの `.env` に入れる（項目は backend/README.md）
-4. Lightsail は 25 番ポートが塞がっているので、送信は SES の API（HTTPS）にする。SMTP（587 番）を使う場合、SMTP のパスワードはアクセスキーとは別の値（シークレットキーから計算する）なので、SES コンソールの「SMTP 認証情報」で作ったものを使う
+3. 送信は **SMTP の 587 番**（`email-smtp.ap-northeast-1.amazonaws.com`、STARTTLS）。Lightsail は 25 番ポートが塞がっているので 25 番は使わない。
+   SMTP のパスワードは IAM のシークレットキーそのものではなく、そこから計算した値なので、次の手順で作る
+   1. IAM コンソール → ユーザー → `poifo-ses-sender` → セキュリティ認証情報 → アクセスキーを作成（「AWS の外部で実行されるアプリケーション」）
+   2. サーバで、リポジトリの `deploy/backend/server/ses-smtp-password.py` を実行し、シークレットキーを貼り付ける（履歴に残らないよう標準入力から読む）
+      ```sh
+      python3 ses-smtp-password.py
+      ```
+   3. サーバの `/var/www/poifo/shared/.env` に入れる（ほかの項目は backend/README.md の「本番の設定」）
+      ```dotenv
+      MAIL_MAILER=smtp
+      MAIL_HOST=email-smtp.ap-northeast-1.amazonaws.com
+      MAIL_PORT=587
+      MAIL_USERNAME=<アクセスキー ID>
+      MAIL_PASSWORD=<上で出力された値>
+      MAIL_FROM_ADDRESS=no-reply@example.jp
+      ```
+   4. シークレットキーはどこにも残さない（必要になったらアクセスキーを作り直す）
+   - SMTP の認証に失敗する場合は、SES コンソール → SMTP 設定 →「SMTP 認証情報の作成」で作った値を使ってもよい。
+     ただしその場合は SES が別の IAM ユーザー（`ses-smtp-user.…`、送信元の制限なし）を作るので、`poifo-ses-sender` のアクセスキーは消す
 
 費用: 1,000通あたり $0.10。通知だけなら月数円以下。
 
