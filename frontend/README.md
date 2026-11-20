@@ -11,13 +11,15 @@
 
 ## ページ
 
+画面の仕様: [../docs/specs/top-page-spec.md](../docs/specs/top-page-spec.md)、[../docs/specs/admin-and-member-spec.md](../docs/specs/admin-and-member-spec.md)（仮）
+
 | URL | 内容 |
 |---|---|
 | `/` | トップ（ファーストビュー・おすすめ案件・担当サポート・イベント・特徴・初めての方へ） |
-| `/campaigns/` | 案件一覧 |
+| `/campaigns/` | 案件一覧（カテゴリのタブで絞り込み。`?category=` で共有できる） |
 | `/campaigns/detail/?id=` | 案件詳細・「この案件に進む」 |
 | `/events/` | イベント一覧 |
-| `/events/detail/?id=` | イベント詳細・オープンチャットへの参加ボタン |
+| `/events/detail/?id=` | イベント詳細・参加／取り消し（要ログイン）。オープンチャットの URL は参加した会員にだけ出る |
 | `/login/` | LINEでログイン（会員登録も兼ねる） |
 | `/auth/complete/` | ログイン後の戻り先（`?new=1` で登録完了＋公式LINEの案内） |
 | `/auth/error/?reason=` | ログイン失敗 |
@@ -25,6 +27,7 @@
 | `/mypage/points/` | ポイント履歴（要ログイン） |
 | `/mypage/bank/` | 振込先口座の登録・変更（要ログイン） |
 | `/mypage/withdraw/` | ポイント交換（銀行振込）の申請と申請履歴（要ログイン） |
+| `/mypage/leave/` | 退会（要ログイン。手続き中の換金申請があるとできない） |
 | `/support/` `/guide/` | 担当サポート・はじめての方へ |
 | `/terms/` `/privacy/` `/company/` `/contact/` | 準備中ページ |
 
@@ -59,6 +62,5 @@ main に `frontend/` の変更が入ると、ワークフロー「デプロイ�
 
 ## まだやっていないこと
 
-- 退会の画面
 - favicon・OGP 画像（ロゴの正式な書き出し待ち）。いまはヘッダー用にロゴ原本の余白を切り詰めた画像を使っている
 - 利用規約・プライバシーポリシーなどの本文

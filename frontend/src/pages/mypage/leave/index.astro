@@ -1,0 +1,56 @@
+---
+// 退会（docs/specs/admin-and-member-spec.md 6章）
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="退会" requireLogin noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">退会</h1>
+      <div class="card">
+        <p><strong>退会する前に必ずご確認ください。</strong></p>
+        <ul>
+          <li>残っているポイント（利用可能・判定中とも）はすべて失効し、元に戻せません。</li>
+          <li>手続き中のポイント交換（申請中・振込待ち）があるときは退会できません。振込が終わってから手続きしてください。</li>
+          <li>退会後は、同じ LINE アカウントでもう一度登録することはできません。</li>
+          <li>参加予定のイベントがあっても参加特典は受け取れません。</li>
+        </ul>
+      </div>
+      <form id="leave-form" class="card">
+        <div id="errors" class="form-errors" role="alert" hidden></div>
+        <label><input type="checkbox" id="agree" required> 上記を確認し、同意します</label>
+        <p><button type="submit" class="btn btn--block" id="submit" disabled>退会する</button></p>
+      </form>
+      <p><a href="/mypage/">マイページに戻る</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { ApiError, leave } from '../../../lib/api';
+
+  const form = document.getElementById('leave-form') as HTMLFormElement;
+  const agree = document.getElementById('agree') as HTMLInputElement;
+  const submit = document.getElementById('submit') as HTMLButtonElement;
+  const errors = document.getElementById('errors')!;
+
+  agree.addEventListener('change', () => (submit.disabled = !agree.checked));
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (!agree.checked || !confirm('本当に退会しますか？この操作は取り消せません。')) return;
+    submit.disabled = true;
+    errors.hidden = true;
+    try {
+      await leave();
+      location.href = '/';
+    } catch (err) {
+      errors.textContent =
+        err instanceof ApiError && (err.errors.leave?.[0] || err.errors.agree?.[0])
+          ? (err.errors.leave?.[0] ?? err.errors.agree?.[0])!
+          : '退会できませんでした。時間をおいて再度お試しください。';
+      errors.hidden = false;
+      submit.disabled = false;
+    }
+  });
+</script>

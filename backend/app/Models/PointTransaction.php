@@ -20,6 +20,24 @@ class PointTransaction extends Model
 
     public const TYPE_EXPIRY = 'expiry';
 
+    public const TYPE_EVENT_REWARD = 'event_reward';
+
+    /** 会員・管理画面に出す種類の名前 */
+    public const TYPE_LABELS = [
+        self::TYPE_CONVERSION => '案件の成果',
+        self::TYPE_ADJUSTMENT => '運営による調整',
+        self::TYPE_WITHDRAWAL => '換金',
+        self::TYPE_WITHDRAWAL_REFUND => '換金の取り消し（返却）',
+        self::TYPE_EXPIRY => '失効',
+        self::TYPE_EVENT_REWARD => 'イベント参加',
+    ];
+
+    public const STATUS_LABELS = [
+        'pending' => '判定中',
+        'confirmed' => '確定',
+        'rejected' => '否認',
+    ];
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_CONFIRMED = 'confirmed';
