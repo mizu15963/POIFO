@@ -54,8 +54,49 @@ export type PointHistoryItem = {
 
 type Paged<T> = { data: T[]; meta: { current_page: number; last_page: number } };
 
+export type BankAccount = {
+  bank_code: string;
+  bank_name: string | null;
+  branch_code: string;
+  branch_name: string | null;
+  account_type: 'ordinary' | 'checking' | 'savings';
+  account_type_label: string;
+  account_number_masked: string;
+  account_holder_kana: string;
+  holder_name: string | null;
+};
+
+export type BankAccountInput = {
+  bank_code: string;
+  bank_name: string;
+  branch_code: string;
+  branch_name: string;
+  account_type: string;
+  account_number: string;
+  account_holder_kana: string;
+  holder_name: string;
+};
+
+export type WithdrawalItem = {
+  id: number;
+  points: number;
+  amount_yen: number;
+  status: 'requested' | 'approved' | 'rejected' | 'paid';
+  created_at: string;
+  paid_at: string | null;
+};
+
+export type WithdrawalList = {
+  data: WithdrawalItem[];
+  meta: { available_points: number; min_points: number; yen_per_point: number; has_bank_account: boolean };
+};
+
 export class ApiError extends Error {
-  constructor(public status: number) {
+  constructor(
+    public status: number,
+    /** 入力エラー（422）のときの項目ごとのメッセージ */
+    public errors: Record<string, string[]> = {},
+  ) {
     super(`API error: ${status}`);
   }
 }
@@ -66,7 +107,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     credentials: 'include',
     headers: { Accept: 'application/json', ...(init.headers || {}) },
   });
-  if (!res.ok) throw new ApiError(res.status);
+  if (!res.ok) {
+    const body = res.status === 422 ? await res.json().catch(() => ({})) : {};
+    throw new ApiError(res.status, body.errors ?? {});
+  }
   return res.json() as Promise<T>;
 }
 
@@ -107,6 +151,20 @@ export const fetchEvents = async (params: { upcoming?: boolean; limit?: number }
 export const fetchEvent = async (id: string) => (await request<{ data: EventDetail }>(`/v1/events/${encodeURIComponent(id)}`)).data;
 
 export const fetchPointHistory = (page = 1) => request<Paged<PointHistoryItem>>(`/v1/me/points?page=${page}`);
+
+export const fetchBankAccount = async () => (await request<{ data: BankAccount | null }>('/v1/me/bank-account')).data;
+
+export async function saveBankAccount(input: BankAccountInput): Promise<BankAccount> {
+  const init = await withCsrf({ method: 'PUT', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } });
+  return (await request<{ data: BankAccount }>('/v1/me/bank-account', init)).data;
+}
+
+export const fetchWithdrawals = () => request<WithdrawalList>('/v1/me/withdrawals');
+
+export async function requestWithdrawal(points: number): Promise<void> {
+  const init = await withCsrf({ method: 'POST', body: JSON.stringify({ points }), headers: { 'Content-Type': 'application/json' } });
+  await request('/v1/me/withdrawals', init);
+}
 
 export async function logout(): Promise<void> {
   await request('/v1/logout', await withCsrf({ method: 'POST' }));

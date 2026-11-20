@@ -14,6 +14,18 @@ API（`api.<domain>`）・ASP のポストバック受信（`api.<domain>/postba
 - **口座番号は暗号化キャスト（`encrypted`）で保存する。** 同一口座の検知は `BankAccount::fingerprint()` で行い、平文で比較・ログ出力しない。
 - **管理画面のルートは `routes/admin.php` だけに置く。** `viewer.host:admin` が付いたグループ以外に管理機能を足さない。管理者の操作（ポイント調整・換金承認・会員停止など）は `admin_audit_logs` に記録する。
 
+## スケールアウト前提（API サーバを複数台に増やせること）
+
+負荷が増えたら API サーバ（Lightsail）を手動で増やし、前段のロードバランサで振り分ける。どのサーバにリクエストが届いても同じ結果になるよう、**状態をサーバの中に持たない。**
+
+- セッション・キャッシュ・キュー・ロック・試行回数制限は共有の DB に置く（`SESSION_DRIVER` / `CACHE_STORE` / `QUEUE_CONNECTION` は `database`。将来 Redis にしてもよいが、`file` / `array` にはしない）。
+- メンテナンスモードは `APP_MAINTENANCE_DRIVER=cache`（全台に効く）。
+- ファイルをサーバのディスクに保存しない。アップロード等が必要になったら S3 に置く（`Storage::disk('s3')`）。CSV のような出力はその場でストリームで返す。
+- スケジュール実行は全台の cron から呼ばれるので、**`Schedule` に登録するタスクには必ず `->onOneServer()` を付ける**（テストで確認している）。重い処理はキューに回す。
+- 同時に更新される可能性がある処理（ポイント・換金・成果通知）は、DB のトランザクションと `lockForUpdate()` で守る。PHP のメモリやローカルファイルでの排他に頼らない。
+- `APP_KEY` は全台で同じ値にする（口座番号などの暗号化とセッションに使う。台ごとに違うと復号できない）。
+- マイグレーションは同時に1台だけが実行する（`migrate --force --isolated`）。
+
 ## ホストでの振り分け
 
 本番の Lightsail には CloudFront 経由でしか届かず、`Host` はオリジン名になる。閲覧者がアクセスしたホスト名は
@@ -23,18 +35,34 @@ CloudFront Function が付ける `x-poifo-viewer-host` ヘッダーで判断す�
 |---|---|---|---|
 | `routes/api.php` | api. | `api`（Sanctum の Cookie 認証） | 会員向け JSON API（`/v1/...`） |
 | `routes/auth.php` | api. | `web` | LINE ログイン、案件への遷移（`/go/{id}`） |
-| `routes/postback.php` | api. | なし（WAF で IP 制限） | ASP の成果通知（`/postback/...`） |
+| `routes/postback.php` | api. | `VerifyPostbackSource`（パスの秘密の文字列・送信元 IP） | ASP の成果通知（`/postback/{token}/...`） |
 | `routes/admin.php` | admin. | `web`（Cookie は admin. 専用） | 管理画面 |
 
 新しいルートを足すときは、どのホストから届くべきかを決めてから該当ファイルに書く。`bootstrap/app.php` の振り分けを崩さない。
 
+API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` のときだけ api. にルートを作る（本番は false）。
+仕様書はコードから自動生成されるので、API を変えたらバリデーション（`$request->validate()`）と返却値の形を明示し、
+`/docs/api` で意図どおりに載っているか確かめる。コントローラのメソッドの PHPDoc 1行目が各 API の説明になる。
+
 ## ポストバック（成果通知）の決まりごと
 
 - 応答は **HTTP 200 と本文 `0` / `1` / `2` だけ**（空白・改行・HTML なし）。処理中の例外だけ 500（ASP がリトライする）。
+- 受信口は「WAF の IP 制限 → URL の秘密の文字列 → 送信元 IP（`VerifyPostbackSource`）→ hash → 案件情報との突き合わせ」の順に多重に確かめる。どれかを外さない。
+- 送信元 IP は `App\Support\ClientIp` で取る（CloudFront Function が付ける `x-poifo-viewer-ip`）。`$request->ip()`（X-Forwarded-For の先頭）は偽装できるので、制限や回数制限のキーに使わない。
 - `hash`（HMAC-SHA256）を必ず検証する。比較は `hash_equals`。
+- 会員・案件・成果地点が見つからない、またはポイント数が案件APIの値と合わない通知は保留（`conversions.hold_reason`）にし、ポイントを確定しない。保留は自動で解除しない。
+- 拒否・保留・処理失敗・大量受信は `AdminAlerter` で管理者にメールする（キューで送る。本文に秘密の値や口座番号を入れない）。
 - `cv_id` で重複を弾く。状態は「未承認 → 承認 / 否認」だけ。確定後の変更は受け付けず、前回と同じ応答を返す。
 - 受信したリクエストは結果にかかわらず `postback_logs` に残す。
 - 10秒でタイムアウトされるので、重い処理（通知送信など）は同期で行わずキューに回す。
+
+## 換金と管理画面の決まりごと
+
+- 換金の状態は `WithdrawalService` だけで変える（申請 → 承認 → 振込済み、却下はポイントを戻す）。コントローラや画面から `status` を直接書き換えない。
+- 振込に使う口座情報は申請時点の `bank_snapshot`（暗号化）。CSV や一覧は現在の `bank_accounts` ではなくスナップショットから出す。
+- 個人情報（氏名・口座番号）を出す画面・CSV は管理画面（admin.）だけ。出力したら操作ログに残す。会員向け API に口座番号を返さない。
+- 会員の更新系 API（特にお金・口座に関わるもの）には会員単位の回数制限（`AppServiceProvider::configureRateLimiting`）を付ける。
+- 管理者のログインは「パスワード → 二要素認証」が両方通ってから `Auth::guard('admin')->login()` する。途中の状態でログイン扱いにしない。
 
 ## コーディング
 
