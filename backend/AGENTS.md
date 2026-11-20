@@ -40,6 +40,10 @@ CloudFront Function が付ける `x-poifo-viewer-host` ヘッダーで判断す�
 
 新しいルートを足すときは、どのホストから届くべきかを決めてから該当ファイルに書く。`bootstrap/app.php` の振り分けを崩さない。
 
+API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` のときだけ api. にルートを作る（本番は false）。
+仕様書はコードから自動生成されるので、API を変えたらバリデーション（`$request->validate()`）と返却値の形を明示し、
+`/docs/api` で意図どおりに載っているか確かめる。コントローラのメソッドの PHPDoc 1行目が各 API の説明になる。
+
 ## ポストバック（成果通知）の決まりごと
 
 - 応答は **HTTP 200 と本文 `0` / `1` / `2` だけ**（空白・改行・HTML なし）。処理中の例外だけ 500（ASP がリトライする）。

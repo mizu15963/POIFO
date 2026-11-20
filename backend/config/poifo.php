@@ -12,6 +12,9 @@ return [
         'allow_host_header_fallback' => (bool) env('POIFO_ALLOW_HOST_FALLBACK', false),
     ],
 
+    // API 仕様書（Swagger 相当、/docs/api）を出すか。開発期間中だけ true にする。本番は必ず false
+    'api_docs_enabled' => (bool) env('POIFO_API_DOCS_ENABLED', false),
+
     // フロント（Astro 静的サイト）の URL。ログイン後のリダイレクト先などに使う
     'front_url' => rtrim(env('POIFO_FRONT_URL', 'http://localhost:4321'), '/'),
 

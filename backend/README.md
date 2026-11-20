@@ -99,6 +99,19 @@ composer dev                # http://localhost:8000
 - フロント（`http://localhost:4321`）からの Cookie 認証のため、`SESSION_DOMAIN=localhost`・`SANCTUM_STATEFUL_DOMAINS=localhost:4321`
 - LINE ログインを試すには LINE Developers でチャネルを作り、コールバックURLに `http://api.localhost:8000/auth/line/callback` を登録する
 
+### API 仕様書（Swagger 相当。開発期間中だけ）
+
+`POIFO_API_DOCS_ENABLED=true` のとき、api. に API 仕様書が出る（`.env.example` は true、本番の既定は false）。
+ルートやバリデーション・返却値から自動で作るので、手で書く仕様書はない（[Scramble](https://scramble.dedoc.co/)）。
+
+- 画面: `http://api.localhost:8000/docs/api`（Try It でその場で API を呼べる）
+- OpenAPI の JSON: `http://api.localhost:8000/docs/api.json`（Postman などに読み込める）
+- 載せるのは会員 API（`/v1`）・LINE ログイン・案件遷移（`/go`）・成果通知（`/postback`）。管理画面（admin.）は載せない
+- false のときはルート自体を作らないので 404 になる。サーバでは `.env` を変えたあと `php artisan route:cache` し直す（デプロイでも実行される）
+- ログインが必要な API は、同じブラウザで LINE ログインを済ませておけば Cookie で通る。POST/PUT は先に `/sanctum/csrf-cookie` を開き、
+  発行された `XSRF-TOKEN` Cookie の値（URL デコードしたもの）を Try It の `X-XSRF-TOKEN` 欄に入れる
+- サーバ上で使うときは `SANCTUM_STATEFUL_DOMAINS` に `api.<domain>` も足す（足さないとログインが必要な API が 401 になる）。開発期間が終わったら両方戻す
+
 ## 本番の設定（サーバの `.env`）
 
 `.env.example` との違いだけ。秘密の値はサーバの `.env` にだけ置く。
@@ -110,6 +123,7 @@ composer dev                # http://localhost:8000
 | `POIFO_API_HOST` / `POIFO_ADMIN_HOST` | `api.<domain>` / `admin.<domain>` |
 | `POIFO_ALLOW_HOST_FALLBACK` | `false` |
 | `POIFO_FRONT_URL` | `https://<domain>` |
+| `POIFO_API_DOCS_ENABLED` | `false`（開発期間中に API 仕様書を見るときだけ `true`） |
 | `DB_HOST` など | Lightsail マネージドDB のエンドポイント・ユーザー・パスワード |
 | `MYSQL_ATTR_SSL_CA` | AWS の CA バンドル（`global-bundle.pem`）のパス |
 | `SESSION_DOMAIN` | `.<domain>`（フロントと api. で Cookie を共有） |
