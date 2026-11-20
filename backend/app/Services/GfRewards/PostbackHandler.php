@@ -148,6 +148,44 @@ class PostbackHandler
     }
 
     /**
+     * 管理者が確認した保留を解除する。ASP 側の状態（承認なら確定、未承認なら判定中、否認なら否認）を台帳に反映する。
+     * 会員が見つからない・退会済みの成果は付与先がないので解除できない。
+     *
+     * @return array{conversion: Conversion, transaction_status: string} 解除後の成果と台帳の状態
+     *
+     * @throws \RuntimeException 解除できないとき
+     */
+    public function releaseHold(int $conversionId): array
+    {
+        return DB::transaction(function () use ($conversionId) {
+            $conversion = Conversion::query()->lockForUpdate()->find($conversionId);
+
+            if (! $conversion) {
+                throw new \RuntimeException('成果が見つかりません。');
+            }
+            if (! $conversion->isHeld()) {
+                throw new \RuntimeException('この成果は保留になっていません。');
+            }
+
+            $user = $conversion->user_id ? User::query()->lockForUpdate()->find($conversion->user_id) : null;
+            if (! $user) {
+                throw new \RuntimeException('付与先の会員が見つからないため解除できません。');
+            }
+            if ($user->status === User::STATUS_WITHDRAWN) {
+                throw new \RuntimeException('退会済みの会員の成果は解除できません。');
+            }
+
+            $conversion->forceFill(['hold_reason' => null])->save();
+            $this->syncPointTransaction($conversion, $user);
+
+            return [
+                'conversion' => $conversion,
+                'transaction_status' => $conversion->pointTransaction()->value('status'),
+            ];
+        });
+    }
+
+    /**
      * 通知の案件・成果地点・ポイント数を、案件APIで取得済みの情報と突き合わせる。
      *
      * @return array{0: ?string, 1: ?int} [保留の理由（問題なければ null）, 案件情報のポイント数（定額案件のみ）]

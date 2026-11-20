@@ -67,6 +67,15 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 5. 案件APIで取得済みの情報との突き合わせ。会員・案件・成果地点が見つからない、定額案件でポイント数が違う、定率案件で上限を超える場合は
    **保留**（`conversions.hold_reason`）にして、承認の通知が来ても判定中のままにする（ASP には `0`）。一度保留にしたら自動では解除しない
 
+保留の確認と解除（管理画面ができるまではサーバでコマンドを使う）:
+
+```sh
+php artisan postback:held                                    # 保留中の成果の一覧
+php artisan postback:release <ID> --by=<管理者のメールアドレス>  # 内容を確認して解除（承認済みなら通知ポイントで確定）。監査ログに残る
+```
+
+会員が見つからない・退会済みの成果は付与先がないので解除できない。
+
 拒否・保留を含めて全件を `postback_logs` に残す。次の場合は `POIFO_ALERT_EMAILS` にメールで知らせる（同じ種類は10分に1通。送信はキュー）:
 パスの文字列や送信元 IP の不一致、署名の不一致、保留、処理の失敗、1分間に `POIFO_POSTBACK_BURST_PER_MINUTE` 件を超える受信。
 
@@ -179,9 +188,12 @@ main に `backend/` の変更が入ると、ワークフロー「デプロイ（
 `/var/www/poifo/current`（最新リリースへのリンク）、`.env` と `storage` は `/var/www/poifo/shared/`。
 詳しくは [../docs/deploy/README.md](../docs/deploy/README.md)。
 
+初回の本番公開時は、GF Rewards の管理画面に成果通知の URL `https://api.<domain>/postback/<POIFO_POSTBACK_PATH_TOKEN>/gf-rewards` を登録する
+（`POIFO_POSTBACK_PATH_TOKEN` を変えたときも登録し直す）。
+
 ## まだやっていないこと
 
-- 管理画面の残りの機能（会員検索・停止、ポイント手動調整、ポストバックログ、保留した成果の確認・解除、案件の表示設定、イベント登録）
+- 管理画面の残りの機能（会員検索・停止、ポイント手動調整、ポストバックログ、保留した成果の確認・解除の画面（いまはコマンド）、案件の表示設定、イベント登録）
 - 退会 API
 - サーバの初期設定手順（nginx・PHP のインストールなど。デプロイに必要な分は docs/deploy/README.md にある）
 - GF Rewards に確認すること: 判定中（未承認）の通知への応答を `0` にしているが、それでよいか
