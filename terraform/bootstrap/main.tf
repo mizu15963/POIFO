@@ -5,7 +5,7 @@
 #       plan  : 読み取り専用。main ブランチと PR（同じリポジトリのブランチ）から使える
 #       apply : Environment（承認者あり）を通ったジョブだけが使える
 #       deploy: アプリのデプロイ用。Environment「poifo-deploy」のジョブだけが使える（S3 への配置と CloudFront のキャッシュ削除のみ）
-# この state は手元PC（.gitignore 済み）。state を置くバケットを作るスタックの state はそこに置けないため。
+# この state も state バケットの bootstrap/terraform.tfstate に置く（backend.tf。初回だけ手元で apply してから移す）。
 terraform {
   required_version = ">= 1.10.0"
   required_providers {
@@ -188,6 +188,13 @@ data "aws_iam_policy_document" "apply" {
     sid       = "StateObjects"
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"] # *.tflock を含む
     resources = ["${aws_s3_bucket.tfstate.arn}/*"]
+  }
+  # bootstrap の state（このロール自身の定義を含む）は Actions から書き換えさせない
+  statement {
+    sid       = "NeverWriteBootstrapState"
+    effect    = "Deny"
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.tfstate.arn}/bootstrap/*"]
   }
 
   # 使うサービス（Lightsail・CloudFront・WAF・ACM・Route 53・SES）。東京と us-east-1 以外では何もできない
