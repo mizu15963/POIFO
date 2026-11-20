@@ -1,0 +1,102 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ポイント交換（銀行振込）" requireLogin noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">ポイント交換（銀行振込）</h1>
+      <p id="saved" class="notice" hidden>振込先口座を登録しました。</p>
+      <div class="card">
+        <div class="lead">交換できるポイント</div>
+        <div class="big" id="available">—</div>
+      </div>
+      <div id="no-bank" hidden>
+        <p>換金するには、先に振込先口座を登録してください。</p>
+        <a class="btn btn--block" href="/mypage/bank/">振込先口座を登録する</a>
+      </div>
+      <form id="withdraw-form" class="form" hidden novalidate>
+        <div id="form-errors" class="form-errors" role="alert" hidden></div>
+        <label>交換するポイント<input name="points" type="number" inputmode="numeric" min="1" step="1" required /></label>
+        <p class="lead" id="rule"></p>
+        <button class="btn btn--block" type="submit">申請する</button>
+        <p><a class="more-link" href="/mypage/bank/">振込先口座を確認・変更する</a></p>
+      </form>
+      <ul class="lead guide-list">
+        <li>振込は月に1回まとめて行います。申請から振込まで、審査のため日数がかかります。</li>
+        <li>申請したポイントは、申請の時点で残高から差し引かれます。審査の結果お振込みできない場合は、ポイントをお戻しします。</li>
+      </ul>
+      <h2>申請履歴</h2>
+      <ul id="history" class="history"><li class="loading">読み込み中…</li></ul>
+      <p><a class="more-link" href="/mypage/">マイページへ戻る</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { ApiError, fetchWithdrawals, requestWithdrawal, type WithdrawalItem } from '../../../lib/api';
+  import { escapeHtml, formatDate, formatPoints } from '../../../lib/format';
+  import { whenMe } from '../../../lib/session';
+
+  // 会員には「却下」を「お振込みできませんでした（ポイント返却）」として見せる
+  const statusLabel: Record<WithdrawalItem['status'], string> = {
+    requested: '審査中',
+    approved: '振込準備中',
+    paid: '振込済み',
+    rejected: 'お振込みできませんでした（ポイント返却済み）',
+  };
+
+  const form = document.getElementById('withdraw-form') as HTMLFormElement;
+  const errors = document.getElementById('form-errors')!;
+  const history = document.getElementById('history')!;
+
+  if (new URLSearchParams(location.search).get('bank') === 'saved') document.getElementById('saved')!.hidden = false;
+
+  async function load() {
+    try {
+      const res = await fetchWithdrawals();
+      const { available_points, min_points, yen_per_point, has_bank_account } = res.meta;
+      document.getElementById('available')!.textContent = formatPoints(available_points);
+      document.getElementById('no-bank')!.hidden = has_bank_account;
+      form.hidden = !has_bank_account;
+      document.getElementById('rule')!.textContent = `${min_points.toLocaleString('ja-JP')}ポイントから申請できます（1ポイント＝${yen_per_point}円）。`;
+      (form.elements.namedItem('points') as HTMLInputElement).min = String(min_points);
+      history.innerHTML = res.data.length
+        ? res.data
+            .map(
+              (w) => `<li class="history__item history__item--${w.status === 'rejected' ? 'rejected' : 'confirmed'}">
+                <span class="history__date">${escapeHtml(formatDate(w.created_at))} 申請</span>
+                <span class="history__desc">${escapeHtml(formatPoints(w.points))} → ${w.amount_yen.toLocaleString('ja-JP')}円</span>
+                <span class="history__points"></span>
+                <span class="badge">${escapeHtml(statusLabel[w.status])}</span>
+              </li>`,
+            )
+            .join('')
+        : '<li class="empty">まだ申請はありません。</li>';
+    } catch {
+      history.innerHTML = '<li class="empty">読み込めませんでした。</li>';
+    }
+  }
+
+  whenMe().then((me) => me && load());
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errors.hidden = true;
+    const points = Number((form.elements.namedItem('points') as HTMLInputElement).value);
+    if (!confirm(`${formatPoints(points)}を換金申請します。よろしいですか？`)) return;
+    const button = form.querySelector('button')!;
+    button.disabled = true;
+    try {
+      await requestWithdrawal(points);
+      form.reset();
+      await load();
+    } catch (err) {
+      const messages = err instanceof ApiError && err.status === 422 ? Object.values(err.errors).flat() : ['申請できませんでした。時間をおいてもう一度お試しください。'];
+      errors.innerHTML = `<ul>${messages.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
+      errors.hidden = false;
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>

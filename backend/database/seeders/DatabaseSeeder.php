@@ -2,8 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\BankAccount;
 use App\Models\Campaign;
 use App\Models\Event;
+use App\Models\PointTransaction;
+use App\Models\User;
+use App\Services\Withdrawals\WithdrawalService;
 use Illuminate\Database\Seeder;
 
 /**
@@ -41,5 +45,16 @@ class DatabaseSeeder extends Seeder
             'openchat_url' => 'https://line.me/ti/g2/sample',
             'status' => Event::STATUS_PUBLISHED,
         ]);
+
+        // 換金申請の確認画面用のサンプル会員（口座登録・ポイントあり・申請済み）
+        foreach ([['山田 太郎', 'ﾔﾏﾀﾞ ﾀﾛｳ', '1234567'], ['佐藤 花子', 'ｻﾄｳ ﾊﾅｺ', '7654321']] as $i => [$name, $kana, $number]) {
+            $user = User::firstOrCreate(['line_user_id' => 'Usample'.$i], ['display_name' => 'サンプル会員'.($i + 1), 'status' => User::STATUS_ACTIVE]);
+
+            if ($user->wasRecentlyCreated) {
+                PointTransaction::create(['user_id' => $user->id, 'type' => 'adjustment', 'status' => 'confirmed', 'points' => 5000, 'description' => 'サンプル付与']);
+                BankAccount::register($user, ['bank_code' => '0001', 'bank_name' => 'みずほ銀行', 'branch_code' => '001', 'branch_name' => '東京営業部', 'account_type' => 'ordinary', 'account_number' => $number, 'account_holder_kana' => $kana, 'holder_name' => $name]);
+                app(WithdrawalService::class)->request($user, 3000);
+            }
+        }
     }
 }

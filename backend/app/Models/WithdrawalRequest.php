@@ -30,6 +30,31 @@ class WithdrawalRequest extends Model
         ];
     }
 
+    /** 月末の確認・CSV 出力で、いま何をすべき申請かを判断するための表示名 */
+    public const STATUS_LABELS = [
+        self::STATUS_REQUESTED => '申請中',
+        self::STATUS_APPROVED => '承認済み（振込待ち）',
+        self::STATUS_REJECTED => '却下',
+        self::STATUS_PAID => '振込済み',
+    ];
+
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status] ?? $this->status;
+    }
+
+    /** 振込額（換金額 − 手数料） */
+    public function transferYen(): int
+    {
+        return max(0, $this->amount_yen - $this->fee_yen);
+    }
+
+    /** 審査期間が終わっていて承認できるか */
+    public function isReviewable(): bool
+    {
+        return $this->reviewable_after === null || $this->reviewable_after->isPast();
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
