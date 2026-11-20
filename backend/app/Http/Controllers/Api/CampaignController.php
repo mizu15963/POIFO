@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignClick;
+use App\Support\ClientIp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,7 +62,7 @@ class CampaignController extends Controller
         CampaignClick::create([
             'user_id' => $user->id,
             'campaign_id' => $campaign->id,
-            'ip_address' => $request->ip(),
+            'ip_address' => ClientIp::forLog($request),
             'user_agent' => substr((string) $request->userAgent(), 0, 1000),
         ]);
 

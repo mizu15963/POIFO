@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Services\Admin\AuditLogger;
 use App\Services\Admin\TwoFactor;
+use App\Support\ClientIp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,7 +39,7 @@ class AuthController extends Controller
     public function login(Request $request): RedirectResponse
     {
         $data = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
-        $throttleKey = 'admin-login:'.Str::lower($data['email']).'|'.$request->ip();
+        $throttleKey = 'admin-login:'.Str::lower($data['email']).'|'.ClientIp::forLog($request);
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             return back()->withErrors(['email' => 'ログインの試行回数が多すぎます。'.RateLimiter::availableIn($throttleKey).'秒後にお試しください。'])->onlyInput('email');

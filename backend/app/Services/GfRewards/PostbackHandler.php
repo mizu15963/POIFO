@@ -2,6 +2,7 @@
 
 namespace App\Services\GfRewards;
 
+use App\Models\Campaign;
 use App\Models\Conversion;
 use App\Models\PointTransaction;
 use App\Models\User;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\DB;
  * - hash（HMAC-SHA256）を検証する
  * - cv_id で重複・状態遷移を管理する（未承認 → 承認／否認。確定後の変更は受け付けない）
  * - 未承認は「判定中」、承認で「確定」、否認で「否認」としてポイント台帳に反映する
+ * - 会員・案件・成果地点が見つからない、またはポイント数が案件APIで取得済みの値と合わない通知は
+ *   「保留」にしてポイントを確定しない（判定中のまま。管理者が確認して扱いを決める）
  *
  * 応答コード（ASP に返す本文）: 0 = ポイント未付与 / 1 = ポイント付与 / 2 = 未付与（退会ユーザー）
  */
@@ -58,7 +61,7 @@ class PostbackHandler
     /**
      * ハッシュ検証済みのパラメータを処理する。
      *
-     * @return array{result: string, response: int}
+     * @return array{result: string, response: int, hold_reason?: string}
      */
     public function handle(array $params): array
     {
@@ -70,8 +73,12 @@ class PostbackHandler
         }
 
         $user = User::firstWhere('uid', (string) $params['user_id']);
+        $points = max(0, (int) floor((float) ($params['incentive_amount'] ?? 0)));
+        [$holdReason, $expectedPoints] = $user
+            ? $this->checkAgainstCampaign($params, $points)
+            : ['unknown_user', null];
 
-        return DB::transaction(function () use ($params, $cvId, $newStatus, $user) {
+        return DB::transaction(function () use ($params, $cvId, $newStatus, $user, $points, $holdReason, $expectedPoints) {
             $conversion = Conversion::query()
                 ->where('provider', 'gf_rewards')
                 ->where('cv_id', $cvId)
@@ -82,15 +89,21 @@ class PostbackHandler
                 // 承認・否認が確定した成果への再通知（リトライなど）。何も変えずに前回と同じ結果を返す
                 return [
                     'result' => 'duplicate',
-                    'response' => $this->responseFor($conversion->status, $conversion->user),
+                    'response' => $this->responseFor($conversion->status, $conversion->user, $conversion->isHeld()),
                 ];
             }
 
             if ($conversion && $conversion->status === $newStatus) {
-                return ['result' => 'duplicate', 'response' => $this->responseFor($newStatus, $conversion->user)];
+                return ['result' => 'duplicate', 'response' => $this->responseFor($newStatus, $conversion->user, $conversion->isHeld())];
             }
 
             $conversion ??= new Conversion(['provider' => 'gf_rewards', 'cv_id' => $cvId]);
+
+            // 一度保留にした成果は、あとの通知で条件が合っても自動では解除しない（管理者が確認する）。
+            // 否認はポイントが動かないので保留にしない
+            $holdReason = $conversion->hold_reason
+                ?? ($newStatus === Conversion::STATUS_REJECTED ? null : $holdReason);
+
             $conversion->fill([
                 'user_id' => $user?->id,
                 'external_user_id' => (string) $params['user_id'],
@@ -99,7 +112,10 @@ class PostbackHandler
                 'cv_action_id' => $params['cv_action_id'] ?? null,
                 'cv_action_name' => $params['cv_action_name'] ?? null,
                 'status' => $newStatus,
-                'points' => max(0, (int) floor((float) ($params['incentive_amount'] ?? 0))),
+                'hold_reason' => $holdReason,
+                'held_at' => $holdReason ? ($conversion->held_at ?? now()) : null,
+                'points' => $points,
+                'expected_points' => $expectedPoints ?? $conversion->expected_points,
                 'net_cost' => isset($params['net_cost']) ? (float) $params['net_cost'] : null,
                 'cv_at' => self::parseDate($params['cv_datetime'] ?? null),
                 'authenticated_at' => self::parseDate($params['cv_authenticated_datetime'] ?? null),
@@ -107,7 +123,7 @@ class PostbackHandler
             ])->save();
 
             if (! $user) {
-                return ['result' => 'unknown_user', 'response' => self::RESPONSE_NOT_GRANTED];
+                return ['result' => 'unknown_user', 'response' => self::RESPONSE_NOT_GRANTED, 'hold_reason' => 'unknown_user'];
             }
 
             if ($user->status === User::STATUS_WITHDRAWN) {
@@ -115,6 +131,10 @@ class PostbackHandler
             }
 
             $this->syncPointTransaction($conversion, $user);
+
+            if ($conversion->isHeld()) {
+                return ['result' => 'held', 'response' => self::RESPONSE_NOT_GRANTED, 'hold_reason' => $conversion->hold_reason];
+            }
 
             return [
                 'result' => match ($newStatus) {
@@ -127,10 +147,49 @@ class PostbackHandler
         });
     }
 
+    /**
+     * 通知の案件・成果地点・ポイント数を、案件APIで取得済みの情報と突き合わせる。
+     *
+     * @return array{0: ?string, 1: ?int} [保留の理由（問題なければ null）, 案件情報のポイント数（定額案件のみ）]
+     */
+    private function checkAgainstCampaign(array $params, int $points): array
+    {
+        $campaign = Campaign::query()
+            ->where('provider', 'gf_rewards')
+            ->where('external_id', (string) ($params['campaign_id'] ?? ''))
+            ->first();
+
+        if (! $campaign) {
+            return ['unknown_campaign', null];
+        }
+
+        $action = collect($campaign->conversion_actions ?? [])
+            ->first(fn ($a) => is_array($a) && (string) ($a['conversion_action_id'] ?? '') === (string) ($params['cv_action_id'] ?? ''));
+
+        if (! $action) {
+            return ['unknown_action', null];
+        }
+
+        $amount = $action['incentive']['amount'] ?? null;
+
+        // 定額案件: 成果地点のポイント数と一致すること
+        if ($amount !== null) {
+            $expected = (int) floor((float) $amount);
+
+            return [$expected === $points ? null : 'amount_mismatch', $expected];
+        }
+
+        // 定率案件: 金額が決まっていないので、上限があれば超えていないことだけ確かめる
+        $limit = $action['incentive_cost_limit'] ?? null;
+
+        return [$limit !== null && $points > (int) $limit ? 'amount_over_limit' : null, null];
+    }
+
     private function syncPointTransaction(Conversion $conversion, User $user): void
     {
         $status = match ($conversion->status) {
-            Conversion::STATUS_APPROVED => PointTransaction::STATUS_CONFIRMED,
+            // 保留中は承認の通知が来ても確定しない（判定中のまま）
+            Conversion::STATUS_APPROVED => $conversion->isHeld() ? PointTransaction::STATUS_PENDING : PointTransaction::STATUS_CONFIRMED,
             Conversion::STATUS_PENDING => PointTransaction::STATUS_PENDING,
             Conversion::STATUS_REJECTED => PointTransaction::STATUS_REJECTED,
         };
@@ -147,10 +206,10 @@ class PostbackHandler
     }
 
     /**
-     * ASP に返す本文。承認でポイントを確定したときだけ 1（付与）。判定中・否認は 0、退会者は 2。
+     * ASP に返す本文。承認でポイントを確定したときだけ 1（付与）。判定中・否認・保留は 0、退会者は 2。
      * 停止中の会員の成果も台帳には記録する（調査のあとで運営が扱いを決める）。
      */
-    private function responseFor(string $status, ?User $user): int
+    private function responseFor(string $status, ?User $user, bool $held = false): int
     {
         if (! $user) {
             return self::RESPONSE_NOT_GRANTED;
@@ -160,7 +219,7 @@ class PostbackHandler
             return self::RESPONSE_WITHDRAWN;
         }
 
-        return $status === Conversion::STATUS_APPROVED ? self::RESPONSE_GRANTED : self::RESPONSE_NOT_GRANTED;
+        return $status === Conversion::STATUS_APPROVED && ! $held ? self::RESPONSE_GRANTED : self::RESPONSE_NOT_GRANTED;
     }
 
     private static function parseDate(mixed $value): ?CarbonImmutable

@@ -35,7 +35,7 @@ CloudFront Function が付ける `x-poifo-viewer-host` ヘッダーで判断す�
 |---|---|---|---|
 | `routes/api.php` | api. | `api`（Sanctum の Cookie 認証） | 会員向け JSON API（`/v1/...`） |
 | `routes/auth.php` | api. | `web` | LINE ログイン、案件への遷移（`/go/{id}`） |
-| `routes/postback.php` | api. | なし（WAF で IP 制限） | ASP の成果通知（`/postback/...`） |
+| `routes/postback.php` | api. | `VerifyPostbackSource`（パスの秘密の文字列・送信元 IP） | ASP の成果通知（`/postback/{token}/...`） |
 | `routes/admin.php` | admin. | `web`（Cookie は admin. 専用） | 管理画面 |
 
 新しいルートを足すときは、どのホストから届くべきかを決めてから該当ファイルに書く。`bootstrap/app.php` の振り分けを崩さない。
@@ -47,7 +47,11 @@ API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` の�
 ## ポストバック（成果通知）の決まりごと
 
 - 応答は **HTTP 200 と本文 `0` / `1` / `2` だけ**（空白・改行・HTML なし）。処理中の例外だけ 500（ASP がリトライする）。
+- 受信口は「WAF の IP 制限 → URL の秘密の文字列 → 送信元 IP（`VerifyPostbackSource`）→ hash → 案件情報との突き合わせ」の順に多重に確かめる。どれかを外さない。
+- 送信元 IP は `App\Support\ClientIp` で取る（CloudFront Function が付ける `x-poifo-viewer-ip`）。`$request->ip()`（X-Forwarded-For の先頭）は偽装できるので、制限や回数制限のキーに使わない。
 - `hash`（HMAC-SHA256）を必ず検証する。比較は `hash_equals`。
+- 会員・案件・成果地点が見つからない、またはポイント数が案件APIの値と合わない通知は保留（`conversions.hold_reason`）にし、ポイントを確定しない。保留は自動で解除しない。
+- 拒否・保留・処理失敗・大量受信は `AdminAlerter` で管理者にメールする（キューで送る。本文に秘密の値や口座番号を入れない）。
 - `cv_id` で重複を弾く。状態は「未承認 → 承認 / 否認」だけ。確定後の変更は受け付けず、前回と同じ応答を返す。
 - 受信したリクエストは結果にかかわらず `postback_logs` に残す。
 - 10秒でタイムアウトされるので、重い処理（通知送信など）は同期で行わずキューに回す。
@@ -57,6 +61,7 @@ API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` の�
 - 換金の状態は `WithdrawalService` だけで変える（申請 → 承認 → 振込済み、却下はポイントを戻す）。コントローラや画面から `status` を直接書き換えない。
 - 振込に使う口座情報は申請時点の `bank_snapshot`（暗号化）。CSV や一覧は現在の `bank_accounts` ではなくスナップショットから出す。
 - 個人情報（氏名・口座番号）を出す画面・CSV は管理画面（admin.）だけ。出力したら操作ログに残す。会員向け API に口座番号を返さない。
+- 会員の更新系 API（特にお金・口座に関わるもの）には会員単位の回数制限（`AppServiceProvider::configureRateLimiting`）を付ける。
 - 管理者のログインは「パスワード → 二要素認証」が両方通ってから `Auth::guard('admin')->login()` する。途中の状態でログイン扱いにしない。
 
 ## コーディング
