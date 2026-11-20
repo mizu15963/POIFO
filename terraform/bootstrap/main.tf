@@ -190,7 +190,7 @@ data "aws_iam_policy_document" "apply" {
     resources = ["${aws_s3_bucket.tfstate.arn}/*"]
   }
 
-  # 使うサービス（Lightsail・CloudFront・WAF・ACM・Route 53）。東京と us-east-1 以外では何もできない
+  # 使うサービス（Lightsail・CloudFront・WAF・ACM・Route 53・SES）。東京と us-east-1 以外では何もできない
   statement {
     sid       = "ProjectServices"
     actions   = var.apply_regional_actions

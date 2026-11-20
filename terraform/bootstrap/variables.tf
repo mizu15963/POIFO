@@ -53,6 +53,7 @@ variable "apply_regional_actions" {
     "wafv2:*",
     "acm:*",
     "route53:*",
+    "ses:*",
     "sts:GetCallerIdentity",
   ]
 }

@@ -39,7 +39,7 @@ AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `p
 |---|---|---|
 | `poifo-gha-plan` | plan・whoami（main ブランチ、同じリポジトリからの PR） | ReadOnlyAccess |
 | `poifo-gha-deploy` | アプリのデプロイ（Environment `poifo-deploy` のジョブだけ） | フロントの S3 同期・CloudFront のキャッシュ削除・バックエンドのリリース置き場への配置だけ（[../deploy/README.md](../deploy/README.md)） |
-| `poifo-gha-apply` | apply・destroy（`poifo-apply` の承認後だけ） | Lightsail・CloudFront・WAF・ACM・Route 53（東京と us-east-1 のみ）、`poifo-*` の S3 バケット、`poifo-*` の IAM ユーザー |
+| `poifo-gha-apply` | apply・destroy（`poifo-apply` の承認後だけ） | Lightsail・CloudFront・WAF・ACM・Route 53・SES（東京と us-east-1 のみ）、`poifo-*` の S3 バケット、`poifo-*` の IAM ユーザー |
 
 ## 費用と片付け（先に読む）
 
@@ -226,7 +226,7 @@ DB のバックアップ・OS 更新は Lightsail が行う。S3 への mysqldum
    反映確認: `Resolve-DnsName example.jp -Type NS`
 3. Secrets に `ORIGIN_VERIFY_SECRET`、必要なら `ADMIN_ALLOWED_CIDRS`・`POSTBACK_ALLOWED_CIDRS` を登録
 4. Variables の `ENABLE_CUSTOM_DOMAIN` を `true` → **構築・削除** → `apply` / `app`
-   - 証明書（`example.jp`・`api.`・`admin.`）、API 用 CloudFront、WAF 2つ、DNS レコード（`origin.` は固定IP）ができる
+   - 証明書（`example.jp`・`api.`・`admin.`）、API 用 CloudFront、WAF 2つ、DNS レコード（`origin.` は固定IP）、通知メール用の SES（下の「通知メール」）ができる
    - 証明書の DNS 検証で数分かかる。ネームサーバが委任されていないと、ここで待ち続けて失敗する
 5. サーバで `origin.example.jp` の Let's Encrypt 証明書を取り、nginx に秘密ヘッダーの確認と api / admin の振り分けを入れる（下の nginx の例）
 6. **CloudFront の定額プラン（Free）に加入する**（Terraform では扱えないのでコンソールで）
@@ -292,6 +292,23 @@ server {
 ```
 
 細かい設定はサーバ構築の手順書で詰める。管理画面は IP 制限（WAF と nginx の二重）と二要素認証をかける。
+
+### 通知メール（Amazon SES）
+
+アプリが管理者に送る通知メール（成果通知の異常など）は SES（東京リージョン）から送る。段階2の apply で次ができる。
+
+- ドメイン `example.jp` の SES ID と、DKIM の CNAME 3つ（Route 53）。数分〜1時間ほどで SES コンソールの ID が「検証済み」になる
+- 送信だけできる IAM ユーザー `poifo-ses-sender`（送信元は `@example.jp` のアドレスだけ）
+
+Terraform の外でやること:
+
+1. **bootstrap を手元PCで再 apply**（apply ロールに SES の権限を足したため。段階2の apply より前に）
+2. SES コンソール（東京）→ ID → ID の作成 → E メールアドレス で、宛先（yamada さん・クライアント）を登録し、届いたメールのリンクを押してもらう。
+   当面はサンドボックスのままなので、**確認済みのアドレスにしか送れない**（1日200通まで）。宛先のアドレスは個人情報なので Terraform（公開される Actions ログ）では扱わない
+3. IAM コンソール → ユーザー → `poifo-ses-sender` → アクセスキーを作成（「AWS の外部で実行されるアプリケーション」）し、サーバの `.env` に入れる（項目は backend/README.md）
+4. Lightsail は 25 番ポートが塞がっているので、送信は SES の API（HTTPS）にする。SMTP（587 番）を使う場合、SMTP のパスワードはアクセスキーとは別の値（シークレットキーから計算する）なので、SES コンソールの「SMTP 認証情報」で作ったものを使う
+
+費用: 1,000通あたり $0.10。通知だけなら月数円以下。
 
 ## 7. 日々の更新
 
