@@ -34,19 +34,29 @@ GitHub Actions                         S3 poifo-deploy-…                サー
                                                                        migrate・キャッシュ作成
                                                                        current を切り替え・PHP-FPM reload
                                                                        キューのワーカー再起動
- 結果を待つ（最大10分） ◀─────────── status/<デプロイID>.json ◀────── 結果を書く
+ 結果を待つ（最大15分） ◀─────────── status/<デプロイID>/<サーバ名>.json ◀── 結果を書く
 ```
 
 - migrate やキャッシュ作成が失敗したら切り替えない（今のリリースのまま動き続ける）
 - 切り替えた後に失敗したら、前のリリースに自動で戻す
 - サーバには直近5リリースを残す（`/var/www/poifo/releases/`）
 - 同じコミットでも、Actions から再実行すれば取り込み直す（デプロイID = 実行ID-試行回数）
-- **戻す**: 「デプロイ（バックエンド）」を手動実行し、`ref` に戻したいコミットかタグを入れる。DB の migrate は戻らないので、テーブルを変えた変更を戻すときは注意する
+- **戻す**: 「デプロイ（バックエンド）」を手動実行し、`ref` に戻したいコミットかタグを入れる（main の履歴にあるものだけ）。DB の migrate は戻らないので、テーブルを変えた変更を戻すときは注意する
+
+### API サーバが複数台のとき
+
+- どの台も同じ `latest.json` を見て取り込む。Actions は Variables の `API_SERVER_COUNT` 台分の結果がそろうまで待ち、1台でも失敗ならジョブを失敗にする
+- **migrate は1台だけ**: deploy agent の設定で `MIGRATE=true` は**必ず1台**（primary）だけ、ほかの台は `MIGRATE=false`（2台とも true にすると、ロックを取れなかった側がすぐ完了扱いにするため、migrate の完了前にほかの台が切り替わることがある）。
+  primary は migrate の結果を `status/<デプロイID>/_migrated.json` に書き、ほかの台はそれが成功になってから切り替える（新しいコードが古いテーブルで動かないように）。
+  primary の migrate が失敗したら、どの台も切り替えない。念のため migrate は `--isolated`（共有キャッシュのロック）でも二重実行を防ぐ
+- **`.env` は全台同じ**（`APP_KEY` を含む。口座番号の暗号化に使うので、違うと復号できない）。`APP_MAINTENANCE_DRIVER=cache` にする（メンテナンスモードを全台で共有するため）
+- cron（`schedule:run`）とキューのワーカーは全台で動かしてよい（スケジュールは1台だけが実行する作り）
+- 台数の増やし方は [../infra/README.md](../infra/README.md) の「API サーバを増やす」
 
 | AWS の権限 | 何ができるか |
 |---|---|
 | ロール `poifo-gha-deploy`（Actions、Environment `poifo-deploy` のジョブだけ） | フロント用バケットへの同期、CloudFront のキャッシュ削除、`releases/` への書き込み、`status/` の読み取り。インフラは変えられない |
-| IAM ユーザー `poifo-deploy-agent`（サーバ） | `releases/` の読み取りと `status/` への書き込みだけ |
+| IAM ユーザー `poifo-deploy-agent`（サーバ） | `releases/` の読み取りと `status/` の読み書きだけ（全台で同じユーザーを使う） |
 
 費用: S3 の保管（リリースは30日で自動削除）と、サーバが1分ごとに確認するリクエスト（月4万回程度で数円）。
 
@@ -101,7 +111,7 @@ sudo chown root:www-data /var/www/poifo/shared/.env && sudo chmod 640 /var/www/p
 sudo install -m 755 poifo-deploy-agent.sh /usr/local/bin/poifo-deploy-agent
 sudo install -d -m 700 /etc/poifo
 sudo install -m 600 deploy-agent.env.example /etc/poifo/deploy-agent.env
-sudo nano /etc/poifo/deploy-agent.env     # poifo-deploy-agent のアクセスキーと DEPLOY_BUCKET を入れる
+sudo nano /etc/poifo/deploy-agent.env     # poifo-deploy-agent のアクセスキー、DEPLOY_BUCKET、SERVER_NAME（台ごとに別）、MIGRATE（1台だけ true）
 sudo install -m 644 poifo-deploy-agent.service poifo-deploy-agent.timer poifo-queue.service /etc/systemd/system/
 sudo install -m 644 poifo.cron /etc/cron.d/poifo
 sudo systemctl daemon-reload
@@ -122,8 +132,9 @@ sudo systemctl enable --now poifo-deploy-agent.timer
 | 症状 | 原因と対処 |
 |---|---|
 | 「AWS_DEPLOY_ROLE_ARN が未登録のためスキップ」 | 初回の準備1。Secret を登録してから再実行 |
+| 「15分待っても N 台中 M 台しか取り込みませんでした」 | 取り込んでいない台の deploy agent を確認（`systemctl status poifo-deploy-agent.timer`）。台を増やした直後なら、その台の準備が済んでいるか。`API_SERVER_COUNT` が実際の台数と合っているか |
+| 「primary の migrate 待ち」で失敗 | `MIGRATE=true` の台で migrate が失敗したか、`MIGRATE=true` の台がない。primary の `journalctl -u poifo-deploy-agent` を確認 |
 | `Not authorized to perform sts:AssumeRoleWithWebIdentity` | Environment `poifo-deploy` がない、または bootstrap の `deploy_environment` と名前が違う |
-| 「10分待ってもサーバが取り込みませんでした」 | サーバで `systemctl status poifo-deploy-agent.timer`、`journalctl -u poifo-deploy-agent -n 100`。アクセスキーと `DEPLOY_BUCKET` を確認 |
 | 「migrate で失敗しました」 | 今のリリースのまま動いている。`journalctl -u poifo-deploy-agent` でエラーを見て、直したコミットを main に入れる |
 | フロントで「CloudFront が見つかりません」 | app スタックが未構築、または Variables の `PROJECT` が違う |
 | フロントが古いまま | キャッシュ削除の完了まで待つ。ブラウザのキャッシュも確認 |

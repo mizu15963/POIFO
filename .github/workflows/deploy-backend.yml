@@ -1,8 +1,9 @@
 # バックエンドのデプロイ（プル型）: backend/ をテスト・ビルドしてリリースを S3 に置き、サーバが取り込むのを待つ
 #   1. テスト → composer install --no-dev → tar.gz にまとめる
 #   2. S3（<PROJECT>-deploy-<アカウントID>）の releases/ に tar.gz と latest.json を置く
-#   3. サーバの deploy agent（deploy/backend/server/）が1分以内に取り込み、migrate・切り替えを行い、status/ に結果を書く
-#   4. このジョブは結果を待ち、失敗ならジョブも失敗にする
+#   3. 各サーバの deploy agent（deploy/backend/server/）が1分以内に取り込み、切り替えて status/<デプロイID>/<サーバ名>.json に結果を書く
+#      （migrate は MIGRATE=true の1台だけ。ほかの台はその完了を待ってから切り替える）
+#   4. このジョブは API_SERVER_COUNT 台分の結果を待ち、1台でも失敗ならジョブも失敗にする
 # main に backend/ の変更が入ると自動で動く。手動実行では過去のコミットを指定して戻すこともできる（DB の migrate は戻らない）
 name: デプロイ（バックエンド）
 
@@ -131,31 +132,38 @@ jobs:
           aws s3 cp --only-show-errors "$RUNNER_TEMP/latest.json" "s3://${bucket}/releases/latest.json"
           echo "bucket=${bucket}" >> "$GITHUB_OUTPUT"
 
-      - name: サーバの取り込みを待つ（最大10分）
+      - name: サーバの取り込みを待つ（最大15分）
         if: steps.ready.outputs.ok == 'true'
         env:
           BUCKET: ${{ steps.upload.outputs.bucket }}
           SHA: ${{ steps.build.outputs.sha }}
           DEPLOY_ID: ${{ steps.build.outputs.deploy_id }}
+          # API サーバの台数（Terraform の api_instance_count と同じ Variables）。全台の結果がそろうまで待つ
+          EXPECTED: ${{ vars.API_SERVER_COUNT || '1' }}
         run: |
-          for i in $(seq 1 60); do
-            if aws s3 cp --only-show-errors "s3://${BUCKET}/status/${DEPLOY_ID}.json" status.json 2> /dev/null; then
-              result=$(jq -r .result status.json)
-              message=$(jq -r .message status.json)
-              {
-                echo "## バックエンドのデプロイ: ${result}"
-                echo "- コミット: \`${SHA::7}\`（デプロイID ${DEPLOY_ID}）"
-                echo "- ${message}"
-              } >> "$GITHUB_STEP_SUMMARY"
-              if [ "$result" = "success" ]; then
-                echo "$message"
-                exit 0
-              fi
-              echo "::error::${message}"
-              exit 1
+          mkdir -p status
+          for i in $(seq 1 90); do
+            aws s3 cp --only-show-errors --recursive "s3://${BUCKET}/status/${DEPLOY_ID}/" status/ \
+              --exclude "_migrated.json" > /dev/null 2>&1 || true
+            total=$(find status -name '*.json' | wc -l)
+            failed=$(cat status/*.json 2> /dev/null | jq -s '[.[] | select(.result != "success")] | length')
+            if [ "$failed" -gt 0 ] || [ "$total" -ge "$EXPECTED" ]; then
+              break
             fi
-            echo "[$i] 待機中..."
+            echo "[$i] 待機中...（${total}/${EXPECTED} 台）"
             sleep 10
           done
-          echo "::error::10分待ってもサーバが取り込みませんでした。サーバで systemctl status poifo-deploy-agent.timer を確認してください"
-          exit 1
+          {
+            echo "## バックエンドのデプロイ（${total}/${EXPECTED} 台）"
+            echo "- コミット: \`${SHA::7}\`（デプロイID ${DEPLOY_ID}）"
+            cat status/*.json 2> /dev/null | jq -r -s '.[] | "- \(.server): \(.result) — \(.message)"'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${failed:-0}" -gt 0 ]; then
+            cat status/*.json | jq -r -s '.[] | select(.result != "success") | "::error::\(.server): \(.message)"'
+            exit 1
+          fi
+          if [ "$total" -lt "$EXPECTED" ]; then
+            echo "::error::15分待っても ${EXPECTED} 台中 ${total} 台しか取り込みませんでした。サーバで systemctl status poifo-deploy-agent.timer を確認してください"
+            exit 1
+          fi
+          echo "${total} 台すべてで切り替わりました"

@@ -14,3 +14,7 @@ docs/partners/*/text/
 crash.log
 .env
 *.pem
+
+# Python
+__pycache__/
+*.pyc

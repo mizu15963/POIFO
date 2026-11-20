@@ -32,14 +32,14 @@ terraform/
 AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `poifo-apply` で承認されるまで止まる。
 スマホの GitHub アプリからも承認できる。
 
-**誤削除の防止**: plan / apply で、Lightsail インスタンス・固定IP・DB・ホストゾーン・バックアップ用バケットを
+**誤削除の防止**: plan / apply で、1台目の Lightsail インスタンス・固定IP・DB・ホストゾーン・バックアップ用バケットを
 消す（作り直す）変更が含まれると止まる。これらを消せるのは「構築・削除」の `destroy` だけ。
 
 | ロール | 使う場面 | 権限 |
 |---|---|---|
 | `poifo-gha-plan` | plan・whoami（main ブランチ、同じリポジトリからの PR） | ReadOnlyAccess |
 | `poifo-gha-deploy` | アプリのデプロイ（Environment `poifo-deploy` のジョブだけ） | フロントの S3 同期・CloudFront のキャッシュ削除・バックエンドのリリース置き場への配置だけ（[../deploy/README.md](../deploy/README.md)） |
-| `poifo-gha-apply` | apply・destroy（`poifo-apply` の承認後だけ） | Lightsail・CloudFront・WAF・ACM・Route 53（東京と us-east-1 のみ）、`poifo-*` の S3 バケット、`poifo-*` の IAM ユーザー |
+| `poifo-gha-apply` | apply・destroy（`poifo-apply` の承認後だけ） | Lightsail・CloudFront・WAF・ACM・Route 53・SES（東京と us-east-1 のみ）、`poifo-*` の S3 バケット、`poifo-*` の IAM ユーザー |
 
 ## 費用と片付け（先に読む）
 
@@ -226,7 +226,7 @@ DB のバックアップ・OS 更新は Lightsail が行う。S3 への mysqldum
    反映確認: `Resolve-DnsName example.jp -Type NS`
 3. Secrets に `ORIGIN_VERIFY_SECRET`、必要なら `ADMIN_ALLOWED_CIDRS`・`POSTBACK_ALLOWED_CIDRS` を登録
 4. Variables の `ENABLE_CUSTOM_DOMAIN` を `true` → **構築・削除** → `apply` / `app`
-   - 証明書（`example.jp`・`api.`・`admin.`）、API 用 CloudFront、WAF 2つ、DNS レコード（`origin.` は固定IP）ができる
+   - 証明書（`example.jp`・`api.`・`admin.`）、API 用 CloudFront、WAF 2つ、DNS レコード（`origin.` は固定IP）、通知メール用の SES（下の「通知メール」）ができる
    - 証明書の DNS 検証で数分かかる。ネームサーバが委任されていないと、ここで待ち続けて失敗する
 5. サーバで `origin.example.jp` の Let's Encrypt 証明書を取り、nginx に秘密ヘッダーの確認と api / admin の振り分けを入れる（下の nginx の例）
 6. **CloudFront の定額プラン（Free）に加入する**（Terraform では扱えないのでコンソールで）
@@ -239,6 +239,17 @@ DB のバックアップ・OS 更新は Lightsail が行う。S3 への mysqldum
 CloudFront を通らない直接アクセスは nginx が秘密ヘッダーの有無で拒否する。
 CloudFront からオリジンへの Host は `origin.example.jp` になるため、閲覧者がアクセスしたホスト名は
 CloudFront Function が `x-poifo-viewer-host` ヘッダーに入れて渡す。
+閲覧者の IP も同じ Function が `x-poifo-viewer-ip`（ポートなし）に入れて渡す（ポストバックの送信元確認・回数制限用。LB を挟んでも変わらない）。
+どちらも閲覧者が同名のヘッダーを送ってきても上書きされ、秘密ヘッダーのない直接アクセスは nginx が拒否するので、偽装できない。
+
+API 用 WAF のルール（定額プランの上限5個）:
+
+| # | ルール | 内容 |
+|---|---|---|
+| 1 | 送信元 IP 制限 | `admin.` で `ADMIN_ALLOWED_CIDRS` 以外、または `/postback/` 配下で `POSTBACK_ALLOWED_CIDRS` 以外をブロック（OR で1ルール。未設定の側は条件に入らない） |
+| 2 | ログイン関連の回数制限 | `/auth/` 配下は同一 IP から5分に50回まで（`waf_auth_rate_limit`） |
+| 3〜4 | AWS マネージドルール | コアルール・SQLi（`WAF_COUNT_MODE=true` の間は検知のみ） |
+| 5 | 全体のレート制限 | 同一 IP から5分に1,000回まで（`waf_rate_limit`） |
 
 ### nginx の例（オリジン側）
 
@@ -282,13 +293,47 @@ server {
 
 細かい設定はサーバ構築の手順書で詰める。管理画面は IP 制限（WAF と nginx の二重）と二要素認証をかける。
 
+### 通知メール（Amazon SES）
+
+アプリが管理者に送る通知メール（成果通知の異常など）は SES（東京リージョン）から送る。段階2の apply で次ができる。
+
+- ドメイン `example.jp` の SES ID と、DKIM の CNAME 3つ（Route 53）。数分〜1時間ほどで SES コンソールの ID が「検証済み」になる
+- 送信だけできる IAM ユーザー `poifo-ses-sender`（送信元は `@example.jp` のアドレスだけ）
+
+Terraform の外でやること:
+
+1. **bootstrap を手元PCで再 apply**（apply ロールに SES の権限を足したため。段階2の apply より前に）
+2. SES コンソール（東京）→ ID → ID の作成 → E メールアドレス で、宛先（yamada さん・クライアント）を登録し、届いたメールのリンクを押してもらう。
+   当面はサンドボックスのままなので、**確認済みのアドレスにしか送れない**（1日200通まで）。宛先のアドレスは個人情報なので Terraform（公開される Actions ログ）では扱わない
+3. 送信は **SMTP の 587 番**（`email-smtp.ap-northeast-1.amazonaws.com`、STARTTLS）。Lightsail は 25 番ポートが塞がっているので 25 番は使わない。
+   SMTP のパスワードは IAM のシークレットキーそのものではなく、そこから計算した値なので、次の手順で作る
+   1. IAM コンソール → ユーザー → `poifo-ses-sender` → セキュリティ認証情報 → アクセスキーを作成（「AWS の外部で実行されるアプリケーション」）
+   2. サーバで、リポジトリの `deploy/backend/server/ses-smtp-password.py` を実行し、シークレットキーを貼り付ける（履歴に残らないよう標準入力から読む）
+      ```sh
+      python3 ses-smtp-password.py
+      ```
+   3. サーバの `/var/www/poifo/shared/.env` に入れる（ほかの項目は backend/README.md の「本番の設定」）
+      ```dotenv
+      MAIL_MAILER=smtp
+      MAIL_HOST=email-smtp.ap-northeast-1.amazonaws.com
+      MAIL_PORT=587
+      MAIL_USERNAME=<アクセスキー ID>
+      MAIL_PASSWORD=<上で出力された値>
+      MAIL_FROM_ADDRESS=no-reply@example.jp
+      ```
+   4. シークレットキーはどこにも残さない（必要になったらアクセスキーを作り直す）
+   - SMTP の認証に失敗する場合は、SES コンソール → SMTP 設定 →「SMTP 認証情報の作成」で作った値を使ってもよい。
+     ただしその場合は SES が別の IAM ユーザー（`ses-smtp-user.…`、送信元の制限なし）を作るので、`poifo-ses-sender` のアクセスキーは消す
+
+費用: 1,000通あたり $0.10。通知だけなら月数円以下。
+
 ## 7. 日々の更新
 
 1. ブランチで `terraform/` を変更して PR を作る → **更新（Terraform）** が plan を実行し、ジョブサマリーに差分が出る
 2. 差分を確認して main にマージ → 自動で plan → 変更があれば承認待ち → Approve で apply
 3. Variables / Secrets だけを変えたとき（例: `ADMIN_ALLOWED_CIDRS` の変更、`WAF_COUNT_MODE` を `false` に）は、**更新（Terraform）** を手動実行
 
-サーバ・固定IP・DB・ホストゾーン・バックアップ用バケットを消す（作り直す）変更は止まる。
+1台目のサーバ・固定IP・DB・ホストゾーン・バックアップ用バケットを消す（作り直す）変更は止まる（台数を減らして2台目以降が消えるのは止めない）。
 例えば `lightsail_bundle_id`（プラン）や `lightsail_blueprint_id`（OS）、`db_bundle_id` を変えると作り直しになるので止まる。
 
 ### サーバのプランを上げる（1GB → 2GB）
@@ -300,6 +345,42 @@ Lightsail はプラン変更＝別インスタンスへの作り直しになる�
 
 DB のプランを上げるときも同じく作り直しになる（DB のスナップショットから新しいプランで作る）。
 MySQL のマイナー更新は Lightsail のメンテナンス時間（月曜 4:00 JST）に自動で入る。
+
+### API サーバを増やす（ロードバランサー）
+
+負荷が増えたら、手動で台数を増やし、API サーバの直前に Lightsail ロードバランサー（LB）を置く。
+アプリは状態（セッション・キャッシュ・キュー・ロック）を DB に持つので、どの台に振り分けられても同じように動く。
+
+```text
+CloudFront（WAF）→ https://origin.<domain> ─┬ LB なし: 1台目の固定 IP
+                                            └ LB あり: LB（HTTPS を終端）→ http://各サーバ:80
+```
+
+CloudFront のオリジンは最初から `origin.<domain>` なので、LB を入れる・外すときは DNS の向き先が変わるだけ。
+
+| Variables | 既定 | 内容 |
+|---|---|---|
+| `API_SERVER_COUNT` | `1` | API サーバの台数（1〜5）。2台目以降は `poifo-api-2`、`poifo-api-3`…。デプロイもこの台数分の結果を待つ |
+| `ENABLE_LOAD_BALANCER` | `false` | `true` で LB（$18/月、約2,700円）を作る。独自ドメインが必要。2台以上なら必須 |
+
+費用は1台増やすごとに $7/月（約1,050円）、LB が $18/月。
+
+手順（API を止めない順番）:
+1. **先に1台目の nginx を LB 用に変える**: LB からは HTTP（80番）で届くので、80番でもアプリを動かす（秘密ヘッダーの確認はそのまま）。
+   ヘルスチェック（`/up`）は秘密ヘッダーなしで来るので、そのパスだけヘッダーなしでも通す。
+   これを先にしないと、LB に切り替わった時点でヘルスチェックが失敗し（80番が HTTPS へのリダイレクトのままだと 301）、API が止まる
+2. Variables の `ENABLE_LOAD_BALANCER` を `true` にし、**`API_SERVER_COUNT` は `1` のまま** **更新（Terraform）** を手動実行 → 承認。
+   `origin.<domain>` が LB に切り替わる。LB の証明書（`origin.<domain>`）の検証に数分かかり、`certificate_attachment` が失敗したら少し待って再実行する。
+   Lightsail コンソールで LB のターゲットが「正常」になり、API が LB 経由で動くことを確認する
+3. `API_SERVER_COUNT` を `2` にして、もう一度 **更新（Terraform）** → 承認。2台目が作られ、LB にもつながる（準備が済むまではヘルスチェックで外される）
+4. 2台目を1台目と同じように準備する（[../deploy/README.md](../deploy/README.md) の「サーバ（1回だけ）」と、手順1の nginx 設定）。
+   **`.env` は全台同じ内容にする**（`APP_KEY` は口座番号の暗号化に使うので、違うと復号できない）。
+   deploy agent の設定は `SERVER_NAME=api-2`、**`MIGRATE=false`**（`MIGRATE=true` は必ず1台だけ。2台とも true にすると、migrate の完了前にほかの台が切り替わることがある）
+5. 「デプロイ（バックエンド）」を手動実行し、全台が同じリリースになることを確認する
+
+手順3から4の間（2台目の準備が済むまで）は、デプロイのワークフローが `API_SERVER_COUNT` 台分の結果を待って失敗する。準備が済んでから手順5で出し直せばよい。
+
+減らすときは `API_SERVER_COUNT` を下げて更新を実行する（番号の大きいサーバから消える）。1台に戻したら `ENABLE_LOAD_BALANCER` も `false` にできる。
 
 ## 8. 削除
 

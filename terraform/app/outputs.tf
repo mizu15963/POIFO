@@ -1,5 +1,5 @@
-output "instance_name" {
-  value = aws_lightsail_instance.api.name
+output "instance_names" {
+  value = aws_lightsail_instance.api[*].name
 }
 
 # 固定 IP はオリジンの所在を明かすので、公開ログ（ジョブサマリー）には出さない。
@@ -44,4 +44,9 @@ output "deploy_bucket" {
 output "deploy_agent_user" {
   description = "このユーザーのアクセスキーをコンソールで発行し、サーバの /etc/poifo/deploy-agent.env に置く"
   value       = aws_iam_user.deploy_agent.name
+}
+
+output "ses_sender_user" {
+  description = "通知メール送信用の IAM ユーザー（アクセスキーはコンソールで発行し、サーバの .env に入れる）"
+  value       = local.custom_domain ? aws_iam_user.ses_sender[0].name : null
 }

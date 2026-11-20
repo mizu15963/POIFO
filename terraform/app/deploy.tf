@@ -1,7 +1,7 @@
 # バックエンドのデプロイ（プル型）
 #   1. GitHub Actions がテスト・ビルドしたリリース（tar.gz）と latest.json をこのバケットの releases/ に置く
 #   2. サーバ（Lightsail）の deploy agent が1分ごとに latest.json を見て、新しければ取り込んで切り替える
-#   3. 結果を status/<デプロイID>.json に書く → Actions がそれを待って成否を表示する
+#   3. 各サーバが結果を status/<デプロイID>/<サーバ名>.json に書く → Actions が台数分を待って成否を表示する
 # サーバに外から入る経路（SSH を Actions に開ける等）を作らずに済む
 resource "aws_s3_bucket" "deploy" {
   bucket        = "${var.project}-deploy-${local.account_id}"
@@ -79,7 +79,7 @@ resource "aws_iam_user" "deploy_agent" {
 }
 
 data "aws_iam_policy_document" "deploy_agent" {
-  # 一覧の権限がないと、まだ無いファイルが 404 ではなく 403 になって区別できないため（releases/ だけ）
+  # 一覧の権限がないと、まだ無いファイルが 404 ではなく 403 になって区別できないため（releases/ と status/ だけ）
   statement {
     sid       = "ListReleases"
     actions   = ["s3:ListBucket"]
@@ -87,7 +87,7 @@ data "aws_iam_policy_document" "deploy_agent" {
     condition {
       test     = "StringLike"
       variable = "s3:prefix"
-      values   = ["releases/*"]
+      values   = ["releases/*", "status/*"]
     }
   }
   statement {
@@ -95,9 +95,10 @@ data "aws_iam_policy_document" "deploy_agent" {
     actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.deploy.arn}/releases/*"]
   }
+  # status/ は書き込みと、ほかの台が primary の migrate 完了（_migrated.json）を読むため
   statement {
     sid       = "WriteStatus"
-    actions   = ["s3:PutObject"]
+    actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${aws_s3_bucket.deploy.arn}/status/*"]
   }
 }

@@ -43,6 +43,8 @@ env:
   TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
   TF_VAR_enable_custom_domain: ${{ vars.ENABLE_CUSTOM_DOMAIN || 'false' }}
   TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+  TF_VAR_api_instance_count: ${{ vars.API_SERVER_COUNT || '1' }}
+  TF_VAR_enable_load_balancer: ${{ vars.ENABLE_LOAD_BALANCER || 'false' }}
   TF_VAR_waf_managed_rules_count_mode: ${{ vars.WAF_COUNT_MODE || 'true' }}
   TF_VAR_ssh_allowed_cidrs: ${{ secrets.SSH_ALLOWED_CIDRS || '[]' }}
   TF_VAR_admin_allowed_cidrs: ${{ secrets.ADMIN_ALLOWED_CIDRS || '[]' }}

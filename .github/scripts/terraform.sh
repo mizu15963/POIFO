@@ -6,7 +6,8 @@
 #   terraform.sh apply        <stack>  [--guard]   構築・変更（apply ロール）
 #   terraform.sh destroy      <stack>              削除（apply ロール）
 #
-# --guard: plan / apply で、サーバ（Lightsail）・固定IP・DB・ホストゾーン・DBバックアップ用バケットを
+# --guard: plan / apply で、1台目のサーバ（Lightsail）・固定IP・DB・ホストゾーン・DBバックアップ用バケットを
+#          （2台目以降のサーバは台数を減らすと消えるのが正しいので止めない）
 #          消す・作り直す変更を止める（plan-destroy / destroy では無視）。
 #          これらを消すのは destroy を明示したときだけにする。
 #
@@ -89,8 +90,8 @@ if [[ ${code} -eq 2 && "${guard}" == "--guard" && ("${cmd}" == "plan" || "${cmd}
     .resource_changes[]?
     | select(.change.actions | index("delete"))
     | select(
-        (.type | IN("aws_lightsail_instance", "aws_lightsail_static_ip", "aws_lightsail_database", "aws_route53_zone"))
-        or (.address == "aws_s3_bucket.backup")
+        (.type | IN("aws_lightsail_static_ip", "aws_lightsail_database", "aws_route53_zone"))
+        or (.address | IN("aws_lightsail_instance.api[0]", "aws_lightsail_instance.api", "aws_s3_bucket.backup"))
       )
     | .address')
   if [[ -n "${blocked}" ]]; then
