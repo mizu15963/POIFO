@@ -35,6 +35,11 @@
         <env name="POIFO_FRONT_URL" value="https://poifo.test"/>
         <env name="POIFO_API_DOCS_ENABLED" value="false"/>
         <env name="GF_REWARDS_API_KEY" value="test"/>
+        <env name="POIFO_POSTBACK_PATH_TOKEN" value="test-path-token"/>
+        <env name="POIFO_POSTBACK_ALLOWED_IPS" value="192.0.2.10,198.51.100.0/24"/>
+        <env name="POIFO_CLIENT_IP_HEADER" value="x-poifo-viewer-ip"/>
+        <env name="POIFO_CLIENT_IP_FALLBACK" value="false"/>
+        <env name="POIFO_ALERT_EMAILS" value="alerts@poifo.test"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

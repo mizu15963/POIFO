@@ -30,7 +30,7 @@ class ApiDocsTest extends TestCase
         $paths = array_keys($this->asApiHost()->getJson('/docs/api.json')->assertOk()->json('paths'));
         $this->assertContains('/v1/campaigns', $paths);
         $this->assertContains('/v1/me/withdrawals', $paths);
-        $this->assertContains('/postback/gf-rewards', $paths);
+        $this->assertContains('/postback/{token}/gf-rewards', $paths);
         // 管理画面のルートは載せない
         $this->assertNotContains('/withdrawals/export', $paths);
         $this->assertNotContains('/login', $paths);

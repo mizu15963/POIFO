@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\Admin;
 use App\Models\AdminAuditLog;
+use App\Support\ClientIp;
 use Illuminate\Http\Request;
 
 /**
@@ -21,7 +22,7 @@ class AuditLogger
             'target_type' => $targetType,
             'target_id' => $targetId,
             'payload' => $payload ?: null,
-            'ip_address' => $this->request->ip(),
+            'ip_address' => ClientIp::forLog($this->request),
         ]);
     }
 }

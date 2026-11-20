@@ -97,4 +97,28 @@ class MemberWithdrawalApiTest extends TestCase
         $this->asApiHost()->getJson('/v1/me/withdrawals')->assertUnauthorized();
         $this->asApiHost()->putJson('/v1/me/bank-account', $this->bank)->assertUnauthorized();
     }
+
+    public function test_bank_account_updates_are_limited_per_member(): void
+    {
+        $user = User::factory()->create();
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->actingAs($user)->asApiHost()->putJson('/v1/me/bank-account', $this->bank)->assertOk();
+        }
+        $this->actingAs($user)->asApiHost()->putJson('/v1/me/bank-account', $this->bank)->assertTooManyRequests();
+
+        // 別の会員は影響を受けない
+        $this->actingAs(User::factory()->create())->asApiHost()
+            ->putJson('/v1/me/bank-account', array_merge($this->bank, ['account_number' => '7654321']))->assertOk();
+    }
+
+    public function test_withdrawal_requests_are_limited_per_member(): void
+    {
+        $user = User::factory()->create();
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->actingAs($user)->asApiHost()->postJson('/v1/me/withdrawals', ['points' => 2000])->assertStatus(422);
+        }
+        $this->actingAs($user)->asApiHost()->postJson('/v1/me/withdrawals', ['points' => 2000])->assertTooManyRequests();
+    }
 }
