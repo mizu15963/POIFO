@@ -12,13 +12,13 @@ locals {
   waf_ip_restrictions = local.custom_domain ? concat(
     local.waf_admin_ip_enabled ? [{
       field    = "host"
-      match    = local.admin_host
+      match    = lower(local.admin_host)
       position = "EXACTLY"
       ip_set   = aws_wafv2_ip_set.admin[0].arn
     }] : [],
     local.waf_postback_ip_enabled ? [{
       field    = "path"
-      match    = var.postback_path_prefix
+      match    = lower(var.postback_path_prefix)
       position = "STARTS_WITH"
       ip_set   = aws_wafv2_ip_set.postback[0].arn
     }] : [],
@@ -89,9 +89,13 @@ resource "aws_wafv2_web_acl" "api" {
                           content {}
                         }
                       }
-                      text_transformation {
-                        priority = 0
-                        type     = statement.value.field == "host" ? "LOWERCASE" : "NONE"
+                      # パスは URL デコードしてから比べる（%70ostback のような書き方でのすり抜けを防ぐ）
+                      dynamic "text_transformation" {
+                        for_each = statement.value.field == "host" ? ["LOWERCASE"] : ["URL_DECODE", "LOWERCASE"]
+                        content {
+                          priority = text_transformation.key
+                          type     = text_transformation.value
+                        }
                       }
                     }
                   }
@@ -128,9 +132,13 @@ resource "aws_wafv2_web_acl" "api" {
                     content {}
                   }
                 }
-                text_transformation {
-                  priority = 0
-                  type     = and_statement.value.field == "host" ? "LOWERCASE" : "NONE"
+                # パスは URL デコードしてから比べる（%70ostback のような書き方でのすり抜けを防ぐ）
+                dynamic "text_transformation" {
+                  for_each = and_statement.value.field == "host" ? ["LOWERCASE"] : ["URL_DECODE", "LOWERCASE"]
+                  content {
+                    priority = text_transformation.key
+                    type     = text_transformation.value
+                  }
                 }
               }
             }
@@ -168,13 +176,17 @@ resource "aws_wafv2_web_acl" "api" {
         evaluation_window_sec = 300
         scope_down_statement {
           byte_match_statement {
-            search_string         = var.auth_path_prefix
+            search_string         = lower(var.auth_path_prefix)
             positional_constraint = "STARTS_WITH"
             field_to_match {
               uri_path {}
             }
             text_transformation {
               priority = 0
+              type     = "URL_DECODE"
+            }
+            text_transformation {
+              priority = 1
               type     = "LOWERCASE"
             }
           }
