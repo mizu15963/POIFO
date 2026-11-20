@@ -239,6 +239,17 @@ DB のバックアップ・OS 更新は Lightsail が行う。S3 への mysqldum
 CloudFront を通らない直接アクセスは nginx が秘密ヘッダーの有無で拒否する。
 CloudFront からオリジンへの Host は `origin.example.jp` になるため、閲覧者がアクセスしたホスト名は
 CloudFront Function が `x-poifo-viewer-host` ヘッダーに入れて渡す。
+閲覧者の IP も同じ Function が `x-poifo-viewer-ip`（ポートなし）に入れて渡す（ポストバックの送信元確認・回数制限用。LB を挟んでも変わらない）。
+どちらも閲覧者が同名のヘッダーを送ってきても上書きされ、秘密ヘッダーのない直接アクセスは nginx が拒否するので、偽装できない。
+
+API 用 WAF のルール（定額プランの上限5個）:
+
+| # | ルール | 内容 |
+|---|---|---|
+| 1 | 送信元 IP 制限 | `admin.` で `ADMIN_ALLOWED_CIDRS` 以外、または `/postback/` 配下で `POSTBACK_ALLOWED_CIDRS` 以外をブロック（OR で1ルール。未設定の側は条件に入らない） |
+| 2 | ログイン関連の回数制限 | `/auth/` 配下は同一 IP から5分に50回まで（`waf_auth_rate_limit`） |
+| 3〜4 | AWS マネージドルール | コアルール・SQLi（`WAF_COUNT_MODE=true` の間は検知のみ） |
+| 5 | 全体のレート制限 | 同一 IP から5分に1,000回まで（`waf_rate_limit`） |
 
 ### nginx の例（オリジン側）
 

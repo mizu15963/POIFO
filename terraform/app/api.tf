@@ -93,7 +93,11 @@ resource "aws_cloudfront_distribution" "api" {
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
-    # API・ポストバックはキャッシュしない。Cookie・クエリ・ヘッダーはすべてオリジンへ渡す（Host を除く）
+    # API・ポストバックはキャッシュしない。Cookie・クエリ・ヘッダーはすべてオリジンへ渡す（Host を除く）。
+    # 定額プランはマネージドポリシーのみ。AllViewerAndCloudFrontHeaders は閲覧者の Host も渡してしまい、
+    # CloudFront がオリジンの証明書を api.<domain> で確かめることになる（origin.<domain> の証明書と合わず 502）ので使わない。
+    # AllViewerExceptHostHeader も CloudFront-Viewer-Address などの位置情報ヘッダーを付ける。
+    # 閲覧者 IP は確実に渡すため CloudFront Function でも x-poifo-viewer-ip に入れる
     cache_policy_id          = local.cache_policy_caching_disabled
     origin_request_policy_id = local.origin_request_all_viewer_except_host
 

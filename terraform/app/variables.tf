@@ -118,6 +118,23 @@ variable "waf_managed_rules_count_mode" {
   default     = true
 }
 
+variable "auth_path_prefix" {
+  description = "ログイン関連のパスの先頭（WAF の厳しい回数制限の対象）"
+  type        = string
+  default     = "/auth/"
+}
+
+variable "waf_auth_rate_limit" {
+  description = "同一 IP から 5 分間に許すログイン関連（auth_path_prefix 配下）のリクエスト数。超えるとブロック"
+  type        = number
+  default     = 50
+
+  validation {
+    condition     = var.waf_auth_rate_limit >= 10
+    error_message = "WAF のレート制限は 10 以上にしてください。"
+  }
+}
+
 variable "waf_rate_limit" {
   description = "同一 IP から 5 分間に許すリクエスト数。超えるとブロック"
   type        = number
