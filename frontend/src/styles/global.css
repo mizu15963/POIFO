@@ -25,6 +25,11 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* hidden 属性は .btn などの display 指定より優先する（「もっと見る」などを確実に隠す） */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -338,4 +343,30 @@ body:not([data-auth='guest']) [data-show='guest'] {
 .history__item .badge {
   justify-self: start;
   margin-left: 0;
+}
+
+/* 案件一覧のカテゴリ（横にスクロールできるタブ） */
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tab[aria-pressed='true'] {
+  border-color: var(--color-brand);
+  background: var(--color-brand-bg);
+  font-weight: 700;
 }

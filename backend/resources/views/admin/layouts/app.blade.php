@@ -11,7 +11,7 @@
         body { font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; color: var(--text); margin: 0; background: #F7FAFA; line-height: 1.6; }
         header { background: var(--text); color: #fff; }
         header .inner, main { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
-        header .inner { display: flex; align-items: center; justify-content: space-between; min-height: 52px; gap: 16px; }
+        header .inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; min-height: 52px; gap: 16px; }
         header a { color: #fff; text-decoration: none; margin-right: 16px; }
         header .brand { font-weight: 700; border-left: 4px solid var(--brand); padding-left: 8px; }
         main { padding-top: 24px; padding-bottom: 48px; }
@@ -19,7 +19,7 @@
         .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
         .narrow { max-width: 420px; margin: 48px auto; }
         label { display: block; font-weight: 600; margin: 12px 0 4px; }
-        input[type=text], input[type=email], input[type=password], input[type=month], select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
+        input[type=text], input[type=email], input[type=password], input[type=month], input[type=date], input[type=datetime-local], input[type=number], input[type=url], textarea, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
         .inline { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
         .inline > div { min-width: 160px; }
         button, .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: #fff; font-size: .95rem; cursor: pointer; text-decoration: none; }
@@ -38,6 +38,15 @@
         .badge-requested { background: #FFF4DB; } .badge-approved { background: var(--brand-bg); } .badge-paid { background: #E6F4EA; } .badge-rejected { background: #FDECEC; }
         .table-wrap { overflow-x: auto; }
         .qr svg { width: 200px; height: 200px; }
+        textarea { min-height: 120px; font-family: inherit; }
+        .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 16px; }
+        .stats { display: flex; flex-wrap: wrap; gap: 16px; }
+        .stats > div { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; min-width: 160px; }
+        .stats strong { font-size: 1.3rem; }
+        .pager { margin: 12px 0; }
+        .pager nav { display: flex; gap: 8px; flex-wrap: wrap; }
+        h2 { font-size: 1.05rem; margin: 0 0 8px; }
+        pre { background: #fff; border: 1px solid var(--border); padding: 12px; border-radius: 8px; overflow-x: auto; font-size: .85rem; }
         code { background: var(--brand-bg); padding: 2px 6px; border-radius: 4px; word-break: break-all; }
     </style>
 </head>
@@ -48,6 +57,10 @@
         <nav>
             <a class="brand" href="{{ route('admin.home') }}">POIFO 管理画面</a>
             <a href="{{ route('admin.withdrawals.index') }}">換金申請</a>
+            <a href="{{ route('admin.members.index') }}">会員</a>
+            <a href="{{ route('admin.campaigns.index') }}">案件</a>
+            <a href="{{ route('admin.events.index') }}">イベント</a>
+            <a href="{{ route('admin.postbacks.index') }}">成果通知</a>
         </nav>
         <form method="post" action="{{ route('admin.logout') }}">
             @csrf

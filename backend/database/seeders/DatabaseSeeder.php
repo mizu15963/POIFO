@@ -43,6 +43,8 @@ class DatabaseSeeder extends Seeder
             'ends_at' => now()->addDays(7)->setTime(21, 0),
             'format' => 'オンライン（LINEオープンチャット）',
             'openchat_url' => 'https://line.me/ti/g2/sample',
+            'capacity' => 20,
+            'reward_points' => 100,
             'status' => Event::STATUS_PUBLISHED,
         ]);
 

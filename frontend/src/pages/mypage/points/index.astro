@@ -26,7 +26,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
   const row = (t: PointHistoryItem) => `
     <li class="history__item history__item--${t.status}">
       <span class="history__date">${escapeHtml(formatDate(t.created_at))}</span>
-      <span class="history__desc">${escapeHtml(t.description ?? '')}</span>
+      <span class="history__desc">${escapeHtml(t.description ?? t.type_label)}${t.description && t.type !== 'conversion' ? `<span class="lead">（${escapeHtml(t.type_label)}）</span>` : ''}</span>
       <span class="history__points">${t.points > 0 ? '+' : ''}${escapeHtml(formatPoints(t.points))}</span>
       <span class="badge">${statusLabel[t.status]}</span>
     </li>`;

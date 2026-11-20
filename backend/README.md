@@ -18,6 +18,8 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 
 ## 機能と API（いまある分）
 
+管理画面・会員機能の仕様（仮）: [../docs/specs/admin-and-member-spec.md](../docs/specs/admin-and-member-spec.md)
+
 | メソッド・パス | ホスト | 認証 | 内容 |
 |---|---|---|---|
 | `GET /auth/line/redirect` | api. | — | LINE ログインへ（会員登録も兼ねる） |
@@ -27,10 +29,13 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 | `GET /v1/campaigns` | api. | — | 掲載中の案件一覧（`?featured=1`、`?category=`、`?per_page=`） |
 | `GET /v1/campaigns/{id}` | api. | — | 案件詳細（成果地点ごとのポイント） |
 | `GET /v1/events` | api. | — | イベント一覧（`?upcoming=1`、`?limit=`） |
-| `GET /v1/events/{id}` | api. | — | イベント詳細（オープンチャット URL） |
+| `GET /v1/campaign-categories` | api. | — | 掲載中の案件のカテゴリと件数（一覧のタブ用） |
+| `GET /v1/events/{id}` | api. | — | イベント詳細（残りの枠、ログイン中なら自分の参加状況。オープンチャット URL は参加した会員にだけ返す） |
+| `POST/DELETE /v1/events/{id}/participation` | api. | 会員 | イベントに参加・参加を取り消す（開始前だけ。上限人数まで） |
 | `GET /v1/me` | api. | 会員 | 表示名・ポイント（利用可能／判定中）・公式LINE の友だち追加URL |
 | `GET /v1/me/points` | api. | 会員 | ポイント履歴 |
 | `POST /v1/logout` | api. | 会員 | ログアウト |
+| `POST /v1/me/leave` | api. | 会員 | 退会（`agree` が必要。手続き中の換金申請があるとできない） |
 | `GET/PUT /v1/me/bank-account` | api. | 会員 | 振込先口座の表示（口座番号は末尾3桁以外伏せ字）・登録／変更。同じ口座がほかの会員にあれば登録できない |
 | `GET/POST /v1/me/withdrawals` | api. | 会員 | 換金申請の履歴（残高・最低ポイント・口座登録の有無つき）・申請 |
 | `GET/POST /postback/{token}/gf-rewards` | api. | パスの文字列・送信元IP・hash | GF Rewards の成果通知。本文 `0`/`1`/`2` を返す（下の「成果通知の受信」） |
@@ -39,6 +44,10 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 | `GET /withdrawals` | admin. | 管理者 | 換金申請の一覧（申請月・状態で絞り込み、同一口座・同一名義の警告） |
 | `POST /withdrawals/bulk` | admin. | 管理者 | 選んだ申請を承認／却下（ポイントを戻す）／振込済みにする |
 | `GET /withdrawals/export` | admin. | 管理者 | 振込用 CSV（UTF-8 BOM 付き・CRLF。Excel で開ける） |
+| `/members` | admin. | 管理者 | 会員の検索・詳細・停止／再開・ポイントの手動調整 |
+| `/campaigns` | admin. | 管理者 | 案件の表示設定（非表示・おすすめ・並び順） |
+| `/events` | admin. | 管理者 | イベントの登録・編集、参加者一覧（参加済み／不参加を付けて参加ポイントを付与）・CSV |
+| `/postbacks` / `/conversions/held` | admin. | 管理者 | 成果通知の受信ログ、保留した成果の確認・解除 |
 | `GET /up` | どちらも | — | ヘルスチェック |
 
 スケジューラ: `gf:sync-campaigns`（15分ごと。GF Rewards 案件連携API → `campaigns`。API は1時間60回まで）
@@ -52,7 +61,7 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 | `postback_logs` / `conversions` | 成果通知の受信ログ（拒否したものも全件）と、cv_id ごとの成果（未承認／承認／否認、保留の理由） |
 | `point_transactions` | ポイント台帳（判定中・確定・否認）。残高は確定分の合計 |
 | `bank_accounts` / `withdrawal_requests` | 振込先口座（口座番号は暗号化）と換金申請（審査期間・全銀CSV出力の単位） |
-| `events` | イベント（みんなでポイ活） |
+| `events` / `event_participants` | イベント（みんなでポイ活）と参加（イベントと会員の組で1行。参加したかどうかはこの表で判定） |
 | `admins` / `admin_audit_logs` | 管理者（2FA 用の列あり）と操作ログ |
 
 ### 成果通知の受信（お金に直結するので多重に確かめる）
@@ -193,7 +202,7 @@ main に `backend/` の変更が入ると、ワークフロー「デプロイ（
 
 ## まだやっていないこと
 
-- 管理画面の残りの機能（会員検索・停止、ポイント手動調整、ポストバックログ、保留した成果の確認・解除の画面（いまはコマンド）、案件の表示設定、イベント登録）
-- 退会 API
+- 管理画面・会員機能の仕様は仮（[../docs/specs/admin-and-member-spec.md](../docs/specs/admin-and-member-spec.md)）。運営の確認で変わる可能性がある
+- ポイントの有効期限、会員へのお知らせ（メール・LINE 通知）
 - サーバの初期設定手順（nginx・PHP のインストールなど。デプロイに必要な分は docs/deploy/README.md にある）
 - GF Rewards に確認すること: 判定中（未承認）の通知への応答を `0` にしているが、それでよいか

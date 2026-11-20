@@ -7,6 +7,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     <div class="container">
       <h1 class="section__title">案件を探す</h1>
       <p class="lead">案件はログインしてから利用してください（ログインしていないとポイントが付きません）。</p>
+      <nav id="categories" class="tabs" aria-label="カテゴリ" hidden></nav>
       <div id="campaigns" class="grid grid--2" aria-live="polite"><p class="loading">読み込み中…</p></div>
       <p><button id="more" class="btn btn--outline" type="button" hidden>もっと見る</button></p>
     </div>
@@ -14,16 +15,20 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <script>
-  import { fetchCampaigns } from '../../lib/api';
+  import { fetchCampaignCategories, fetchCampaigns } from '../../lib/api';
+  import { escapeHtml } from '../../lib/format';
   import { campaignCard, emptyState } from '../../lib/render';
 
   const list = document.getElementById('campaigns')!;
+  const tabs = document.getElementById('categories')!;
   const more = document.getElementById('more') as HTMLButtonElement;
+  // ?category= で絞り込んだ状態を共有できるようにする
+  let category = new URLSearchParams(location.search).get('category') ?? '';
   let page = 1;
 
   async function load() {
     try {
-      const res = await fetchCampaigns({ page, perPage: 20 });
+      const res = await fetchCampaigns({ page, perPage: 20, category: category || undefined });
       if (page === 1) list.innerHTML = res.data.length ? '' : emptyState('現在掲載中の案件はありません。');
       list.insertAdjacentHTML('beforeend', res.data.map(campaignCard).join(''));
       more.hidden = res.meta.current_page >= res.meta.last_page;
@@ -32,9 +37,34 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     }
   }
 
+  function renderTabs(names: string[]) {
+    tabs.innerHTML = ['', ...names]
+      .map((name) => `<button type="button" class="tab" data-category="${escapeHtml(name)}" aria-pressed="${name === category}">${escapeHtml(name || 'すべて')}</button>`)
+      .join('');
+    tabs.hidden = names.length === 0;
+  }
+
+  tabs.addEventListener('click', (ev) => {
+    const button = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-category]');
+    if (!button) return;
+    category = button.dataset.category ?? '';
+    tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+    const url = new URL(location.href);
+    if (category) url.searchParams.set('category', category);
+    else url.searchParams.delete('category');
+    history.replaceState(null, '', url);
+    page = 1;
+    list.innerHTML = '<p class="loading">読み込み中…</p>';
+    load();
+  });
+
   more.addEventListener('click', () => {
     page += 1;
     load();
   });
+
+  fetchCampaignCategories()
+    .then((cats) => renderTabs(cats.map((c) => c.name)))
+    .catch(() => renderTabs([]));
   load();
 </script>

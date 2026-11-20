@@ -10,36 +10,80 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <script>
-  import { fetchEvent } from '../../../lib/api';
-  import { escapeHtml, formatDateTime, safeUrl } from '../../../lib/format';
+  import { ApiError, cancelEvent, fetchEvent, joinEvent, type EventDetail } from '../../../lib/api';
+  import { LINE_LOGIN_URL } from '../../../lib/config';
+  import { escapeHtml, formatDateTime, formatPoints, safeUrl } from '../../../lib/format';
   import { emptyState } from '../../../lib/render';
+  import { whenMe } from '../../../lib/session';
 
   const root = document.getElementById('event')!;
   const id = new URLSearchParams(location.search).get('id');
 
-  async function render() {
+  // 参加まわりの表示（参加は開始前まで。オープンチャットの URL は参加した会員にだけ API が返す）
+  function entryHtml(e: EventDetail, loggedIn: boolean, message = ''): string {
+    const note = message ? `<p class="form-errors" role="alert">${escapeHtml(message)}</p>` : '';
+    if (e.status === 'ended') return '<p class="lead">このイベントは終了しました。</p>';
+
+    const openchat = safeUrl(e.openchat_url);
+    const joined = e.participation === 'joined' || e.participation === 'attended';
+    if (joined) {
+      return `${note}<p class="notice">参加予定です。当日はオープンチャットで案内します。</p>
+        ${openchat ? `<a class="btn btn--line btn--block" href="${escapeHtml(openchat)}" rel="noopener">オープンチャットを開く</a>` : ''}
+        ${e.accepting && e.participation === 'joined' ? '<p><button type="button" class="btn btn--outline btn--block" data-action="cancel">参加を取り消す</button></p>' : ''}`;
+    }
+    if (!e.accepting) return `${note}<p class="lead">参加の受付は終了しました。</p>`;
+    if (e.remaining_seats === 0) return `${note}<p class="lead">満員のため、参加を受け付けていません。</p>`;
+    if (!loggedIn) return `${note}<a class="btn btn--line btn--block" href="${LINE_LOGIN_URL}">LINEでログインして参加する</a>`;
+    return `${note}<button type="button" class="btn btn--block" data-action="join">このイベントに参加する</button>
+      <p class="lead">参加すると、オープンチャットの参加リンクが表示されます。開始前なら取り消せます。</p>`;
+  }
+
+  function render(e: EventDetail, loggedIn: boolean, message = '') {
+    document.title = `${e.title}｜ポイフォ`;
+    const thumb = safeUrl(e.thumbnail_url);
+    const seats = e.capacity !== null ? `<strong>定員：</strong>${e.capacity}人${e.accepting && e.remaining_seats !== null ? `（残り${e.remaining_seats}人）` : ''}<br>` : '';
+    root.innerHTML = `
+      ${thumb ? `<img src="${escapeHtml(thumb)}" alt="" class="event-thumb">` : ''}
+      <h1>${escapeHtml(e.title)}</h1>
+      <p><strong>日時：</strong>${escapeHtml(formatDateTime(e.starts_at))}${e.ends_at ? ` 〜 ${escapeHtml(formatDateTime(e.ends_at))}` : ''}<br>
+      ${e.format ? `<strong>開催方法：</strong>${escapeHtml(e.format)}<br>` : ''}
+      ${seats}
+      ${e.reward_points > 0 ? `<strong>参加特典：</strong>${escapeHtml(formatPoints(e.reward_points))}（参加を確認したあとに付与）` : ''}</p>
+      ${e.body ? `<p class="prose">${escapeHtml(e.body)}</p>` : e.summary ? `<p class="prose">${escapeHtml(e.summary)}</p>` : ''}
+      ${e.notes ? `<h2>注意事項</h2><p class="prose">${escapeHtml(e.notes)}</p>` : ''}
+      <div id="entry">${entryHtml(e, loggedIn, message)}</div>`;
+  }
+
+  async function act(action: 'join' | 'cancel', button: HTMLButtonElement, current: EventDetail) {
+    button.disabled = true;
+    try {
+      render(await (action === 'join' ? joinEvent(id!) : cancelEvent(id!)), true);
+    } catch (err) {
+      const message = err instanceof ApiError && err.errors.event?.[0] ? err.errors.event[0] : 'うまくいきませんでした。時間をおいて再度お試しください。';
+      const latest = await fetchEvent(id!).catch(() => current);
+      render(latest, true, message);
+    }
+  }
+
+  async function load() {
     if (!id) {
       root.innerHTML = emptyState('イベントが見つかりません。');
       return;
     }
     try {
-      const e = await fetchEvent(id);
-      document.title = `${e.title}｜ポイフォ`;
-      const thumb = safeUrl(e.thumbnail_url);
-      const openchat = safeUrl(e.openchat_url);
-      root.innerHTML = `
-        ${thumb ? `<img src="${escapeHtml(thumb)}" alt="" class="event-thumb">` : ''}
-        <h1>${escapeHtml(e.title)}</h1>
-        <p><strong>日時：</strong>${escapeHtml(formatDateTime(e.starts_at))}${e.ends_at ? ` 〜 ${escapeHtml(formatDateTime(e.ends_at))}` : ''}<br>
-        ${e.format ? `<strong>開催方法：</strong>${escapeHtml(e.format)}` : ''}</p>
-        ${e.body ? `<p class="prose">${escapeHtml(e.body)}</p>` : e.summary ? `<p class="prose">${escapeHtml(e.summary)}</p>` : ''}
-        ${e.notes ? `<h2>注意事項</h2><p class="prose">${escapeHtml(e.notes)}</p>` : ''}
-        ${e.status === 'ended' ? '<p class="lead">このイベントは終了しました。</p>' : openchat ? `<a class="btn btn--line btn--block" href="${escapeHtml(openchat)}" rel="noopener">オープンチャットで参加する</a>` : ''}`;
+      const [e, me] = await Promise.all([fetchEvent(id), whenMe()]);
+      render(e, !!me);
+      root.addEventListener('click', async (ev) => {
+        const button = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+        if (!button) return;
+        if (button.dataset.action === 'cancel' && !confirm('参加を取り消しますか？')) return;
+        await act(button.dataset.action as 'join' | 'cancel', button, await fetchEvent(id).catch(() => e));
+      });
     } catch {
       root.innerHTML = emptyState('イベントが見つかりません。');
     }
   }
-  render();
+  load();
 </script>
 
 <style is:global>

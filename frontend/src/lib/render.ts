@@ -21,7 +21,7 @@ export function eventCard(e: EventSummary): string {
       <span class="event-card__date">${escapeHtml(formatDateTime(e.starts_at))}${e.status === 'ended' ? '<span class="badge badge--muted">終了</span>' : ''}</span>
       <span class="event-card__title">${escapeHtml(e.title)}</span>
       ${e.summary ? `<span class="event-card__summary">${escapeHtml(e.summary)}</span>` : ''}
-      <span class="event-card__meta">${escapeHtml(e.format ?? '')}</span>
+      <span class="event-card__meta">${escapeHtml(e.format ?? '')}${e.reward_points > 0 ? ` ・参加で ${escapeHtml(formatPoints(e.reward_points))}` : ''}${e.accepting && e.remaining_seats !== null ? ` ・${e.remaining_seats === 0 ? '満員' : `残り${e.remaining_seats}人`}` : ''}</span>
       <span class="event-card__more">詳しく見る</span>
     </a>`;
 }

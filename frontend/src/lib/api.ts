@@ -38,13 +38,31 @@ export type EventSummary = {
   format: string | null;
   thumbnail_url: string | null;
   status: 'published' | 'ended';
+  /** 参加上限人数（なければ上限なし） */
+  capacity: number | null;
+  /** 残りの枠（上限なしは null） */
+  remaining_seats: number | null;
+  /** 参加を確認した会員に付与するポイント */
+  reward_points: number;
+  /** 参加を受け付けているか（公開中で開始前） */
+  accepting: boolean;
 };
 
-export type EventDetail = EventSummary & { body: string | null; notes: string | null; openchat_url: string | null };
+export type EventDetail = EventSummary & {
+  body: string | null;
+  notes: string | null;
+  /** ログイン中の会員の参加状況（未参加・未ログインは null） */
+  participation: 'joined' | 'cancelled' | 'attended' | 'absent' | null;
+  /** 参加した会員にだけ返る */
+  openchat_url: string | null;
+};
+
+export type CampaignCategory = { name: string; count: number };
 
 export type PointHistoryItem = {
   id: number;
   type: string;
+  type_label: string;
   status: 'pending' | 'confirmed' | 'rejected';
   points: number;
   description: string | null;
@@ -131,9 +149,10 @@ export async function fetchMe(): Promise<Me | null> {
   }
 }
 
-export const fetchCampaigns = (params: { featured?: boolean; perPage?: number; page?: number } = {}) => {
+export const fetchCampaigns = (params: { featured?: boolean; perPage?: number; page?: number; category?: string } = {}) => {
   const q = new URLSearchParams();
   if (params.featured) q.set('featured', '1');
+  if (params.category) q.set('category', params.category);
   if (params.perPage) q.set('per_page', String(params.perPage));
   if (params.page) q.set('page', String(params.page));
   return request<Paged<CampaignSummary>>(`/v1/campaigns?${q}`);
@@ -148,7 +167,19 @@ export const fetchEvents = async (params: { upcoming?: boolean; limit?: number }
   return (await request<{ data: EventSummary[] }>(`/v1/events?${q}`)).data;
 };
 
+export const fetchCampaignCategories = async () => (await request<{ data: CampaignCategory[] }>('/v1/campaign-categories')).data;
+
 export const fetchEvent = async (id: string) => (await request<{ data: EventDetail }>(`/v1/events/${encodeURIComponent(id)}`)).data;
+
+/** イベントに参加する（満員・開始後などは 422 で errors.event にメッセージ） */
+export async function joinEvent(id: string): Promise<EventDetail> {
+  return (await request<{ data: EventDetail }>(`/v1/events/${encodeURIComponent(id)}/participation`, await withCsrf({ method: 'POST' }))).data;
+}
+
+/** イベントの参加を取り消す（開始前だけ） */
+export async function cancelEvent(id: string): Promise<EventDetail> {
+  return (await request<{ data: EventDetail }>(`/v1/events/${encodeURIComponent(id)}/participation`, await withCsrf({ method: 'DELETE' }))).data;
+}
 
 export const fetchPointHistory = (page = 1) => request<Paged<PointHistoryItem>>(`/v1/me/points?page=${page}`);
 
@@ -168,4 +199,10 @@ export async function requestWithdrawal(points: number): Promise<void> {
 
 export async function logout(): Promise<void> {
   await request('/v1/logout', await withCsrf({ method: 'POST' }));
+}
+
+/** 退会する（手続き中の換金申請があると 422 で errors.leave にメッセージ） */
+export async function leave(): Promise<void> {
+  const init = await withCsrf({ method: 'POST', body: JSON.stringify({ agree: true }), headers: { 'Content-Type': 'application/json' } });
+  await request('/v1/me/leave', init);
 }

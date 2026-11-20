@@ -73,6 +73,12 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(10)->by('withdrawal-day:'.$key($request)),
         ]);
 
+        // イベントの参加・取り消し: 繰り返して枠を押さえたり外したりするのを抑える
+        RateLimiter::for('event-participation', fn (Request $request) => [
+            Limit::perMinute(10)->by('event-min:'.$key($request)),
+            Limit::perDay(50)->by('event-day:'.$key($request)),
+        ]);
+
         // 振込先口座の登録・変更: 他人の口座を総当たりで試す・頻繁に付け替えるのを抑える
         RateLimiter::for('bank-account-update', fn (Request $request) => [
             Limit::perMinute(3)->by('bank-min:'.$key($request)),

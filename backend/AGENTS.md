@@ -62,6 +62,9 @@ API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` の�
 - 振込に使う口座情報は申請時点の `bank_snapshot`（暗号化）。CSV や一覧は現在の `bank_accounts` ではなくスナップショットから出す。
 - 個人情報（氏名・口座番号）を出す画面・CSV は管理画面（admin.）だけ。出力したら操作ログに残す。会員向け API に口座番号を返さない。
 - 会員の更新系 API（特にお金・口座に関わるもの）には会員単位の回数制限（`AppServiceProvider::configureRateLimiting`）を付ける。
+- 会員の状態（有効・停止・退会）は `MemberService` だけで変える。停止・退会した会員のセッションは `EnsureMemberIsActive` が次の API 呼び出しで切る。
+- イベントの参加は `event_participants`（イベントと会員の組で1行）で判定し、状態は `EventParticipationService` だけで変える。上限人数はイベントの行を `lockForUpdate()` してから数える。参加ポイントは `point_transactions.event_participant_id`（unique）で1回だけ付与する。オープンチャットの URL は参加した会員にだけ返す。
+- 管理画面・会員機能の仕様は [../docs/specs/admin-and-member-spec.md](../docs/specs/admin-and-member-spec.md)（仮）。仕様を変えたらこの文書も直す。
 - 管理者のログインは「パスワード → 二要素認証」が両方通ってから `Auth::guard('admin')->login()` する。途中の状態でログイン扱いにしない。
 
 ## コーディング

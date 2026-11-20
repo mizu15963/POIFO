@@ -23,6 +23,12 @@ class User extends Authenticatable
 
     public const STATUS_WITHDRAWN = 'withdrawn';
 
+    public const STATUS_LABELS = [
+        self::STATUS_ACTIVE => '有効',
+        self::STATUS_SUSPENDED => '停止中',
+        self::STATUS_WITHDRAWN => '退会済み',
+    ];
+
     protected $fillable = ['line_user_id', 'display_name', 'avatar_url', 'status', 'last_login_at'];
 
     protected $hidden = ['line_user_id', 'remember_token'];
@@ -50,6 +56,21 @@ class User extends Authenticatable
     public function pointTransactions(): HasMany
     {
         return $this->hasMany(PointTransaction::class);
+    }
+
+    public function withdrawalRequests(): HasMany
+    {
+        return $this->hasMany(WithdrawalRequest::class);
+    }
+
+    public function conversions(): HasMany
+    {
+        return $this->hasMany(Conversion::class);
+    }
+
+    public function eventParticipations(): HasMany
+    {
+        return $this->hasMany(EventParticipant::class);
     }
 
     public function bankAccount(): HasOne

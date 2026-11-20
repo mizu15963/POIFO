@@ -32,6 +32,16 @@ class CampaignController extends Controller
         ]);
     }
 
+    /** 掲載中の案件のカテゴリ（件数つき）。一覧のタブに使う */
+    public function categories(): JsonResponse
+    {
+        $rows = Campaign::listed()->whereNotNull('category')->where('category', '!=', '')
+            ->selectRaw('category, COUNT(*) as count')->groupBy('category')->orderByDesc('count')->orderBy('category')
+            ->get();
+
+        return response()->json(['data' => $rows->map(fn ($r) => ['name' => $r->category, 'count' => (int) $r->count])]);
+    }
+
     public function show(Campaign $campaign): JsonResponse
     {
         abort_unless(Campaign::listed()->whereKey($campaign->id)->exists(), 404);

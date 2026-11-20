@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\PointTransaction;
+use App\Services\Members\MemberException;
+use App\Services\Members\MemberService;
 use App\Services\Points\PointBalance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class MeController extends Controller
 {
@@ -36,6 +39,7 @@ class MeController extends Controller
             'data' => collect($page->items())->map(fn (PointTransaction $t) => [
                 'id' => $t->id,
                 'type' => $t->type,
+                'type_label' => PointTransaction::TYPE_LABELS[$t->type] ?? $t->type,
                 'status' => $t->status,
                 'points' => $t->points,
                 'description' => $t->description,
@@ -49,9 +53,28 @@ class MeController extends Controller
     public function logout(Request $request): JsonResponse
     {
         Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * 退会する。注意事項への同意（`agree`）が必要。手続き中の換金申請があるときはできない。
+     * 残りのポイントは失効し、同じ LINE アカウントでは再登録できない。
+     */
+    public function leave(Request $request, MemberService $members): JsonResponse
+    {
+        $request->validate(['agree' => ['accepted']], ['agree.accepted' => '注意事項に同意してください。']);
+
+        try {
+            $members->leave($request->user());
+        } catch (MemberException $e) {
+            throw ValidationException::withMessages(['leave' => $e->getMessage()]);
+        }
+
+        return $this->logout($request);
     }
 }
