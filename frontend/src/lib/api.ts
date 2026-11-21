@@ -119,12 +119,23 @@ export class ApiError extends Error {
   }
 }
 
+/** メンテナンス画面へ移る。戻り先として今のパスを ?back= に付ける（メンテナンス画面にいるときは何もしない） */
+function goMaintenance() {
+  if (location.pathname.startsWith('/maintenance/')) return;
+  const back = location.pathname + location.search;
+  location.assign(`/maintenance/?back=${encodeURIComponent(back)}`);
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: 'include',
     headers: { Accept: 'application/json', ...(init.headers || {}) },
   });
+  if (res.status === 503) {
+    // バックエンドがメンテナンス中（php artisan down）。どの画面からでもメンテナンス画面へ移す
+    goMaintenance();
+  }
   if (!res.ok) {
     const body = res.status === 422 ? await res.json().catch(() => ({})) : {};
     throw new ApiError(res.status, body.errors ?? {});

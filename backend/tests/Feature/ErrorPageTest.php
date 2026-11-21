@@ -41,6 +41,25 @@ class ErrorPageTest extends TestCase
         $this->asApiHost()->get('/_test/error/400')->assertStatus(400)->assertSee('ページを表示できません');
     }
 
+    public function test_maintenance_mode_shows_the_maintenance_page_and_json_503_with_cors(): void
+    {
+        $this->app->maintenanceMode()->activate([]);
+
+        try {
+            $this->asApiHost()->get('/auth/line/redirect')
+                ->assertStatus(503)
+                ->assertSee('メンテナンス中')
+                ->assertSee('poifox-maintenance.webp', false);
+
+            // フロントが 503 を読んでメンテナンス画面へ移れるよう、API の 503 にも CORS のヘッダーが付くこと
+            $this->asApiHost()->withHeader('Origin', 'https://poifo.test')->getJson('/v1/campaigns')
+                ->assertStatus(503)
+                ->assertHeader('Access-Control-Allow-Origin', 'https://poifo.test');
+        } finally {
+            $this->app->maintenanceMode()->deactivate();
+        }
+    }
+
     public function test_json_requests_still_get_json_errors(): void
     {
         $this->asApiHost()->getJson('/v1/no-such-endpoint')

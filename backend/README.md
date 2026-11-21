@@ -184,6 +184,18 @@ LINE を通さずに会員としてログインする。API 仕様書と同じ `
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | SES 送信用 IAM ユーザー（`poifo-ses-sender`）のアクセスキー ID / そのシークレットキーから [`../deploy/backend/server/ses-smtp-password.py`](../deploy/backend/server/ses-smtp-password.py) で作った SMTP パスワード |
 | `MAIL_FROM_ADDRESS` | SES で DKIM 認証したドメインのアドレス（例: `noreply@<domain>`）。当面は SES サンドボックスなので、`POIFO_ALERT_EMAILS` の宛先も SES で確認済みにしておく |
 
+### メンテナンス
+
+```sh
+sudo -u www-data php /var/www/poifo/current/artisan down --secret=<推測されにくい文字列>   # 開始（どれか1台で実行すれば全台に効く）
+sudo -u www-data php /var/www/poifo/current/artisan up                                     # 終了
+```
+
+- `APP_MAINTENANCE_DRIVER=cache`（共有 DB）なので、1台で実行すれば全台がメンテナンス中になる
+- 会員向け API（`/v1/*`）は JSON の 503 を返し、フロントは `/maintenance/` に移る。LINE ログインなど HTML の画面と管理画面は `errors/503.blade.php`
+- `--secret` を付けると、`https://admin.<domain>/<その文字列>` を一度開いたブラウザだけはメンテナンス中も通常どおり使える（作業後の確認用）。文字列はその場限りにして、どこにも保存しない
+- 成果通知（`/postback/`）もメンテナンス中は 503 になる。GF Rewards が 503 を再送するかは未確認なので、長時間のメンテナンスは避ける
+
 cron に `* * * * * cd /var/www/poifo/current && php artisan schedule:run >> /dev/null 2>&1` を入れる。
 キューは当面 `database`（`php artisan queue:work` を systemd で常駐）。
 どちらも設定ファイルを [../deploy/backend/server/](../deploy/backend/server/) に用意してある。

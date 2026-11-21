@@ -2,7 +2,7 @@
   エラー画面の共通レイアウト（api. の LINE ログイン・案件への遷移 /go/{id}、admin. の管理画面で、HTML で返すエラー）。
   JSON を返すリクエスト（/v1/* など）には使われない（bootstrap/app.php の shouldRenderJsonWhen）。
   DB やセッションが落ちていても表示できるよう、config と request だけを使い、CSS もこのファイルに書く。
-  使い方: @extends('errors.layout', ['code' => 404, 'heading' => '…', 'message' => '…'])
+  使い方: @extends('errors.layout', ['code' => 404, 'heading' => '…', 'message' => '…'])（'pose' => 'maintenance' で画像を変える）
 --}}
 @php
     $isAdmin = \App\Http\Middleware\RestrictViewerHost::viewerHost(request()) === strtolower((string) config('poifo.hosts.admin'));
@@ -11,8 +11,10 @@
     $backUrl = $isAdmin ? '/' : $frontUrl.'/';
     $backLabel = $isAdmin ? '管理画面のトップへ' : 'ポイフォのトップへ';
     // 会員向けはキャラクター付き（画像はフロントの配信先から読む）。管理画面は飾らない
-    // エラーページ用の謝るポーズ（実寸 447x480 → 表示幅180pxで高さ193）
-    $mascot = $isAdmin ? null : $frontUrl.'/images/mascot/poifox-sorry.webp';
+    // 既定はエラーページ用の謝るポーズ（実寸 447x480 → 表示幅180pxで高さ193）。メンテナンス（503）は整備士のポーズ
+    $pose ??= 'sorry';
+    [$mascotWidth, $mascotHeight] = $pose === 'maintenance' ? [280, 207] : [180, 193];
+    $mascot = $isAdmin ? null : $frontUrl.'/images/mascot/poifox-'.$pose.'.webp';
 @endphp
 <!doctype html>
 <html lang="ja">
@@ -25,7 +27,7 @@
         * { box-sizing: border-box; }
         body { margin: 0; min-height: 100vh; background: #EEF7F7; color: #1A1E21; font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; line-height: 1.7; }
         main { max-width: 480px; min-height: 100vh; margin: 0 auto; background: #fff; padding: 40px 16px; text-align: center; }
-        img { display: block; width: 180px; height: auto; margin: 0 auto 8px; }
+        img { display: block; max-width: 100%; height: auto; margin: 0 auto 8px; }
         .code { margin: 0; font-size: .85rem; font-weight: 600; letter-spacing: .08em; color: #B45A00; }
         h1 { margin: 4px 0 12px; font-size: 1.4rem; font-weight: 600; line-height: 1.4; }
         p.message { margin: 0 0 24px; color: #5F6B70; text-align: left; }
@@ -35,7 +37,7 @@
 <body>
 <main>
     @if ($mascot)
-        <img src="{{ $mascot }}" alt="" width="180" height="193">
+        <img src="{{ $mascot }}" alt="" width="{{ $mascotWidth }}" height="{{ $mascotHeight }}">
     @endif
     <p class="code">{{ $code }}</p>
     <h1>{{ $heading }}</h1>

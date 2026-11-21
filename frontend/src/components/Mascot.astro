@@ -1,6 +1,6 @@
 ---
 // キャラクター「ポイフォックス」の画像。
-// 画像は public/images/mascot/ の書き出し済み WebP（透過・長辺480px）を使う。
+// 画像は public/images/mascot/ の書き出し済み WebP（透過・長辺480px。横長のメンテナンス用だけ640px）を使う。
 // width/height を必ず付けて、読み込み中にレイアウトがずれないようにする。
 const sizes = {
   wave: [426, 480], // 手を振る（あいさつ）
@@ -11,6 +11,7 @@ const sizes = {
   event: [480, 459], // 「イベント参加」
   guide: [480, 418], // チェックリストで説明
   sorry: [447, 480], // 謝る（エラーページ用）
+  maintenance: [640, 472], // 整備士（メンテナンス画面用、横長で長辺640px）
 } as const;
 
 export type MascotPose = keyof typeof sizes;
