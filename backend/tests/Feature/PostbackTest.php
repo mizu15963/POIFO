@@ -82,6 +82,22 @@ class PostbackTest extends TestCase
         $this->assertSame(Conversion::STATUS_APPROVED, Conversion::first()->status);
     }
 
+    public function test_postback_is_accepted_during_maintenance(): void
+    {
+        $user = User::factory()->create();
+        $this->app->maintenanceMode()->activate([]);
+
+        try {
+            $this->sendGet($this->params($user))->assertOk()->assertContent('0');
+            // 会員向け API はメンテナンス中
+            $this->asApiHost()->getJson('/v1/campaigns')->assertStatus(503);
+        } finally {
+            $this->app->maintenanceMode()->deactivate();
+        }
+
+        $this->assertDatabaseHas('point_transactions', ['user_id' => $user->id, 'status' => 'pending', 'points' => 300]);
+    }
+
     public function test_post_json_is_accepted(): void
     {
         $user = User::factory()->create();

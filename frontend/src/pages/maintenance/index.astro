@@ -20,9 +20,17 @@ import Mascot from '../../components/Mascot.astro';
 </StandaloneLayout>
 
 <script>
-  // 元のページへ戻すリンク。同じサイト内のパス（/ で始まり // ではない）だけを受け付け、外部へは飛ばさない
+  // 元のページへ戻すリンク。外部サイトへ飛ばされないよう、文字列の先頭で判断せずブラウザと同じ規則で URL として解釈し
+  // （/\evil.example やタブ入りの値もブラウザは外部 URL とみなすため）、同じオリジンのときだけ使う
   const back = new URLSearchParams(location.search).get('back');
-  if (back && back.startsWith('/') && !back.startsWith('//') && !back.startsWith('/maintenance/')) {
-    document.getElementById('maintenance-back')!.setAttribute('href', back);
+  if (back) {
+    try {
+      const url = new URL(back, location.origin);
+      if (url.origin === location.origin && !url.pathname.startsWith('/maintenance/')) {
+        document.getElementById('maintenance-back')!.setAttribute('href', url.pathname + url.search + url.hash);
+      }
+    } catch {
+      // 解釈できない値は無視してトップへ戻す
+    }
   }
 </script>
