@@ -1,0 +1,24 @@
+# /etc/nginx/sites-available/poifo（setup-server.sh が作る。手で直さず、server.env を直して setup-server.sh を再実行する）
+server_tokens off;
+# 秘密の値（48文字）を map のキーにするため（既定の 64 では足りない）
+map_hash_bucket_size 128;
+
+map $http_x_origin_verify $poifo_origin_ok {
+    default 0;
+    "__ORIGIN_VERIFY_SECRET__" 1;
+}
+
+map $uri $poifo_unprotected_path {
+    default 0;
+    /up 1;
+    ~^/\.well-known/acme-challenge/ 1;
+}
+
+# 80番: LB（HTTP で届く）と Let's Encrypt の確認用。LB なしでも秘密ヘッダーがなければ 403
+# IPv6 では待ち受けない（CloudFront・LB からは IPv4 で届く。origin.<domain> は A レコード）
+server {
+    listen 80 default_server;
+    server_name _;
+    include snippets/poifo-app.conf;
+}
+__HTTPS_SERVER__

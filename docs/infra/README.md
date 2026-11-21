@@ -257,7 +257,7 @@ DB のバックアップ・OS 更新は Lightsail が行う。S3 への mysqldum
 4. Variables の `ENABLE_CUSTOM_DOMAIN` を `true` → **構築・削除** → `apply` / `app`
    - 証明書（`example.jp`・`api.`・`admin.`）、API 用 CloudFront、WAF 2つ、DNS レコード（`origin.` は固定IP）、通知メール用の SES（下の「通知メール」）ができる
    - 証明書の DNS 検証で数分かかる。ネームサーバが委任されていないと、ここで待ち続けて失敗する
-5. サーバで `origin.example.jp` の Let's Encrypt 証明書を取り、nginx に秘密ヘッダーの確認と api / admin の振り分けを入れる（下の nginx の例）
+5. サーバで `origin.example.jp` の Let's Encrypt 証明書を取る（[../server/README.md](../server/README.md) の5。`ORIGIN_HOST` と `ISSUE_CERT=true` を入れて初期設定スクリプトを再実行）
 6. **CloudFront の定額プラン（Free）に加入する**（Terraform では扱えないのでコンソールで）
    - CloudFront コンソールで、フロント用（`poifo front`）と API 用（`poifo api/admin`）のそれぞれに Free プランを選ぶ。Web ACL は Terraform が作った `poifo-front` / `poifo-api` を使う
    - Free プランはアカウントにつき3つまで、ルールは5個まで、ログ出力やカスタムのキャッシュ・オリジンリクエストポリシーは使えない（この構成はその範囲に収めてある）
@@ -280,47 +280,10 @@ API 用 WAF のルール（定額プランの上限5個）:
 | 3〜4 | AWS マネージドルール | コアルール・SQLi（`WAF_COUNT_MODE=true` の間は検知のみ） |
 | 5 | 全体のレート制限 | 同一 IP から5分に1,000回まで（`waf_rate_limit`） |
 
-### nginx の例（オリジン側）
+### オリジン（サーバ）側の設定
 
-```nginx
-# /etc/nginx/conf.d/origin-verify.conf
-map $http_x_origin_verify $origin_ok {
-    default 0;
-    "<ORIGIN_VERIFY_SECRET の値>" 1;
-}
-
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name origin.example.jp;
-    ssl_certificate     /etc/letsencrypt/live/origin.example.jp/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/origin.example.jp/privkey.pem;
-
-    # CloudFront（＝WAF）を通っていないリクエストは拒否
-    if ($origin_ok = 0) { return 403; }
-
-    # 閲覧者のアクセス先（api. / admin.）は $http_x_poifo_viewer_host で分かる。
-    # CloudFront Function が必ず上書きするので偽装できない。Laravel 側でこの値を見て
-    # 管理画面のルートは admin. からのアクセスだけに限る（api. からは届かないようにする）
-    root /var/www/poifo/current/public;   # デプロイで切り替わるリンク（docs/deploy/README.md）
-    location / { try_files $uri /index.php?$query_string; }
-    location ~ \.php$ {
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        fastcgi_param POIFO_VIEWER_HOST $http_x_poifo_viewer_host;
-        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
-    }
-}
-
-server {
-    listen 80;
-    server_name origin.example.jp;
-    location /.well-known/acme-challenge/ { root /var/www/letsencrypt; }
-    location / { return 301 https://$host$request_uri; }
-}
-```
-
-細かい設定はサーバ構築の手順書で詰める。管理画面は IP 制限（WAF と nginx の二重）と二要素認証をかける。
+nginx（秘密ヘッダーの確認、`/up` の例外、80番と443番）、PHP、deploy agent などは初期設定スクリプトでまとめて入れる（[../server/README.md](../server/README.md)）。
+管理画面は IP 制限（WAF）と二要素認証をかける。
 
 ### 通知メール（Amazon SES）
 
@@ -395,14 +358,14 @@ CloudFront のオリジンは最初から `origin.<domain>` なので、LB を�
 費用は1台増やすごとに $7/月（約1,050円）、LB が $18/月。
 
 手順（API を止めない順番）:
-1. **先に1台目の nginx を LB 用に変える**: LB からは HTTP（80番）で届くので、80番でもアプリを動かす（秘密ヘッダーの確認はそのまま）。
-   ヘルスチェック（`/up`）は秘密ヘッダーなしで来るので、そのパスだけヘッダーなしでも通す。
-   これを先にしないと、LB に切り替わった時点でヘルスチェックが失敗し（80番が HTTPS へのリダイレクトのままだと 301）、API が止まる
+1. **1台目の nginx が LB 用になっているか確かめる**: LB からは HTTP（80番）で届き、ヘルスチェック（`/up`）は秘密ヘッダーなしで来る。
+   初期設定スクリプト（[../server/README.md](../server/README.md)）の nginx は最初からそうなっているので、最新のスクリプトで設定していれば作業はない
+   （古い設定のままなら `git pull` してスクリプトを再実行）。80番が HTTPS へのリダイレクトのままだと、LB に切り替わった時点でヘルスチェックが失敗し（301）、API が止まる
 2. Variables の `ENABLE_LOAD_BALANCER` を `true` にし、**`API_SERVER_COUNT` は `1` のまま** **更新（Terraform）** を手動実行 → 承認。
    `origin.<domain>` が LB に切り替わる。LB の証明書（`origin.<domain>`）の検証に数分かかり、`certificate_attachment` が失敗したら少し待って再実行する。
    Lightsail コンソールで LB のターゲットが「正常」になり、API が LB 経由で動くことを確認する
 3. `API_SERVER_COUNT` を `2` にして、もう一度 **更新（Terraform）** → 承認。2台目が作られ、LB にもつながる（準備が済むまではヘルスチェックで外される）
-4. 2台目を1台目と同じように準備する（[../deploy/README.md](../deploy/README.md) の「サーバ（1回だけ）」と、手順1の nginx 設定）。
+4. 2台目を1台目と同じように準備する（[../server/README.md](../server/README.md) の初期設定スクリプト。`ISSUE_CERT=false`、DB ユーザーの作成は不要）。
    **`.env` は全台同じ内容にする**（`APP_KEY` は口座番号の暗号化に使うので、違うと復号できない）。
    deploy agent の設定は `SERVER_NAME=api-2`、**`MIGRATE=false`**（`MIGRATE=true` は必ず1台だけ。2台とも true にすると、migrate の完了前にほかの台が切り替わることがある）
 5. 「デプロイ（バックエンド）」を手動実行し、全台が同じリリースになることを確認する
@@ -453,5 +416,5 @@ terraform output -raw static_ip
 ## まだやっていないこと
 
 - アプリのデプロイは [../deploy/README.md](../deploy/README.md)（app スタックにリリース置き場 `poifo-deploy-<アカウントID>` とサーバ用 IAM ユーザー `poifo-deploy-agent` がある）
-- サーバの初期設定（nginx・PHP・バックアップ cron・監視）と、DB 内のアプリ用ユーザー作成は Terraform の対象外。手順書を別に用意する
-- Lightsail のメトリクスアラーム（CPU・ステータスチェック）の通知先メールは未設定
+- サーバの初期設定（nginx・PHP・バックアップ・監視）と DB のアプリ用ユーザー作成は Terraform の対象外。[../server/README.md](../server/README.md) のスクリプトと手順で行う
+- 1台構成でのサーバの入れ替え（新しいサーバを作って切り替える）の Terraform での手順化は未着手
