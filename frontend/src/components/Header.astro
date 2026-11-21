@@ -1,5 +1,57 @@
 ---
+// ヘッダーとハンバーガーメニュー（右から出るドロワー）。
+// メニューは大手ポイントサイトの作りを参考に、会員状態（ポイント）・アイコン付きのタイル・カテゴリ・
+// キャラクター入りの案内バナー・リンク一覧の順に並べ、「開けば一通り行き先がわかる」情報量にしている。
 import { LINE_LOGIN_URL } from '../lib/config';
+import Mascot from './Mascot.astro';
+
+// 線のアイコン（24×24、stroke で描く）。画像ファイルを増やさないためインライン SVG にする
+const icons = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+  book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/>',
+  coin: '<circle cx="12" cy="12" r="8"/><path d="M10 16V8h3a2 2 0 0 1 0 4h-3"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17.5v.01"/>',
+  home: '<path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/>',
+  history: '<path d="M4 12a8 8 0 1 0 2.3-5.6L4 8.7"/><path d="M4 4v4.7h4.7"/><path d="M12 8v4l3 2"/>',
+  bank: '<path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',
+  doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>',
+  shield: '<path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/>',
+  building: '<path d="M5 21V4h10v17"/><path d="M15 9h4v12"/><path d="M8 8h4M8 12h4M8 16h4"/>',
+} as const;
+type Icon = keyof typeof icons;
+
+const tiles: { href: string; label: string; icon: Icon }[] = [
+  { href: '/campaigns/', label: '案件を探す', icon: 'search' },
+  { href: '/events/', label: 'イベント', icon: 'flag' },
+  { href: '/support/', label: '担当サポート', icon: 'chat' },
+  { href: '/guide/#earn', label: '貯め方', icon: 'book' },
+  { href: '/mypage/withdraw/', label: 'ポイント交換', icon: 'coin' },
+  { href: '/guide/', label: 'ヘルプ', icon: 'help' },
+];
+
+const banners = [
+  { href: '/guide/', pose: 'guide', title: 'はじめての方へ', text: 'ポイントの貯め方・交換方法をチェック' },
+  { href: '/events/', pose: 'event', title: 'みんなでポイ活！', text: 'イベントにみんなで挑戦しよう' },
+  { href: '/support/', pose: 'line', title: '担当スタッフに相談', text: '困ったらLINEで気軽に相談できます' },
+] as const;
+
+const myLinks: { href: string; label: string; icon: Icon }[] = [
+  { href: '/mypage/', label: 'マイページ', icon: 'home' },
+  { href: '/mypage/points/', label: 'ポイント履歴', icon: 'history' },
+  { href: '/mypage/withdraw/', label: 'ポイント交換', icon: 'coin' },
+  { href: '/mypage/bank/', label: '振込先口座', icon: 'bank' },
+];
+
+const otherLinks: { href: string; label: string; icon: Icon }[] = [
+  { href: '/guide/', label: 'サービスについて・ヘルプ', icon: 'help' },
+  { href: '/contact/', label: 'お問い合わせ', icon: 'mail' },
+  { href: '/terms/', label: '利用規約', icon: 'doc' },
+  { href: '/privacy/', label: 'プライバシーポリシー', icon: 'shield' },
+  { href: '/company/', label: '運営者情報', icon: 'building' },
+];
 ---
 
 <header class="site-header">
@@ -7,27 +59,181 @@ import { LINE_LOGIN_URL } from '../lib/config';
     <a href="/" class="site-header__logo" aria-label="ポイフォ トップへ">
       <img src="/images/poifo-logo-header.png" alt="POIFO ポイフォ" width="94" height="40" />
     </a>
-    <nav class="site-header__actions">
+    <div class="site-header__actions">
       <span data-show="guest">
         <a class="btn btn--outline site-header__btn" href={LINE_LOGIN_URL}>ログイン</a>
       </span>
       <span data-show="member">
         <a class="btn site-header__btn" href="/mypage/">マイページ</a>
       </span>
-      <details class="menu">
-        <summary aria-label="メニュー">メニュー</summary>
-        <ul>
-          <li><a href="/campaigns/">案件を探す</a></li>
-          <li><a href="/events/">イベント</a></li>
-          <li><a href="/support/">担当サポート</a></li>
-          <li data-show="member"><a href="/mypage/points/">ポイント履歴</a></li>
-          <li data-show="member"><a href="/mypage/withdraw/">ポイント交換</a></li>
-          <li><a href="/guide/">ヘルプ</a></li>
-        </ul>
-      </details>
-    </nav>
+      <button class="burger" type="button" id="menu-open" aria-controls="site-menu" aria-expanded="false">
+        <span class="burger__lines" aria-hidden="true"><span></span></span>
+        <span class="burger__label">メニュー</span>
+      </button>
+    </div>
   </div>
 </header>
+
+<div class="drawer" id="site-menu" hidden>
+  <div class="drawer__backdrop" data-menu-close></div>
+  <nav class="drawer__panel" aria-label="メニュー" tabindex="-1">
+    <div class="drawer__head">
+      <a href="/" aria-label="ポイフォ トップへ"><img src="/images/poifo-logo-header.png" alt="POIFO ポイフォ" width="80" height="34" /></a>
+      <button class="drawer__close" type="button" data-menu-close aria-label="メニューを閉じる">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </div>
+
+    <!-- 未ログイン: 登録の案内 / ログイン中: ポイント残高 -->
+    <div class="drawer__status drawer__status--guest" data-show="guest">
+      <Mascot pose="wave" width={84} />
+      <div>
+        <p class="drawer__status-title">登録無料！<br />LINEですぐ始められます</p>
+        <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
+      </div>
+    </div>
+    <div class="drawer__status drawer__status--member" data-show="member">
+      <p class="drawer__hello"><span id="menu-name">会員</span> さん</p>
+      <p class="drawer__points-label">交換できるポイント</p>
+      <p class="drawer__points" id="menu-points">—</p>
+      <p class="drawer__pending">判定中 <span id="menu-pending">—</span></p>
+      <div class="drawer__status-actions">
+        <a class="btn btn--block" href="/mypage/withdraw/">ポイント交換</a>
+        <a class="btn btn--outline btn--block" href="/mypage/points/">ポイント履歴</a>
+      </div>
+    </div>
+
+    <p class="drawer__label">メニュー</p>
+    <ul class="drawer__tiles">
+      {
+        tiles.map((t) => (
+          <li>
+            <a href={t.href}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons[t.icon]} />
+              <span>{t.label}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="drawer__label">カテゴリから探す</p>
+    <ul class="drawer__chips" id="menu-categories">
+      <li><a href="/campaigns/">すべての案件</a></li>
+    </ul>
+
+    <p class="drawer__label">ポイフォの楽しみ方</p>
+    <ul class="drawer__banners">
+      {
+        banners.map((b) => (
+          <li>
+            <a href={b.href}>
+              <Mascot pose={b.pose} width={72} />
+              <span>
+                <strong>{b.title}</strong>
+                <small>{b.text}</small>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="drawer__label" data-show="member">マイページ</p>
+    <ul class="drawer__list" data-show="member">
+      {
+        myLinks.map((l) => (
+          <li>
+            <a href={l.href}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons[l.icon]} />
+              {l.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="drawer__label">サポート・その他</p>
+    <ul class="drawer__list">
+      {
+        otherLinks.map((l) => (
+          <li>
+            <a href={l.href}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons[l.icon]} />
+              {l.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</div>
+
+<script>
+  import { fetchCampaignCategories } from '../lib/api';
+  import { escapeHtml, formatPoints } from '../lib/format';
+  import { whenMe } from '../lib/session';
+
+  const drawer = document.getElementById('site-menu')!;
+  const openButton = document.getElementById('menu-open')!;
+  const panel = drawer.querySelector<HTMLElement>('.drawer__panel')!;
+  let categoriesLoaded = false;
+
+  const open = () => {
+    drawer.hidden = false;
+    // hidden を外した次のフレームでクラスを付けて、スライドのアニメーションを効かせる
+    requestAnimationFrame(() => drawer.classList.add('drawer--open'));
+    openButton.setAttribute('aria-expanded', 'true');
+    document.documentElement.classList.add('menu-open');
+    panel.focus();
+    loadCategories();
+  };
+  const close = () => {
+    drawer.classList.remove('drawer--open');
+    openButton.setAttribute('aria-expanded', 'false');
+    document.documentElement.classList.remove('menu-open');
+    // 閉じるアニメーションのあとで隠す（動きを減らす設定なら即時）
+    const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 200;
+    setTimeout(() => {
+      if (!drawer.classList.contains('drawer--open')) drawer.hidden = true;
+    }, delay);
+    openButton.focus();
+  };
+
+  openButton.addEventListener('click', open);
+  drawer.addEventListener('click', (ev) => {
+    if ((ev.target as HTMLElement).closest('[data-menu-close]')) close();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !drawer.hidden) close();
+  });
+
+  // カテゴリは開いたときに1回だけ取得する（全ページで毎回 API を呼ばないため）
+  function loadCategories() {
+    if (categoriesLoaded) return;
+    categoriesLoaded = true;
+    const list = document.getElementById('menu-categories')!;
+    fetchCampaignCategories()
+      .then((items) => {
+        const chips = items
+          .slice(0, 8)
+          .map((c) => `<li><a href="/campaigns/?category=${encodeURIComponent(c.name)}">${escapeHtml(c.name)}</a></li>`)
+          .join('');
+        list.insertAdjacentHTML('afterbegin', chips);
+      })
+      .catch(() => {
+        // 取れなくても「すべての案件」は出ているので、そのままにする
+      });
+  }
+
+  // ログイン中なら残高を出す（/v1/me は BaseLayout が1回だけ取る）
+  whenMe().then((me) => {
+    if (!me) return;
+    document.getElementById('menu-name')!.textContent = me.display_name ?? '会員';
+    document.getElementById('menu-points')!.textContent = formatPoints(me.points.available);
+    document.getElementById('menu-pending')!.textContent = formatPoints(me.points.pending);
+  });
+</script>
 
 <style>
   .site-header {
@@ -56,38 +262,335 @@ import { LINE_LOGIN_URL } from '../lib/config';
     padding: 0 14px;
     font-size: 0.9rem;
   }
-  .menu {
-    position: relative;
-  }
-  .menu summary {
-    list-style: none;
+
+  /* 三本線＋「メニュー」の文字 */
+  .burger {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border: 0;
+    background: none;
+    color: var(--color-text);
+    font: inherit;
     cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 0.9rem;
   }
-  .menu summary::-webkit-details-marker {
-    display: none;
+  .burger__lines,
+  .burger__lines span,
+  .burger__lines::before,
+  .burger__lines::after {
+    display: block;
+    width: 22px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
   }
-  .menu ul {
+  .burger__lines {
+    position: relative;
+    margin: 7px 0;
+    background: none;
+  }
+  .burger__lines::before,
+  .burger__lines::after {
+    content: '';
     position: absolute;
-    right: 0;
-    top: calc(100% + 8px);
-    min-width: 200px;
-    margin: 0;
-    padding: 8px 0;
-    list-style: none;
+    left: 0;
+  }
+  .burger__lines::before {
+    top: -7px;
+  }
+  .burger__lines::after {
+    top: 7px;
+  }
+  .burger__label {
+    font-size: 0.65rem;
+    line-height: 1;
+  }
+
+  /* ドロワー。PC では中央のスマホ幅の画面の右端から出す */
+  .drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+  .drawer__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.4);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .drawer__panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: max(0px, calc((100% - var(--shell-width)) / 2));
+    width: min(88%, 400px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: #fff;
+    padding: 0 16px calc(24px + env(safe-area-inset-bottom));
+    transform: translateX(24px);
+    opacity: 0;
+    transition:
+      transform 0.2s,
+      opacity 0.2s;
+    outline: none;
+  }
+  .drawer--open .drawer__backdrop {
+    opacity: 1;
+  }
+  .drawer--open .drawer__panel {
+    transform: none;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drawer__backdrop,
+    .drawer__panel {
+      transition: none;
+    }
+  }
+  :global(html.menu-open) {
+    overflow: hidden;
+  }
+
+  .drawer__head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    margin: 0 -16px;
+    padding: 0 8px 0 16px;
+    background: #fff;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .drawer__head img {
+    display: block;
+  }
+  .drawer__close {
+    width: 44px;
+    height: 44px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: var(--color-text);
+  }
+  .drawer__close svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .drawer__status {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: var(--radius);
+    background: var(--color-accent-bg);
+    border: 1px solid var(--color-accent);
+  }
+  .drawer__status--guest {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .drawer__status--guest > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .drawer__status--guest :global(.mascot) {
+    flex-shrink: 0;
+  }
+  .drawer__status-title {
+    margin: 0 0 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .drawer__status--guest .btn {
+    min-height: 40px;
+    font-size: 0.9rem;
+    padding: 0 8px;
+  }
+  .drawer__hello {
+    margin: 0;
+    font-weight: 600;
+  }
+  .drawer__points-label {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .drawer__points {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-accent-strong);
+  }
+  .drawer__pending {
+    margin: 0 0 12px;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .drawer__status-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .drawer__status-actions .btn {
+    min-height: 40px;
+    padding: 0 8px;
+    font-size: 0.85rem;
+  }
+
+  .drawer__label {
+    margin: 20px 0 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* アイコン付きのタイル（3列） */
+  .drawer__tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .drawer__tiles a {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    padding: 12px 4px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
   }
-  .menu li a {
-    display: block;
-    padding: 10px 16px;
+  .drawer__tiles svg {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    box-sizing: content-box;
+    border-radius: 50%;
+    background: var(--color-brand-bg);
+    fill: none;
+    stroke: var(--color-text);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .drawer__tiles a:hover {
+    border-color: var(--color-brand);
+  }
+
+  /* カテゴリのチップ（API から差し込むので :global） */
+  .drawer__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .drawer__chips :global(a) {
+    display: inline-block;
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 0.85rem;
     text-decoration: none;
   }
-  .menu li a:hover {
+  .drawer__chips :global(a:hover) {
+    border-color: var(--color-brand);
     background: var(--color-brand-bg);
+  }
+
+  /* キャラクター入りの案内バナー */
+  .drawer__banners {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .drawer__banners a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    background: var(--color-brand-bg);
+    text-decoration: none;
+  }
+  .drawer__banners li:nth-child(2) a {
+    background: var(--color-accent-bg);
+  }
+  .drawer__banners :global(.mascot) {
+    flex-shrink: 0;
+  }
+  .drawer__banners strong {
+    display: block;
+    font-weight: 600;
+  }
+  .drawer__banners small {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    line-height: 1.5;
+  }
+
+  /* アイコン付きのリンク一覧 */
+  .drawer__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .drawer__list li + li {
+    border-top: 1px solid var(--color-border);
+  }
+  .drawer__list a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  .drawer__list a::after {
+    content: '';
+    margin-left: auto;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid var(--color-muted);
+    border-right: 2px solid var(--color-muted);
+    transform: rotate(45deg);
+  }
+  .drawer__list a:hover {
+    background: var(--color-brand-bg);
+  }
+  .drawer__list svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--color-text);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 </style>
