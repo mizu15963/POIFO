@@ -21,45 +21,46 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
           <a class="btn" href="/campaigns/">ポイントを貯める</a>
         </div>
       </div>
+      <ul class="hero__points">
+        <li>登録・利用は無料</li>
+        <li>LINEでかんたん登録</li>
+        <li>担当スタッフに相談できる</li>
+      </ul>
     </div>
   </section>
 
-  <!-- ポイントの貯め方（キャラクター納品に合わせて追加） -->
-  <section class="section section--soft">
-    <div class="container">
-      <h2 class="section__title">ポイントの貯め方</h2>
-      <HowToEarn />
-      <a class="more-link" href="/guide/#earn">くわしい貯め方を見る</a>
-    </div>
-  </section>
-
-  <!-- ③ 案件を探す -->
+  <!-- ③ 案件を探す：カテゴリ → おすすめ案件 -->
   <section class="section">
     <div class="container">
-      <h2 class="section__title">おすすめ案件</h2>
+      <div class="section__head">
+        <h2 class="section__title">カテゴリから探す</h2>
+        <a class="section__more" href="/campaigns/">すべて見る</a>
+      </div>
+      <ul id="campaign-categories" class="category-tiles" aria-live="polite">
+        <li class="loading">読み込み中…</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section--tight">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="section__title">おすすめ案件</h2>
+        <a class="section__more" href="/campaigns/">すべて見る</a>
+      </div>
       <div id="featured-campaigns" class="grid grid--2" aria-live="polite">
         <p class="loading">読み込み中…</p>
       </div>
-      <a class="more-link" href="/campaigns/">すべての案件を見る</a>
-    </div>
-  </section>
-
-  <!-- ④ 担当サポート -->
-  <section class="section section--soft">
-    <div class="container">
-      <h2 class="section__title">困ったときは、担当スタッフに相談。</h2>
-      <div class="with-mascot">
-        <p class="with-mascot__body">ポイントの貯め方や案件の進め方を、LINEで気軽に相談できます。初回面談の日程もLINEで調整します。</p>
-        <Mascot pose="line" width={150} />
-      </div>
-      {LINE_OFFICIAL_URL ? <a class="btn btn--line" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline" href="/support/">担当サポートについて</a>}
     </div>
   </section>
 
   <!-- ⑤ みんなでポイ活（イベント） -->
-  <section class="section">
+  <section class="section section--soft">
     <div class="container">
-      <h2 class="section__title">みんなでポイ活！</h2>
+      <div class="section__head">
+        <h2 class="section__title">みんなでポイ活！</h2>
+        <a class="section__more" href="/events/">一覧を見る</a>
+      </div>
       <div class="with-mascot">
         <p class="lead with-mascot__body">ゲーム案件などに、みんなで楽しく挑戦。イベント情報をチェックしよう！</p>
         <Mascot pose="event" width={150} />
@@ -67,7 +68,18 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
       <div id="upcoming-events" class="grid grid--3" aria-live="polite">
         <p class="loading">読み込み中…</p>
       </div>
-      <a class="more-link" href="/events/">イベント一覧を見る</a>
+    </div>
+  </section>
+
+  <!-- ④ 担当サポート -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section__title">困ったときは、担当スタッフに相談。</h2>
+      <div class="with-mascot">
+        <p class="with-mascot__body">ポイントの貯め方や案件の進め方を、LINEで気軽に相談できます。初回面談の日程もLINEで調整します。</p>
+        <Mascot pose="line" width={150} />
+      </div>
+      {LINE_OFFICIAL_URL ? <a class="btn btn--line" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline" href="/support/">担当サポートについて</a>}
     </div>
   </section>
 
@@ -83,26 +95,91 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     </div>
   </section>
 
-  <!-- ⑦ 初めての方へ -->
+  <!-- ⑦ 初めての方へ：貯め方 → しくみ → 交換先 → よくある質問 → 登録 -->
   <section class="section">
     <div class="container">
-      <h2 class="section__title">初めての方へ</h2>
+      <h2 class="section__title">ポイントの貯め方</h2>
+      <HowToEarn />
+      <a class="more-link" href="/guide/#earn">くわしい貯め方を見る</a>
+    </div>
+  </section>
+
+  <section class="section section--soft">
+    <div class="container">
+      <h2 class="section__title">ポイントがもらえるしくみ</h2>
+      <ol class="flow">
+        <li class="card flow__item"><span class="flow__who">あなた</span><span>ポイフォ経由で、広告主のサービスを利用・申し込み</span></li>
+        <li class="card flow__item"><span class="flow__who">広告主</span><span>利用してくれたお礼として、ポイフォに広告費を支払う</span></li>
+        <li class="card flow__item"><span class="flow__who">ポイフォ</span><span>受け取った広告費の一部を、ポイントとしてあなたに還元</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section__title">貯めたポイントの使い道</h2>
+      <div class="exchange card">
+        <p class="exchange__name">現金（銀行振込）</p>
+        <p class="exchange__text">確定したポイントを、登録した銀行口座への振込で受け取れます。交換先は今後追加予定です。</p>
+        <a class="more-link" href="/guide/#exchange">交換方法を見る</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--soft">
+    <div class="container">
+      <h2 class="section__title">よくある質問</h2>
       <div class="with-mascot">
-        <ul class="faq-links with-mascot__body">
-          <li><a href="/guide/#earn">ポイントの貯め方</a></li>
-          <li><a href="/guide/#status">ポイントの獲得条件・反映について</a></li>
-          <li><a href="/guide/#support">担当サポートの利用方法</a></li>
-          <li><a href="/guide/#events">イベントへの参加方法</a></li>
-        </ul>
+        <div class="faq with-mascot__body">
+          <details>
+            <summary>登録や利用にお金はかかりますか？</summary>
+            <p>かかりません。会員登録・案件の利用・ポイント交換の申請は無料です（案件によっては、広告主のサービス自体が有料のものがあります）。</p>
+          </details>
+          <details>
+            <summary>どうやって会員登録しますか？</summary>
+            <p>「LINEで無料で始める」からLINEでログインするだけで登録できます。メールアドレスやパスワードの入力はいりません。</p>
+          </details>
+          <details>
+            <summary>ポイントはいつもらえますか？</summary>
+            <p>条件を達成すると、まず「判定中」として反映されます。広告主の承認後に「確定」となり、交換に使えるようになります。</p>
+          </details>
+          <details>
+            <summary>困ったときは誰に相談できますか？</summary>
+            <p>ポイフォ公式LINEを友だち追加すると、担当スタッフに相談できます。</p>
+          </details>
+        </div>
         <Mascot pose="cheer" width={150} />
       </div>
+      <a class="more-link" href="/guide/">ヘルプをもっと見る</a>
+    </div>
+  </section>
+
+  <!-- 最後の登録導線（未ログインのときだけ） -->
+  <section class="section final-cta" data-show="guest">
+    <div class="container">
+      <p class="final-cta__copy">ひとりじゃない、あたらしいポイ活をはじめよう。</p>
+      <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
     </div>
   </section>
 </BaseLayout>
 
 <script>
-  import { fetchCampaigns, fetchEvents } from '../lib/api';
+  import { fetchCampaignCategories, fetchCampaigns, fetchEvents } from '../lib/api';
+  import { escapeHtml } from '../lib/format';
   import { campaignCard, emptyState, eventCard } from '../lib/render';
+
+  // カテゴリは ASP から取り込んだ案件の分類（件数の多い順）。上位だけを出し、残りは案件一覧で絞り込む
+  const categories = document.getElementById('campaign-categories')!;
+  fetchCampaignCategories()
+    .then((items) => {
+      categories.innerHTML = items.length
+        ? items
+            .slice(0, 8)
+            .map((c) => `<li><a class="category-tile" href="/campaigns/?category=${encodeURIComponent(c.name)}"><span class="category-tile__name">${escapeHtml(c.name)}</span><span class="category-tile__count">${c.count}件</span></a></li>`)
+            .join('')
+        : `<li>${emptyState('カテゴリは準備中です。')}</li>`;
+    })
+    .catch(() => (categories.innerHTML = `<li>${emptyState('カテゴリを読み込めませんでした。')}</li>`));
 
   const campaigns = document.getElementById('featured-campaigns')!;
   fetchCampaigns({ featured: true, perPage: 6 })
@@ -168,10 +245,116 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
       align-self: center;
     }
   }
-  .faq-links {
-    padding-left: 1.2em;
+  .hero__points {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
   }
-  .faq-links li {
-    margin: 8px 0;
+  .hero__points li {
+    padding: 4px 12px;
+    border: 1px solid var(--color-brand);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 0.85rem;
+  }
+  /* カテゴリはスマホ2列・PC4列のタイル。件数を添えて、どこに案件が多いか分かるようにする */
+  .category-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 640px) {
+    .category-tiles {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+  /* タイルはスクリプトで差し込むので :global で当てる（Astro のスコープ付きスタイルが効かないため） */
+  .category-tiles > :global(li:only-child) {
+    grid-column: 1 / -1;
+  }
+  .category-tiles :global(.category-tile) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 8px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-decoration: none;
+  }
+  .category-tiles :global(.category-tile:hover) {
+    border-color: var(--color-brand);
+    background: var(--color-brand-bg);
+  }
+  .category-tiles :global(.category-tile__name) {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .category-tiles :global(.category-tile__count) {
+    color: var(--color-muted);
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .flow {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 640px) {
+    .flow {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .flow__item {
+    display: grid;
+    gap: 4px;
+  }
+  .flow__who {
+    font-weight: 600;
+    color: var(--color-text);
+    border-bottom: 2px solid var(--color-brand);
+    justify-self: start;
+  }
+  .exchange__name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 0 0 4px;
+  }
+  .exchange__text {
+    margin: 0;
+  }
+  .faq details {
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+  }
+  .faq details + details {
+    margin-top: 8px;
+  }
+  .faq summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .faq details p {
+    margin: 8px 0 0;
+  }
+  .final-cta {
+    text-align: center;
+  }
+  .final-cta__copy {
+    font-weight: 600;
+    font-size: 1.15rem;
+    margin: 0 0 16px;
   }
 </style>
