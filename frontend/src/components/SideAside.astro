@@ -1,0 +1,68 @@
+---
+// PC（1024px 以上）で中央のスマホ幅の画面の右に出す案内（登録・相談・はじめての方へ）
+import Mascot from './Mascot.astro';
+import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
+---
+
+<div class="side-aside">
+  <div class="side-card side-card--accent" data-show="guest">
+    <Mascot pose="wave" width={120} class="side-card__img" />
+    <p class="side-card__title">登録無料！<br />LINEですぐ始められます</p>
+    <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
+  </div>
+  <div class="side-card side-card--accent" data-show="member">
+    <Mascot pose="get" width={110} class="side-card__img" />
+    <p class="side-card__title">今日もポイントを貯めよう</p>
+    <a class="btn btn--block" href="/campaigns/">案件を探す</a>
+  </div>
+  <div class="side-card">
+    <Mascot pose="line" width={96} class="side-card__img" />
+    <p class="side-card__title">困ったら担当スタッフに相談</p>
+    {LINE_OFFICIAL_URL ? <a class="btn btn--line btn--block" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline btn--block" href="/support/">担当サポートについて</a>}
+  </div>
+  <a class="side-card side-card--link" href="/guide/">
+    <Mascot pose="guide" width={72} class="side-card__img side-card__img--inline" />
+    <span>はじめての方へ<br /><small>貯め方・交換方法を見る</small></span>
+  </a>
+</div>
+
+<style>
+  .side-aside {
+    display: grid;
+    gap: 16px;
+  }
+  .side-card {
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+    text-align: center;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-decoration: none;
+  }
+  .side-card--accent {
+    background: var(--color-accent-bg);
+    border-color: var(--color-accent);
+  }
+  .side-card__title {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .side-card--link {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    text-align: left;
+    align-items: center;
+    font-weight: 600;
+  }
+  .side-card--link small {
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+  .side-card--link:hover {
+    border-color: var(--color-brand);
+  }
+</style>

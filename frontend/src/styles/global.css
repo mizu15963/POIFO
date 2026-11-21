@@ -10,6 +10,14 @@
   --color-bg: #ffffff;
   --color-logo-bg: #fcfcfc;
   --color-danger: #c4353a;
+  /* 3色目: キャラクター（ポイフォックス）のオレンジ。ポイント数・番号・目立たせたい囲みに使う。
+     文字に使うときはコントラストを確保した --color-accent-strong を使う */
+  --color-accent: #f7a440;
+  --color-accent-strong: #b45a00;
+  --color-accent-bg: #fff4e6;
+  /* PC で中央の画面の外側に敷く背景 */
+  --color-page-bg: #eef7f7;
+  --shell-width: 480px;
   --radius: 12px;
   --content-width: 960px;
   --font-sans: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
@@ -77,23 +85,20 @@ h3 {
 }
 
 /* スマホは余白と見出しを詰め、1画面に入る情報を増やす（主なターゲットがスマホのため） */
-@media (max-width: 639px) {
-  .section {
-    padding: 24px 0;
-  }
-  .section--tight {
-    padding-top: 0;
-  }
-  .section__title {
-    font-size: 1.1rem;
-    padding-left: 10px;
-    border-left-width: 4px;
-  }
-  .section__head {
-    margin-bottom: 12px;
-  }
+.section {
+  padding: 24px 0;
 }
-
+.section--tight {
+  padding-top: 0;
+}
+.section__title {
+  font-size: 1.1rem;
+  padding-left: 10px;
+  border-left-width: 4px;
+}
+.section__head {
+  margin-bottom: 12px;
+}
 /* 見出しの右に「すべて見る」を置く（一覧へのリンクを探さなくて済むように） */
 .section__head {
   display: flex;
@@ -162,15 +167,6 @@ h3 {
   gap: 12px;
 }
 
-@media (min-width: 640px) {
-  .grid--2 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .grid--3 {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
 .card {
   display: block;
   background: #fff;
@@ -221,7 +217,7 @@ a.card:hover {
 
 .campaign-card__points {
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--color-accent-strong);
 }
 
 .event-card {
@@ -436,12 +432,6 @@ body[data-require-login='true']:not([data-auth='member']) main {
   flex-shrink: 0;
 }
 
-@media (min-width: 640px) {
-  .with-mascot .mascot {
-    width: 150px;
-  }
-}
-
 /* スマホで画面下に追従する登録ボタン（未ログインのときだけ。BaseLayout）。PC は出さない */
 .sticky-cta {
   position: fixed;
@@ -466,14 +456,90 @@ body[data-require-login='true']:not([data-auth='member']) main {
 }
 
 /* 追従ボタンでフッターの最後が隠れないよう、その分だけ下に余白を足す */
-@media (max-width: 639px) {
-  body[data-auth='guest'][data-sticky-cta='true'] {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+body[data-auth='guest'][data-sticky-cta='true'] {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* ===== PC のレイアウト: スマホ幅の画面を中央に置き、1024px 以上では左右にメニュー・案内 ===== */
+.shell__side {
+  display: none;
+}
+
+.shell__center {
+  max-width: var(--shell-width);
+  margin: 0 auto;
+  background: var(--color-bg);
+  min-height: 100vh;
+}
+
+@media (min-width: 520px) {
+  body {
+    background: var(--color-page-bg);
+  }
+  .shell__center {
+    box-shadow: 0 0 24px rgb(0 0 0 / 0.06);
+  }
+  /* 追従ボタンも中央の画面の幅に合わせる */
+  .sticky-cta {
+    max-width: var(--shell-width);
+    margin: 0 auto;
   }
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1024px) {
+  .shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--shell-width) minmax(0, 1fr);
+    gap: 32px;
+  }
+  .shell__center {
+    margin: 0;
+  }
+  .shell__side {
+    display: block;
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    padding-block: 24px;
+  }
+  .shell__side--left {
+    justify-self: end;
+    width: 220px;
+  }
+  .shell__side--right {
+    justify-self: start;
+    width: 260px;
+  }
+  /* PC は右の案内に登録ボタンがあるので、追従ボタンは出さない */
   .sticky-cta {
     display: none;
   }
+  body[data-auth='guest'][data-sticky-cta='true'] {
+    padding-bottom: 0;
+  }
+}
+
+/* 中央揃えの見出し（説明・案内のセクション用）。一覧のセクションは左の線の見出しのまま */
+.section__title--center {
+  text-align: center;
+  border-left: 0;
+  padding-left: 0;
+}
+
+.section__title--center::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.section--warm {
+  background: var(--color-accent-bg);
+}
+
+.center-text {
+  text-align: center;
 }

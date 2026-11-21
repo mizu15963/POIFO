@@ -47,7 +47,7 @@ const steps: { pose: MascotPose; title: string; text: string }[] = [
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.08em;
-    color: var(--color-muted);
+    color: var(--color-accent-strong);
   }
   .howto__title {
     margin: 0 0 4px;
@@ -59,19 +59,4 @@ const steps: { pose: MascotPose; title: string; text: string }[] = [
     color: var(--color-muted);
   }
   /* PC は3列にして画像を上に */
-  @media (min-width: 640px) {
-    .howto {
-      grid-template-columns: repeat(3, 1fr);
-    }
-    .howto__step {
-      flex-direction: column;
-      text-align: center;
-    }
-    /* ポーズごとに縦横比が違うので、高さをそろえて見出しの位置を合わせる */
-    .howto__step :global(.howto__img) {
-      width: 160px;
-      height: 140px;
-      object-fit: contain;
-    }
-  }
 </style>

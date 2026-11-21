@@ -24,8 +24,9 @@ API は別ホスト（`https://api.<domain>`、[../backend/](../backend/)）に�
 
 ## デザイン
 
-- スマホ優先。まず幅 390px 前後で崩れないことを確かめてから PC 幅を見る。
-- 色は `src/styles/global.css` の CSS 変数だけを使う。ティファニーブルー（`--color-brand`）はアクセントに留め、白文字を載せない。主要 CTA は濃色背景（`.btn`）か LINE の緑（`.btn--line`）。
+- スマホ優先。**PC でもスマホ幅（480px）の画面を中央に置き**、1024px 以上では左右の余白にメニュー（`SideNav`）と案内（`SideAside`）を出す（BaseLayout の `.shell`）。画面の中身に PC 専用のレイアウト（`min-width` のメディアクエリ）は作らない。
+- 説明・案内のセクションは中央揃えの見出し（`.section__title--center`）、一覧のセクションは左の線の見出し（`.section__title`）にして、全部を左揃えにしない。
+- 色は `src/styles/global.css` の CSS 変数だけを使う。ティファニーブルー（`--color-brand`）はアクセントに留め、白文字を載せない。3色目のオレンジ（`--color-accent` 系、キャラクター由来）はポイント数・番号・強調の囲みに使い、文字は `--color-accent-strong` にする。主要 CTA は濃色背景（`.btn`）か LINE の緑（`.btn--line`）。
 - スマホでは未ログインのとき、画面下に「LINEで無料で始める」を追従させる（BaseLayout。マイページ・ログイン・`noindex` のページでは出さない。同じボタンがページ内で見えている間は引っ込める）。
 - ポイントの状態（判定中・確定・否認）は色だけでなく文字でも示す。
 - 太すぎる見出し・強い影は使わない（`font-weight` は 600 まで）。
