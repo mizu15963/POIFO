@@ -38,6 +38,15 @@ const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなた�
     <main>
       <slot />
     </main>
+    {
+      requireLogin && (
+        <section class="section" id="auth-error" hidden>
+          <div class="container narrow">
+            <p class="notice">サーバーに接続できませんでした。時間をおいて再読み込みしてください。</p>
+          </div>
+        </section>
+      )
+    }
     <Footer />
     <script>
       import { fetchMe } from '../lib/api';
@@ -54,7 +63,10 @@ const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなた�
           setMe(me);
         })
         .catch(() => {
+          // API に届かないときは未ログイン扱い。ログイン必須のページは中身を出さずにお知らせだけ表示する
           document.body.dataset.auth = 'guest';
+          const error = document.getElementById('auth-error');
+          if (error) error.hidden = false;
           setMe(null);
         });
     </script>
