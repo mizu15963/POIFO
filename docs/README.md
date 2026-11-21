@@ -10,6 +10,7 @@ POIFO（ポイフォ）の仕様書・連携資料・ブランド資産をまと
 | [reviews/](reviews/) | 仕様書のレビュー記録 |
 | [infra/](infra/) | AWS 環境の構築・更新・削除の手順（Terraform＋GitHub Actions） |
 | [deploy/](deploy/) | フロント・バックエンドのデプロイの手順 |
+| [server/](server/) | API サーバ（Lightsail）の初期設定・バックアップ・監視 |
 
 ## 仕様書
 

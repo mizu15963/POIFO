@@ -90,37 +90,9 @@ GitHub Actions                         S3 poifo-deploy-…                サー
 
 ### 2. サーバ（1回だけ）
 
-前提: nginx と PHP 8.4（php8.4-fpm、拡張 mbstring・intl・xml・curl・mysql）が入っていること。Composer はサーバに要らない（Actions でビルド済みのものを配る）。
-サーバの初期設定全体は別の手順書で扱う。ここではデプロイに必要な分だけ。
-
-```sh
-# 必要なコマンド
-sudo apt-get install -y jq unzip
-curl -sSfL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-unzip -q /tmp/awscliv2.zip -d /tmp && sudo /tmp/aws/install
-
-# ディレクトリ（コードは root、書き込みが要る storage は www-data）
-sudo mkdir -p /var/www/poifo/releases /var/www/poifo/shared/storage/{app/public,framework/{cache/data,sessions,views},logs}
-sudo chown -R www-data:www-data /var/www/poifo/shared/storage
-
-# 本番の .env（項目は backend/README.md の「本番の設定」）。www-data が読めて、ほかの人は読めないように
-sudo nano /var/www/poifo/shared/.env
-sudo chown root:www-data /var/www/poifo/shared/.env && sudo chmod 640 /var/www/poifo/shared/.env
-
-# deploy agent（リポジトリの deploy/backend/server/ をサーバにコピーしてから）
-sudo install -m 755 poifo-deploy-agent.sh /usr/local/bin/poifo-deploy-agent
-sudo install -d -m 700 /etc/poifo
-sudo install -m 600 deploy-agent.env.example /etc/poifo/deploy-agent.env
-sudo nano /etc/poifo/deploy-agent.env     # poifo-deploy-agent のアクセスキー、DEPLOY_BUCKET、SERVER_NAME（台ごとに別）、MIGRATE（1台だけ true）
-sudo install -m 644 poifo-deploy-agent.service poifo-deploy-agent.timer poifo-queue.service /etc/systemd/system/
-sudo install -m 644 poifo.cron /etc/cron.d/poifo
-sudo systemctl daemon-reload
-sudo systemctl enable --now poifo-deploy-agent.timer
-```
-
-- `poifo-deploy-agent` のアクセスキーは IAM コンソール → ユーザー → `poifo-deploy-agent` → セキュリティ認証情報 → アクセスキーを作成（ユースケースは「AWS の外部で実行されるアプリケーション」）
-- nginx の `root` は `/var/www/poifo/current/public`、`fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;`（`$realpath_root` にするとリンク切り替え後に新しいリリースを読む）
-- 最初のデプロイが成功したら、キューのワーカーを起動する: `sudo systemctl enable --now poifo-queue`
+[../server/README.md](../server/README.md) の初期設定スクリプト（`deploy/backend/server/setup-server.sh`）で、
+deploy agent・キューのワーカー・cron・nginx・PHP をまとめて入れる。deploy agent の設定は `/etc/poifo/deploy-agent.env`
+（`poifo-deploy-agent` のアクセスキー、`DEPLOY_BUCKET`、`SERVER_NAME`（台ごとに別）、`MIGRATE`（1台だけ true））。
 
 ### 3. 最初のデプロイ
 
