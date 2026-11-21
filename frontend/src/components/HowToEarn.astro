@@ -1,0 +1,77 @@
+---
+// ポイントの貯め方（3ステップ）。トップと「はじめての方へ」で共通に使う。
+import Mascot, { type MascotPose } from './Mascot.astro';
+
+const steps: { pose: MascotPose; title: string; text: string }[] = [
+  { pose: 'point', title: 'LINEでかんたん登録', text: 'LINEでログインするだけ。面倒な入力はありません。' },
+  { pose: 'guide', title: '案件を選んで進む', text: '「案件を探す」から気になる案件を選び、「この案件に進む」を押します。' },
+  { pose: 'get', title: '条件達成でポイントGET', text: '条件を達成すると「判定中」で反映され、広告主の承認後に「確定」になります。' },
+];
+---
+
+<ol class="howto">
+  {
+    steps.map((s, i) => (
+      <li class="howto__step card">
+        <Mascot pose={s.pose} width={120} class="howto__img" />
+        <div>
+          <p class="howto__num">STEP {i + 1}</p>
+          <h3 class="howto__title">{s.title}</h3>
+          <p class="howto__text">{s.text}</p>
+        </div>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .howto {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  /* スマホは画像を左に置いて縦に長くしない */
+  .howto__step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .howto__step :global(.howto__img) {
+    width: 96px;
+    flex-shrink: 0;
+  }
+  .howto__num {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+  }
+  .howto__title {
+    margin: 0 0 4px;
+    font-size: 1rem;
+  }
+  .howto__text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+  /* PC は3列にして画像を上に */
+  @media (min-width: 640px) {
+    .howto {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .howto__step {
+      flex-direction: column;
+      text-align: center;
+    }
+    /* ポーズごとに縦横比が違うので、高さをそろえて見出しの位置を合わせる */
+    .howto__step :global(.howto__img) {
+      width: 160px;
+      height: 140px;
+      object-fit: contain;
+    }
+  }
+</style>

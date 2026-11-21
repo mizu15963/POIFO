@@ -1,0 +1,40 @@
+---
+// キャラクター「ポイフォックス」の画像。
+// 画像は public/images/mascot/ の書き出し済み WebP（透過・長辺480px）を使う。
+// width/height を必ず付けて、読み込み中にレイアウトがずれないようにする。
+const sizes = {
+  wave: [426, 480], // 手を振る（あいさつ）
+  cheer: [480, 470], // 座って応援
+  point: [454, 480], // 指さし
+  line: [480, 463], // 「LINEで相談」
+  get: [437, 480], // 「ポイントGET!」
+  event: [480, 459], // 「イベント参加」
+  guide: [480, 418], // チェックリストで説明
+} as const;
+
+export type MascotPose = keyof typeof sizes;
+
+interface Props {
+  pose: MascotPose;
+  /** 表示幅(px)。高さは縦横比から決まる */
+  width: number;
+  /** 装飾なら空文字（既定）。画像だけで意味を伝えるときに説明を入れる */
+  alt?: string;
+  /** ファーストビューの画像だけ true（それ以外は遅延読み込み） */
+  eager?: boolean;
+  class?: string;
+}
+
+const { pose, width, alt = '', eager = false, class: className } = Astro.props;
+const [w, h] = sizes[pose];
+---
+
+<img
+  src={`/images/mascot/poifox-${pose}.webp`}
+  width={width}
+  height={Math.round((width * h) / w)}
+  alt={alt}
+  loading={eager ? 'eager' : 'lazy'}
+  decoding="async"
+  class:list={['mascot', className]}
+/>

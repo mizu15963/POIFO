@@ -1,12 +1,16 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Mascot from '../../components/Mascot.astro';
 ---
 
 <BaseLayout title="イベント">
   <section class="section">
     <div class="container">
       <h1 class="section__title">みんなでポイ活！イベント</h1>
-      <p class="lead">イベントへの参加は、各イベントの「オープンチャットで参加する」から。会話や案内はオープンチャットで行います。</p>
+      <div class="with-mascot">
+        <p class="lead with-mascot__body">イベントへの参加は、各イベントの「オープンチャットで参加する」から。会話や案内はオープンチャットで行います。</p>
+        <Mascot pose="event" width={150} eager />
+      </div>
       <div id="events" class="grid grid--2" aria-live="polite"><p class="loading">読み込み中…</p></div>
     </div>
   </section>

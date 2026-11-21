@@ -13,6 +13,7 @@ API は別ホスト（`https://api.<domain>`、[../backend/](../backend/)）に�
 - **API は `src/lib/api.ts` 経由で呼ぶ。** 直接 `fetch` しない（`credentials: 'include'`・CSRF の扱いをまとめてあるため）。POST などの更新系は `withCsrf()` を通す。
 - **案件のリンクは `campaignGoUrl()`（API の `/go/{id}`）を使う。** ASP の計測リンクをフロントで組み立てない（会員IDを付けるのはバックエンドの役目）。
 - **ロゴは `public/images/` の書き出し済み画像を使う。** 描き直したり、フォントで似せたりしない。
+- **キャラクター（ポイフォックス）は `src/components/Mascot.astro` で `public/images/mascot/` の書き出し済み WebP を使う。** 描き直し・色や形の加工・別ポーズの自作はしない。
 
 ## URL と画面
 
@@ -26,7 +27,8 @@ API は別ホスト（`https://api.<domain>`、[../backend/](../backend/)）に�
 - スマホ優先。まず幅 390px 前後で崩れないことを確かめてから PC 幅を見る。
 - 色は `src/styles/global.css` の CSS 変数だけを使う。ティファニーブルー（`--color-brand`）はアクセントに留め、白文字を載せない。主要 CTA は濃色背景（`.btn`）か LINE の緑（`.btn--line`）。
 - ポイントの状態（判定中・確定・否認）は色だけでなく文字でも示す。
-- 太すぎる見出し・強い影・キャラクター装飾は使わない（`font-weight` は 600 まで）。
+- 太すぎる見出し・強い影は使わない（`font-weight` は 600 まで）。
+- キャラクターは文章の横に添える程度にし、1セクションに1体まで。案件カードなど情報の一覧には入れない。文章で意味が伝わる場所では `alt=""`（装飾扱い）にする。
 
 ## コーディング
 
