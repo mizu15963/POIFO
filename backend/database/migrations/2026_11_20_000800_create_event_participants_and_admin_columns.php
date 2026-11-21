@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // イベントの参加上限と参加ポイント（docs/specs/admin-and-member-spec.md 3章）
+        // イベントの参加上限と参加ポイント（docs/specs/functional-spec.md 8章）
         Schema::table('events', function (Blueprint $table) {
             $table->unsignedInteger('capacity')->nullable()->after('openchat_url');   // 空なら上限なし
             $table->unsignedInteger('reward_points')->default(0)->after('capacity');  // 参加を確認した会員に付与

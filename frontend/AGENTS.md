@@ -2,7 +2,7 @@
 
 POIFO（ポイフォ）の会員向けサイト。Astro 7 の **静的出力** を S3＋CloudFront で配信する。
 API は別ホスト（`https://api.<domain>`、[../backend/](../backend/)）にあり、ブラウザから Cookie 付きで呼ぶ。
-画面の仕様は [../docs/specs/top-page-spec.md](../docs/specs/top-page-spec.md) とそのレビュー（[../docs/reviews/](../docs/reviews/)）、色は [../docs/brand/README.md](../docs/brand/README.md)。
+画面の仕様は [../docs/specs/screen-spec.md](../docs/specs/screen-spec.md)、機能のルールは [../docs/specs/functional-spec.md](../docs/specs/functional-spec.md)、色は [../docs/brand/README.md](../docs/brand/README.md)。
 
 ## 絶対に守ること
 

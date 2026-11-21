@@ -11,7 +11,7 @@
 
 ## ページ
 
-画面の仕様: [../docs/specs/top-page-spec.md](../docs/specs/top-page-spec.md)、[../docs/specs/admin-and-member-spec.md](../docs/specs/admin-and-member-spec.md)（仮）
+画面の仕様: [../docs/specs/screen-spec.md](../docs/specs/screen-spec.md)、機能の仕様: [../docs/specs/functional-spec.md](../docs/specs/functional-spec.md)
 
 | URL | 内容 |
 |---|---|

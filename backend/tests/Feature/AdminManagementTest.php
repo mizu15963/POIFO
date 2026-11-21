@@ -14,7 +14,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-// 管理画面の案件・イベント・会員・成果通知（docs/specs/admin-and-member-spec.md）
+// 管理画面の案件・イベント・会員・成果通知（docs/specs/functional-spec.md 9章）
 class AdminManagementTest extends TestCase
 {
     use RefreshDatabase;

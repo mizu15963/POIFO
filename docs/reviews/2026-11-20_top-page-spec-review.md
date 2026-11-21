@@ -1,6 +1,6 @@
 # レビュー：トップ画面構成・機能仕様（初期版）
 
-- 対象：[specs/top-page-spec.md](../specs/top-page-spec.md)（2026-11-19 作成）
+- 対象：[specs/top-page-spec.md](https://github.com/mizu15963/poifo/blob/87ebcb3/docs/specs/top-page-spec.md)（2026-11-19 作成。2026-11-21 に [functional-spec.md](../specs/functional-spec.md)・[screen-spec.md](../specs/screen-spec.md) へ統合）
 - レビュー日：2026-11-20
 - 照合したもの：[GF Rewards 連携資料](../partners/gf-rewards/README.md)、サーバ構成計画書、これまでの決定事項（LINEログイン、銀行振込での換金、管理画面のIP制限）
 
