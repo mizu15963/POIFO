@@ -43,6 +43,8 @@ CloudFront Function が付ける `x-poifo-viewer-host` ヘッダーで判断す�
 API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` のときだけ api. にルートを作る（本番は false）。
 仕様書はコードから自動生成されるので、API を変えたらバリデーション（`$request->validate()`）と返却値の形を明示し、
 `/docs/api` で意図どおりに載っているか確かめる。コントローラのメソッドの PHPDoc 1行目が各 API の説明になる。
+ASP の成果通知（`postback/`）は受け口の存在を外に見せないため仕様書に載せない（`config/scramble.php` の `api_path`）。
+書き出した OpenAPI（YAML）もリポジトリにコミットしない（public のため）。
 
 ## ポストバック（成果通知）の決まりごと
 
