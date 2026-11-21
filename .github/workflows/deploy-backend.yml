@@ -37,6 +37,8 @@ jobs:
     name: テスト・ビルド・配置
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    # sub が ...:environment:poifo-deploy になり deploy ロールに入れる（初回の実行で自動作成。ブランチ制限がないので main だけで動かす）
+    if: github.ref == 'refs/heads/main'
     environment: poifo-deploy
     defaults:
       run:

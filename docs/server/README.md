@@ -84,7 +84,7 @@ CloudFront のオリジン（`origin.<domain>`）は固定 IP を指したまま
 
 1台目は「枠 a」（`poifo-api-a`）と「枠 b」（`poifo-api-b`）を持ち、固定 IP は Variables の `API_ACTIVE_SLOT` の枠に付く。以下は a から b へ入れ替える例（b から a のときは逆に読む）。
 
-1. **新しいサーバを作る**: Variables の `API_STANDBY` を `true`（サイズを変えるなら `API_B_BUNDLE` も、例 `small_3_0`）にして **更新（Terraform）** → 承認。
+1. **新しいサーバを作る**: Variables の `API_STANDBY` を `true`（サイズを変えるなら `API_B_BUNDLE` も、例 `small_3_0`）にして **更新（Terraform）** を手動実行。
    `poifo-api-b` ができる（固定 IP はまだ a）。ジョブサマリーの outputs の `standby_instance` で確かめる
 2. **新しいサーバを準備する**: `poifo-api-b` に SSH で入り、上の「手順」の1・3を行う（DB ユーザーは作らない）。
    - `/var/www/poifo/shared/.env` は a と同じ内容（a の `sudo cat` をコピー）
@@ -94,11 +94,11 @@ CloudFront のオリジン（`origin.<domain>`）は固定 IP を指したまま
      `curl -s -o /dev/null -w '%{http_code}\n' http://localhost/up` が 200 になり、`sudo journalctl -u poifo-deploy-agent` にエラーがないことを確かめる。
      準備中に b が古いデプロイを取り込もうとして「primary の migrate 待ち」で失敗していても、この手動実行で取り込み直せる
      秘密ヘッダー付きで主な API を叩いて確かめてもよい（`curl -H "X-Origin-Verify: <値>" -H "x-poifo-viewer-host: api.<domain>" http://localhost/v1/campaigns`）
-3. **固定 IP を移す**: `API_ACTIVE_SLOT` を `b` にして **更新（Terraform）** → 承認。数秒〜数十秒で CloudFront からのリクエストが b に届く。
+3. **固定 IP を移す**: `API_ACTIVE_SLOT` を `b` にして **更新（Terraform）** を手動実行。数秒〜数十秒で CloudFront からのリクエストが b に届く。
    サイトと管理画面で動作を確かめる。**問題があれば `API_ACTIVE_SLOT` を `a` に戻して更新するだけで元に戻る**
 4. **役割を移す**: b の `deploy-agent.env` を `MIGRATE=true`（`SERVER_NAME` は `api-b` のままでよい）、a の deploy agent を止める（`sudo systemctl disable --now poifo-deploy-agent.timer poifo-queue`）。
    DB のバックアップをしているなら `backup.env` と `backup.pass` も b に移して、b でスクリプトを再実行する
-5. **古いサーバを消す**: 数時間〜1日ようすを見てから、`API_STANDBY` を `false` にして **更新（Terraform）** → 承認。`poifo-api-a` が消える。
+5. **古いサーバを消す**: 数時間〜1日ようすを見てから、`API_STANDBY` を `false` にして **更新（Terraform）** を手動実行。`poifo-api-a` が消える。
    サイズを変えたなら、次の入れ替えに備えて `API_B_BUNDLE` はそのまま残す（a を作り直すときは `API_A_BUNDLE` を使う）
 6. Lightsail のアラーム（下の「監視」）を b にも付ける
 

@@ -1,6 +1,6 @@
 # Actions → 「構築・削除（Terraform）」→ Run workflow（main ブランチ）
 #   plan ジョブ : plan ロール（読み取り専用）で plan → ジョブサマリーで差分を確認
-#   run ジョブ  : Environment「poifo-apply」の承認後、apply ロールで構築（apply）／削除（destroy）
+#   run ジョブ  : apply ロールで構築（apply）／削除（destroy）。main から実行したときだけ動く
 #
 # スタックの順番: 構築は base → app、削除は app → base（all のとき）
 #   base: DB（Lightsail マネージドデータベース）・DB バックアップ用 S3・バックアップ送信用 IAM ユーザー・Route 53 ホストゾーン（消すと困るもの）
@@ -109,7 +109,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
-      # plan ロールは state に書けないので -lock=false。書き込みは承認後の run ジョブだけ
+      # plan ロールは state に書けないので -lock=false。書き込みは run ジョブだけ
       - name: terraform plan
         env:
           ACTION: ${{ inputs.action }}
@@ -124,10 +124,11 @@ jobs:
   run:
     name: ${{ inputs.action }} (${{ inputs.stack }})
     needs: plan
-    if: inputs.action != 'plan'
+    # Environment に承認者・ブランチ制限がない前提なので、main 以外からは動かさない
+    if: inputs.action != 'plan' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # Required reviewers を設定した Environment。sub が ...:environment:poifo-apply になり apply ロールに入れる
+    # sub が ...:environment:poifo-apply になり apply ロールに入れる（初回の実行で GitHub が自動作成する）
     environment: poifo-apply
     steps:
       - uses: actions/checkout@v7.0.1
