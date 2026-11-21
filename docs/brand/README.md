@@ -27,7 +27,7 @@
 | `--color-accent-strong` | `#B45A00` | ポイント数など、オレンジで文字を書くとき（白背景で読める濃さ） |
 | `--color-accent-bg` | `#FFF4E6` | セクション・カードの淡い背景 |
 
-仕様書（[specs/top-page-spec.md](../specs/top-page-spec.md) 7-3）の暫定値 `#81D8D0` は、上の値で置き換える想定です。
+旧仕様書の暫定値 `#81D8D0` は使わず、上の値を使います。サービス名・コピーは [specs/functional-spec.md](../specs/functional-spec.md) 1章。
 
 ## キャラクター「ポイフォックス（Poifox）」
 

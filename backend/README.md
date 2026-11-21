@@ -18,7 +18,7 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 
 ## 機能と API（いまある分）
 
-管理画面・会員機能の仕様（仮）: [../docs/specs/admin-and-member-spec.md](../docs/specs/admin-and-member-spec.md)
+機能の仕様: [../docs/specs/functional-spec.md](../docs/specs/functional-spec.md)、画面の仕様: [../docs/specs/screen-spec.md](../docs/specs/screen-spec.md)
 
 | メソッド・パス | ホスト | 認証 | 内容 |
 |---|---|---|---|
@@ -211,7 +211,7 @@ main に `backend/` の変更が入ると、ワークフロー「デプロイ（
 
 ## まだやっていないこと
 
-- 管理画面・会員機能の仕様は仮（[../docs/specs/admin-and-member-spec.md](../docs/specs/admin-and-member-spec.md)）。運営の確認で変わる可能性がある
+- 仕様のうち「仮」の部分は運営の確認で変わる可能性がある。まだ決まっていないことは [../docs/specs/functional-spec.md](../docs/specs/functional-spec.md) 14章
 - ポイントの有効期限、会員へのお知らせ（メール・LINE 通知）
 - サーバの初期設定手順（nginx・PHP のインストールなど。デプロイに必要な分は docs/deploy/README.md にある）
 - GF Rewards に確認すること: 判定中（未承認）の通知への応答を `0` にしているが、それでよいか

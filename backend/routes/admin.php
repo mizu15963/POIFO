@@ -12,7 +12,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 // 管理画面（https://admin.<domain>/）。WAF と nginx で IP 制限、ログインはパスワード＋二要素認証。
-// 機能の仕様は docs/specs/admin-and-member-spec.md
+// 機能の仕様は docs/specs/functional-spec.md 9章、画面は docs/specs/screen-spec.md 4章
 Route::model('member', User::class);
 Route::model('log', PostbackLog::class);
 

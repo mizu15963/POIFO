@@ -10,7 +10,7 @@ use App\Services\Points\PointBalance;
 use Illuminate\Support\Facades\DB;
 
 /**
- * 会員の停止・再開・ポイントの手動調整・退会（docs/specs/admin-and-member-spec.md 4章・6章）。
+ * 会員の停止・再開・ポイントの手動調整・退会（docs/specs/functional-spec.md 3.2・3.4・5.2）。
  * 会員の status はここだけで変える。
  */
 class MemberService

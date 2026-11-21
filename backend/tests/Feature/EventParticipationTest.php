@@ -10,7 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-// イベントの参加（docs/specs/admin-and-member-spec.md 3.1）
+// イベントの参加（docs/specs/functional-spec.md 8.2）
 class EventParticipationTest extends TestCase
 {
     use RefreshDatabase;

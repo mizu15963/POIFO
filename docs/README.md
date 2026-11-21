@@ -16,7 +16,10 @@ POIFO（ポイフォ）の仕様書・連携資料・ブランド資産をまと
 
 | ファイル | 内容 | 状態 |
 | --- | --- | --- |
-| [specs/top-page-spec.md](specs/top-page-spec.md) | トップ画面構成・機能仕様（初期版、2026-11-19） | プロトタイプ。レビュー指摘あり（[reviews/2026-11-20_top-page-spec-review.md](reviews/2026-11-20_top-page-spec-review.md)） |
+| [specs/functional-spec.md](specs/functional-spec.md) | 機能仕様（会員・案件・ポイント・成果通知・換金・イベント・管理画面、まだ決まっていないこと） | 実装済みの内容を書き起こし（2026-11-21）。一部は仮 |
+| [specs/screen-spec.md](specs/screen-spec.md) | 画面仕様（会員サイト・管理画面の画面ごとの表示と操作、画面遷移） | 実装済みの画面を書き起こし（2026-11-21） |
+
+2026-11-19 の「トップ画面構成・機能仕様」と 2026-11-20 の「管理画面・会員機能 仮仕様書」は、上の2本に統合した（[レビュー記録](reviews/2026-11-20_top-page-spec-review.md)は当時の版が対象）。
 
 ## インフラ
 

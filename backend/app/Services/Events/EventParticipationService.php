@@ -10,7 +10,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * イベントの参加（docs/specs/admin-and-member-spec.md 3.1）。
+ * イベントの参加（docs/specs/functional-spec.md 8.2）。
  *
  *   参加予定（joined）──取り消し──> 取り消し（cancelled）──再参加──> 参加予定
  *        └──管理者が確認──> 参加済み（attended、参加ポイントを付与）／不参加（absent）
