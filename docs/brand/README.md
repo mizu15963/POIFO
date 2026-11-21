@@ -31,7 +31,7 @@
 
 ## キャラクター「ポイフォックス（Poifox）」
 
-2026-11-21 納品（7ポーズ。同じ画像が2組重複していたので除外）。サイトでは背景を透過にし、長辺480pxの WebP に縮小したものを [frontend/public/images/mascot/](../../frontend/public/images/mascot/) に置いています（1枚 35〜53KB）。納品原本（1254px 前後の PNG、背景は白）はリポジトリには入れず、プロジェクトの共有フォルダ `brand/mascot/original/` に保管しています。
+2026-11-21 納品（7ポーズ＋エラー用1ポーズ。同じ画像が2組重複していたので除外）。サイトでは背景を透過にし、長辺480pxの WebP に縮小したものを [frontend/public/images/mascot/](../../frontend/public/images/mascot/) に置いています（1枚 35〜53KB）。納品原本（1254px 前後の PNG、背景は白）はリポジトリには入れず、プロジェクトの共有フォルダ `brand/mascot/original/` に保管しています。
 
 | ファイル | ポーズ | 主な使いどころ |
 | --- | --- | --- |
@@ -42,6 +42,7 @@
 | poifox-get.webp | 「ポイントGET!」 | 貯め方 STEP3 |
 | poifox-line.webp | 「LINEで相談」 | 担当サポート |
 | poifox-event.webp | 「イベント参加」 | イベント |
+| poifox-sorry.webp | 謝る（2026-11-21 追加納品、透過PNG） | エラーページ（404・500、サーバ側のエラー画面） |
 
 ## 未対応
 

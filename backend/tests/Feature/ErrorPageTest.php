@@ -17,7 +17,7 @@ class ErrorPageTest extends TestCase
             ->assertNotFound()
             ->assertSee('ページが見つかりません')
             ->assertSee('https://poifo.test/', false)
-            ->assertSee('https://poifo.test/images/mascot/poifox-point.webp', false)
+            ->assertSee('https://poifo.test/images/mascot/poifox-sorry.webp', false)
             ->assertDontSee('Not Found');
     }
 
@@ -34,7 +34,7 @@ class ErrorPageTest extends TestCase
     {
         Route::get('/_test/error/{code}', fn (int $code) => abort($code));
 
-        $this->asApiHost()->get('/_test/error/500')->assertStatus(500)->assertSee('ただいまつながりにくくなっています')->assertSee('poifox-guide.webp', false);
+        $this->asApiHost()->get('/_test/error/500')->assertStatus(500)->assertSee('ただいまつながりにくくなっています')->assertSee('poifox-sorry.webp', false);
         $this->asApiHost()->get('/_test/error/503')->assertStatus(503)->assertSee('メンテナンス中');
         // 個別の画面がないコードは 4xx / 5xx の画面になる
         $this->asApiHost()->get('/_test/error/502')->assertStatus(502)->assertSee('ただいまつながりにくくなっています');

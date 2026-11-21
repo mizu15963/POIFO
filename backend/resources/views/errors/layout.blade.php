@@ -11,9 +11,8 @@
     $backUrl = $isAdmin ? '/' : $frontUrl.'/';
     $backLabel = $isAdmin ? '管理画面のトップへ' : 'ポイフォのトップへ';
     // 会員向けはキャラクター付き（画像はフロントの配信先から読む）。管理画面は飾らない
-    // 画像の実寸（長辺480px）から表示幅180pxの高さを出す: point 454x480、guide 480x418
-    [$pose, $mascotHeight] = $code >= 500 ? ['guide', 157] : ['point', 190];
-    $mascot = $isAdmin ? null : $frontUrl.'/images/mascot/poifox-'.$pose.'.webp';
+    // エラーページ用の謝るポーズ（実寸 447x480 → 表示幅180pxで高さ193）
+    $mascot = $isAdmin ? null : $frontUrl.'/images/mascot/poifox-sorry.webp';
 @endphp
 <!doctype html>
 <html lang="ja">
@@ -36,7 +35,7 @@
 <body>
 <main>
     @if ($mascot)
-        <img src="{{ $mascot }}" alt="" width="180" height="{{ $mascotHeight }}">
+        <img src="{{ $mascot }}" alt="" width="180" height="193">
     @endif
     <p class="code">{{ $code }}</p>
     <h1>{{ $heading }}</h1>
