@@ -1,16 +1,55 @@
 ---
+// 400系のエラーページ。CloudFront が存在しないパス（S3 の 403/404）でこのページを返す（terraform/app/front.tf）。
+// サイト自体は動いている状況なので、通常のレイアウト（メニュー付き）で行き先を案内する。
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Mascot from '../components/Mascot.astro';
 ---
 
 <BaseLayout title="ページが見つかりません" noindex>
   <section class="section">
-    <div class="container narrow">
-      <h1 class="section__title">ページが見つかりません</h1>
-      <div class="with-mascot">
-        <p class="with-mascot__body"><a class="more-link" href="/">トップへ戻る</a></p>
-        <Mascot pose="point" width={150} eager />
+    <div class="container narrow error-page">
+      <Mascot pose="point" width={180} eager class="error-page__img" />
+      <p class="error-page__code">404 Not Found</p>
+      <h1 class="error-page__title">ページが見つかりません</h1>
+      <p class="error-page__text">
+        URLが間違っているか、ページが移動・削除された可能性があります。お手数ですが、下のボタンから探してください。
+      </p>
+      <div class="error-page__actions">
+        <a class="btn btn--block" href="/">トップへ戻る</a>
+        <a class="btn btn--outline btn--block" href="/campaigns/">案件を探す</a>
+        <a class="more-link" href="/guide/">はじめての方へ・ヘルプ</a>
       </div>
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  .error-page {
+    text-align: center;
+  }
+  .error-page :global(.error-page__img) {
+    display: block;
+    margin: 0 auto 8px;
+  }
+  .error-page__code {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--color-accent-strong);
+  }
+  .error-page__title {
+    margin: 4px 0 12px;
+    font-size: 1.4rem;
+  }
+  .error-page__text {
+    margin: 0 0 24px;
+    color: var(--color-muted);
+    text-align: left;
+  }
+  .error-page__actions {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+  }
+</style>

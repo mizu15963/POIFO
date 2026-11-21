@@ -86,12 +86,31 @@ resource "aws_cloudfront_distribution" "front" {
     }
   }
 
-  # OAC では存在しないキーは 403 になるので、404 ページを返す
+  # エラーページ（frontend/src/pages/404.astro・500.astro のビルド結果）。
+  # OAC では存在しないキーは 403 になるので、403 も 404 として 404 ページを返す
   custom_error_response {
     error_code            = 403
     response_code         = 404
     response_page_path    = "/404.html"
     error_caching_min_ttl = 60
+  }
+  custom_error_response {
+    error_code            = 404
+    response_code         = 404
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 60
+  }
+
+  # S3 側の障害（5xx）は 500 ページを返す。状態コードはそのままにして、検索エンジンに一時的な障害と伝える。
+  # 復旧したらすぐ通常表示に戻るよう、エラーの記憶時間は短くする
+  dynamic "custom_error_response" {
+    for_each = [500, 502, 503, 504]
+    content {
+      error_code            = custom_error_response.value
+      response_code         = custom_error_response.value
+      response_page_path    = "/500.html"
+      error_caching_min_ttl = 10
+    }
   }
 
   restrictions {
