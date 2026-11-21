@@ -76,6 +76,24 @@ h3 {
   border-left: 5px solid var(--color-brand);
 }
 
+/* スマホは余白と見出しを詰め、1画面に入る情報を増やす（主なターゲットがスマホのため） */
+@media (max-width: 639px) {
+  .section {
+    padding: 24px 0;
+  }
+  .section--tight {
+    padding-top: 0;
+  }
+  .section__title {
+    font-size: 1.1rem;
+    padding-left: 10px;
+    border-left-width: 4px;
+  }
+  .section__head {
+    margin-bottom: 12px;
+  }
+}
+
 /* 見出しの右に「すべて見る」を置く（一覧へのリンクを探さなくて済むように） */
 .section__head {
   display: flex;
