@@ -109,6 +109,14 @@ if [[ "${cmd}" == "apply" || "${cmd}" == "destroy" ]]; then
     tf apply -input=false -no-color tfplan | mask
   fi
   if [[ "${cmd}" == "apply" ]]; then
+    # 接続先（作り直すと CloudFront のアドレスが変わるので、毎回ここに出す）
+    if [[ "${stack}" == "app" ]]; then
+      summary "## 接続先"
+      for name_label in "front_url:トップ画面" "api_url:API" "admin_url:管理画面"; do
+        url=$(tf output -raw "${name_label%%:*}" 2>/dev/null || true)
+        [[ -n "${url}" && "${url}" != "null" ]] && summary "- ${name_label#*:}: ${url}"
+      done
+    fi
     summary "## outputs: ${stack}" '```' "$(tf output -no-color | mask)" '```'
   fi
 fi
