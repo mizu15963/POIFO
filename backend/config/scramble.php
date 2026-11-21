@@ -6,10 +6,10 @@ use Dedoc\Scramble\OpenApiVersion;
 // 公開するかどうかは POIFO_API_DOCS_ENABLED で切り替え、ルートは bootstrap/app.php で登録する
 // （Scramble 既定のルートは AppServiceProvider で無効化している）。
 return [
-    // 仕様書に載せるルート（URI の先頭で判定）。ASP からの成果通知（postback/）は受け口の存在を
-    // 外に見せないため載せない（社内向けの仕様書はリポジトリの外で管理する）
+    // 仕様書に載せるルート（URI の先頭で判定）。開発中の確認用なので成果通知（postback/）も載せる。
+    // 仕様書自体は POIFO_API_DOCS_ENABLED=true の間だけ公開する
     'api_path' => [
-        'include' => ['v1', 'auth', 'go'],
+        'include' => ['v1', 'auth', 'go', 'postback'],
     ],
 
     'api_domain' => null,
@@ -26,7 +26,7 @@ return [
 
     'info' => [
         'version' => env('API_VERSION', '0.1.0'),
-        'description' => 'POIFO 会員向け API・LINE ログインの仕様書（開発用。本番では公開しない）。'
+        'description' => 'POIFO 会員向け API・LINE ログイン・成果通知の仕様書（開発用。本番では公開しない）。'
             .' Try It は同じ api. ホストから Cookie 付きで呼ぶ。POST/PUT は先に /sanctum/csrf-cookie を開いて XSRF-TOKEN を取得すること。',
     ],
 
