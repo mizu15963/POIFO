@@ -147,6 +147,15 @@ composer dev                # http://localhost:8000
   発行された `XSRF-TOKEN` Cookie の値（URL デコードしたもの）を Try It の `X-XSRF-TOKEN` 欄に入れる
 - サーバ上で使うときは `SANCTUM_STATEFUL_DOMAINS` に `api.<domain>` も足す（足さないとログインが必要な API が 401 になる）。開発期間が終わったら両方戻す
 
+### デバッグ用ログイン（開発期間中だけ）
+
+LINE を通さずに会員としてログインする。API 仕様書と同じ `POIFO_API_DOCS_ENABLED=true` のときだけ使える（false なら 404）。
+
+- ブラウザで `http://api.localhost:8000/auth/debug/login?user=tester` を開くと、ログインしてフロントの `/auth/complete/` に戻る
+- `user`（英数字・`_`・`-`、32文字まで。省略時 `tester`）ごとにデバッグ用の会員を初回に作る。同じ `user` なら同じ会員
+- デバッグ用の会員は `line_user_id` が `debug:` で始まる。実際の会員（LINE で登録した人）としてはログインできない
+- 管理画面で停止・退会にした会員はログインできない（LINE ログインと同じ）。別の `user` 名を使えば新しい会員で試せる
+
 ## 本番の設定（サーバの `.env`）
 
 `.env.example` との違いだけ。秘密の値はサーバの `.env` にだけ置く。
@@ -158,7 +167,7 @@ composer dev                # http://localhost:8000
 | `POIFO_API_HOST` / `POIFO_ADMIN_HOST` | `api.<domain>` / `admin.<domain>` |
 | `POIFO_ALLOW_HOST_FALLBACK` | `false` |
 | `POIFO_FRONT_URL` | `https://<domain>` |
-| `POIFO_API_DOCS_ENABLED` | `false`（開発期間中に API 仕様書を見るときだけ `true`） |
+| `POIFO_API_DOCS_ENABLED` | `false`（開発期間中に API 仕様書・デバッグ用ログインを使うときだけ `true`） |
 | `DB_HOST` など | Lightsail マネージドDB のエンドポイント・ユーザー・パスワード |
 | `MYSQL_ATTR_SSL_CA` | AWS の CA バンドル（`global-bundle.pem`）のパス |
 | `SESSION_DOMAIN` | `.<domain>`（フロントと api. で Cookie を共有） |

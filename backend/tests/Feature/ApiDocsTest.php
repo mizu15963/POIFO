@@ -18,6 +18,8 @@ class ApiDocsTest extends TestCase
     {
         $this->asApiHost()->get('/docs/api')->assertNotFound();
         $this->asApiHost()->getJson('/docs/api.json')->assertNotFound();
+        // デバッグ用ログインも同じフラグで止まる
+        $this->asApiHost()->get('/auth/debug/login')->assertNotFound();
     }
 
     public function test_docs_are_served_on_the_api_host_when_enabled(): void

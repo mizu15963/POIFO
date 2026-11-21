@@ -37,6 +37,7 @@ CloudFront Function が付ける `x-poifo-viewer-host` ヘッダーで判断す�
 | `routes/auth.php` | api. | `web` | LINE ログイン、案件への遷移（`/go/{id}`） |
 | `routes/postback.php` | api. | `VerifyPostbackSource`（パスの秘密の文字列・送信元 IP） | ASP の成果通知（`/postback/{token}/...`） |
 | `routes/admin.php` | admin. | `web`（Cookie は admin. 専用） | 管理画面 |
+| `routes/debug.php` | api. | `web`（`POIFO_API_DOCS_ENABLED=true` のときだけ読み込む） | デバッグ用ログイン（`/auth/debug/login`） |
 
 新しいルートを足すときは、どのホストから届くべきかを決めてから該当ファイルに書く。`bootstrap/app.php` の振り分けを崩さない。
 
@@ -45,6 +46,9 @@ API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` の�
 `/docs/api` で意図どおりに載っているか確かめる。コントローラのメソッドの PHPDoc 1行目が各 API の説明になる。
 サーバ上の仕様書には成果通知（`postback/`）も含めて全部載せ、開発の確認中だけ true にする（確認が済んだら false に戻す）。
 書き出した OpenAPI（YAML）はリポジトリにコミットしない（public のため）。
+
+デバッグ用ログイン（`DebugLoginController`）も同じフラグで有効になる。ログインできるのは `line_user_id` が `debug:` で始まる
+デバッグ用の会員だけにし、実際の会員になりすませる機能（uid 指定など）は足さない。開発用の機能はすべて `routes/debug.php` に置く。
 
 ## ポストバック（成果通知）の決まりごと
 
