@@ -30,7 +30,7 @@ variable "availability_zone" {
 }
 
 variable "lightsail_bundle_id" {
-  description = "micro_3_0 = 1GB メモリ・2vCPU・SSD 40GB（$7/月）。DB はマネージドデータベースに分けたので 1GB。変更するとサーバが作り直しになるので注意"
+  description = "micro_3_0 = 1GB メモリ・2vCPU・SSD 40GB（$7/月）。DB はマネージドデータベースに分けたので 1GB。変えると作り直しになるので、1台目のサイズ変更は api_a_bundle_id / api_b_bundle_id で入れ替える"
   type        = string
   default     = "micro_3_0"
 }
@@ -50,6 +50,47 @@ variable "api_instance_count" {
     condition     = var.api_instance_count >= 1 && var.api_instance_count <= 5
     error_message = "api_instance_count は 1〜5 にしてください。"
   }
+}
+
+variable "api_active_slot" {
+  description = "1台目のサーバのうち、固定 IP を付けて使う枠（a / b）。入れ替えのときに切り替える。GitHub Variables: API_ACTIVE_SLOT"
+  type        = string
+  default     = "a"
+
+  validation {
+    condition     = contains(["a", "b"], var.api_active_slot)
+    error_message = "api_active_slot は a か b にしてください。"
+  }
+}
+
+variable "api_standby" {
+  description = "true で、使っていない方の枠に入れ替え用の新しいサーバを作る。入れ替えが済んだら false に戻すと古い方が消える。GitHub Variables: API_STANDBY"
+  type        = bool
+  default     = false
+}
+
+variable "api_a_bundle_id" {
+  description = "枠 a のサーバのプラン。空なら lightsail_bundle_id。入れ替えでサイズを変えるときに使う。GitHub Variables: API_A_BUNDLE"
+  type        = string
+  default     = ""
+}
+
+variable "api_b_bundle_id" {
+  description = "枠 b のサーバのプラン。空なら lightsail_bundle_id。GitHub Variables: API_B_BUNDLE"
+  type        = string
+  default     = ""
+}
+
+variable "api_a_blueprint_id" {
+  description = "枠 a のサーバの OS イメージ。空なら lightsail_blueprint_id。入れ替えで OS を上げるときに使う。GitHub Variables: API_A_BLUEPRINT"
+  type        = string
+  default     = ""
+}
+
+variable "api_b_blueprint_id" {
+  description = "枠 b のサーバの OS イメージ。空なら lightsail_blueprint_id。GitHub Variables: API_B_BLUEPRINT"
+  type        = string
+  default     = ""
 }
 
 variable "enable_load_balancer" {

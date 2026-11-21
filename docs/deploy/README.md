@@ -56,7 +56,7 @@ GitHub Actions                         S3 poifo-deploy-…                サー
 | AWS の権限 | 何ができるか |
 |---|---|
 | ロール `poifo-gha-deploy`（Actions、Environment `poifo-deploy` のジョブだけ） | フロント用バケットへの同期、CloudFront のキャッシュ削除、`releases/` への書き込み、`status/` の読み取り。インフラは変えられない |
-| IAM ユーザー `poifo-deploy-agent`（サーバ） | `releases/` の読み取りと `status/` の読み書きだけ（全台で同じユーザーを使う） |
+| IAM ユーザー `poifo-deploy-agent`（サーバ） | `releases/` の読み取りと `status/` の読み書き、Let's Encrypt の DNS 確認用に `_acme-challenge.origin.<domain>` の TXT レコードの書き込みだけ（全台で同じユーザーを使う） |
 
 費用: S3 の保管（リリースは30日で自動削除）と、サーバが1分ごとに確認するリクエスト（月4万回程度で数円）。
 
@@ -73,9 +73,7 @@ GitHub Actions                         S3 poifo-deploy-…                サー
    gh secret set AWS_DEPLOY_ROLE_ARN --body (terraform output -raw deploy_role_arn)
    ```
 2. **構築・削除（Terraform）** で `apply` / `app` を実行し、リリース置き場 `poifo-deploy-<アカウントID>` と IAM ユーザー `poifo-deploy-agent` を作る
-3. GitHub の Settings → Environments → New environment → `poifo-deploy`
-   - Deployment branches and tags: Selected branches → `main` のみ
-   - Required reviewers は付けない（main に入ったら自動で出す）。毎回承認したければ自分を入れる
+3. Environment `poifo-deploy` は作らなくてよい（最初のデプロイのときに GitHub が自動で作る。デプロイは main からだけ動く）
 4. Variables（フロントのビルド時に埋め込む公開値）
 
    | 名前 | 値 |
@@ -106,7 +104,7 @@ deploy agent・キューのワーカー・cron・nginx・PHP をまとめて入�
 | 「AWS_DEPLOY_ROLE_ARN が未登録のためスキップ」 | 初回の準備1。Secret を登録してから再実行 |
 | 「15分待っても N 台中 M 台しか取り込みませんでした」 | 取り込んでいない台の deploy agent を確認（`systemctl status poifo-deploy-agent.timer`）。台を増やした直後なら、その台の準備が済んでいるか。`API_SERVER_COUNT` が実際の台数と合っているか |
 | 「primary の migrate 待ち」で失敗 | `MIGRATE=true` の台で migrate が失敗したか、`MIGRATE=true` の台がない。primary の `journalctl -u poifo-deploy-agent` を確認 |
-| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | Environment `poifo-deploy` がない、または bootstrap の `deploy_environment` と名前が違う |
+| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | ワークフローの `environment:` と bootstrap の `deploy_environment` の名前が違う |
 | 「migrate で失敗しました」 | 今のリリースのまま動いている。`journalctl -u poifo-deploy-agent` でエラーを見て、直したコミットを main に入れる |
 | フロントで「CloudFront が見つかりません」 | app スタックが未構築、または Variables の `PROJECT` が違う |
 | フロントが古いまま | キャッシュ削除の完了まで待つ。ブラウザのキャッシュも確認 |

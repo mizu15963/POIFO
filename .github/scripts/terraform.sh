@@ -6,9 +6,9 @@
 #   terraform.sh apply        <stack>  [--guard]   構築・変更（apply ロール）
 #   terraform.sh destroy      <stack>              削除（apply ロール）
 #
-# --guard: plan / apply で、1台目のサーバ（Lightsail）・固定IP・DB・ホストゾーン・DBバックアップ用バケットを
-#          （2台目以降のサーバは台数を減らすと消えるのが正しいので止めない）
-#          消す・作り直す変更を止める（plan-destroy / destroy では無視）。
+# --guard: plan / apply で、固定 IP が付いているサーバ（Lightsail）・固定IP・DB・ホストゾーン・DBバックアップ用バケットを
+#          消す・作り直す変更と、まだ無いサーバへの固定 IP の付け替えを止める（plan-destroy / destroy では無視）。
+#          2台目以降のサーバと、固定 IP を外した後の古い1台目は、消えるのが正しいので止めない。
 #          これらを消すのは destroy を明示したときだけにする。
 #
 # 必要な環境変数: TF_STATE_BUCKET, AWS_REGION（TF_VAR_* はワークフローで設定）
@@ -56,6 +56,41 @@ case "${cmd}" in
     ;;
 esac
 
+# DB のプランと MySQL のバージョンが東京リージョンで使えるか、DB を作る前に確かめる（base の plan / apply のとき）。
+# 作成済みなら確かめない（後から売り止めになったプランでも、動いている DB の更新は止めない）
+check_db_ids() {
+  tf state list 2>/dev/null | grep -qx 'aws_lightsail_database.main' && return 0
+  # 値は TF_VAR_ があればそれ、なければ variables.tf の既定値
+  var_value() {
+    local name=$1 env="TF_VAR_$1"
+    if [[ -n "${!env:-}" ]]; then echo "${!env}"; return; fi
+    awk -v n="\"${name}\"" '$1=="variable" && $2==n {f=1} f && $1=="default" {gsub(/"/,"",$3); print $3; exit}' "${dir}/variables.tf"
+  }
+  local bundle blueprint bundles blueprints
+  bundle=$(var_value db_bundle_id)
+  blueprint=$(var_value db_blueprint_id)
+  bundles=$(aws lightsail get-relational-database-bundles --region "${AWS_REGION}" \
+    --query 'bundles[?isActive].[bundleId,price,ramSizeInGb]' --output text)
+  blueprints=$(aws lightsail get-relational-database-blueprints --region "${AWS_REGION}" \
+    --query "blueprints[?engine=='mysql'].[blueprintId,engineVersion]" --output text)
+  local ng=()
+  awk -v id="${bundle}" '$1==id {f=1} END {exit !f}' <<< "${bundles}" || ng+=("プラン db_bundle_id = ${bundle}")
+  awk -v id="${blueprint}" '$1==id {f=1} END {exit !f}' <<< "${blueprints}" || ng+=("MySQL のバージョン db_blueprint_id = ${blueprint}")
+  if [[ ${#ng[@]} -gt 0 ]]; then
+    summary "## ❌ DB の設定が ${AWS_REGION} で使えません" \
+      "$(printf -- '- %s\n' "${ng[@]}")" \
+      "" "terraform/base/variables.tf の既定値を、下の一覧にある ID に変えて PR を出してください。" \
+      "" "### 使えるプラン（ID・月額ドル・メモリGB）" '```' "${bundles}" '```' \
+      "### 使える MySQL（ID・バージョン）" '```' "${blueprints}" '```'
+    echo "::error::DB の設定が ${AWS_REGION} で使えません: ${ng[*]}（一覧はジョブサマリー）"
+    exit 1
+  fi
+  echo "DB の設定を確認しました: ${bundle} / ${blueprint}"
+}
+if [[ "${stack}" == "base" && ( "${cmd}" == "plan" || "${cmd}" == "apply" ) ]]; then
+  check_db_ids
+fi
+
 destroy_flag=""
 if [[ "${cmd}" == "plan-destroy" || "${cmd}" == "destroy" ]]; then
   destroy_flag="-destroy"
@@ -85,18 +120,28 @@ summary "## ${stack}: ${cmd}" '```' "$(grep -E '^(Plan:|No changes|Changes to Ou
 summary "<details><summary>plan 全文（${stack}）</summary>" "" '```' "$(cat plan.log)" '```' "</details>" ""
 
 if [[ ${code} -eq 2 && "${guard}" == "--guard" && ("${cmd}" == "plan" || "${cmd}" == "apply") ]]; then
-  # 消すと DB やドメイン設定を失うリソース
+  # 消すと DB やドメイン設定を失うリソースと、固定 IP の付け替え（1台目の入れ替え）の誤り
+  #   - 今固定 IP が付いているサーバ（prior_state の付け先）を消す・作り直す → 先に api_active_slot を切り替える
+  #   - 固定 IP をこれから作るサーバに付ける（初回構築を除く）→ 先に api_standby = true で作って準備する
   blocked=$(tf show -json tfplan | jq -r '
-    .resource_changes[]?
-    | select(.change.actions | index("delete"))
+    ([.prior_state.values.root_module.resources[]? | select(.address == "aws_lightsail_static_ip_attachment.api") | .values.instance_name][0] // "") as $attached
+    | ([.resource_changes[]? | select(.address == "aws_lightsail_static_ip_attachment.api") | .change.after.instance_name][0] // "") as $next
+    | .resource_changes[]?
     | select(
-        (.type | IN("aws_lightsail_static_ip", "aws_lightsail_database", "aws_route53_zone"))
-        or (.address | IN("aws_lightsail_instance.api[0]", "aws_lightsail_instance.api", "aws_s3_bucket.backup"))
+        ((.change.actions | index("delete"))
+          and (
+            (.type | IN("aws_lightsail_static_ip", "aws_lightsail_database", "aws_route53_zone"))
+            or (.address == "aws_s3_bucket.backup")
+            or (.type == "aws_lightsail_instance" and $attached != "" and .change.before.name == $attached)
+          ))
+        or (.type == "aws_lightsail_instance" and (.change.actions | index("create"))
+            and $attached != "" and $next != $attached and .change.after.name == $next)
       )
     | .address')
   if [[ -n "${blocked}" ]]; then
     summary "### ⛔ 削除・作り直しを含むため止めました（${stack}）" '```' "${blocked}" '```' \
-      "サーバ・DB を消すとデータが失われます。本当に必要なら docs/infra/README.md の手順に沿って、「構築・削除」ワークフローの destroy → apply で行ってください。"
+      "サーバ・DB を消すとデータが失われます。1台目のサーバのサイズ変更や更新は、docs/server/README.md の「サーバの入れ替え」の順番で行ってください" \
+      "（新しいサーバを作る → 固定 IP を移す → 古いサーバを消す、を別々の更新で）。全部作り直すなら「構築・削除」ワークフローの destroy → apply。"
     echo "::error::削除・作り直しを含む変更です: ${blocked//$'\n'/, }"
     exit 1
   fi

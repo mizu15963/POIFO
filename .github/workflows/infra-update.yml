@@ -1,7 +1,8 @@
 # 更新（Terraform）: terraform/ の変更を AWS に反映する
 #   PR        : plan だけ実行し、ジョブサマリーに差分を出す（fork からの PR は OIDC が使えないので動かない）
-#   main へ push: plan → 変更があれば Environment「poifo-apply」の承認後に apply
-#   手動実行    : GitHub の Variables / Secrets を変えたとき（push が起きないので）に使う
+#   main へ push: plan だけ（差分をジョブサマリーに出す）。自動では apply しない
+#   手動実行    : main で plan → 変更があれば apply。terraform/ のマージ後や、Variables / Secrets を変えたときに使う
+#   Environment「poifo-apply」は承認者なしで自動作成されたものを使う前提なので、apply は手動実行に限る
 #
 # サーバ（Lightsail）・固定IP・DB・ホストゾーン・DBバックアップ用バケットを消す／作り直す変更は止める（--guard）。
 # それらは「構築・削除」ワークフローで、手順書に沿って行う。
@@ -45,6 +46,12 @@ env:
   TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
   TF_VAR_api_instance_count: ${{ vars.API_SERVER_COUNT || '1' }}
   TF_VAR_enable_load_balancer: ${{ vars.ENABLE_LOAD_BALANCER || 'false' }}
+  TF_VAR_api_active_slot: ${{ vars.API_ACTIVE_SLOT || 'a' }}
+  TF_VAR_api_standby: ${{ vars.API_STANDBY || 'false' }}
+  TF_VAR_api_a_bundle_id: ${{ vars.API_A_BUNDLE }}
+  TF_VAR_api_b_bundle_id: ${{ vars.API_B_BUNDLE }}
+  TF_VAR_api_a_blueprint_id: ${{ vars.API_A_BLUEPRINT }}
+  TF_VAR_api_b_blueprint_id: ${{ vars.API_B_BLUEPRINT }}
   TF_VAR_waf_managed_rules_count_mode: ${{ vars.WAF_COUNT_MODE || 'true' }}
   TF_VAR_ssh_allowed_cidrs: ${{ secrets.SSH_ALLOWED_CIDRS || '[]' }}
   TF_VAR_admin_allowed_cidrs: ${{ secrets.ADMIN_ALLOWED_CIDRS || '[]' }}
@@ -103,7 +110,8 @@ jobs:
   apply:
     name: apply
     needs: plan
-    if: github.event_name != 'pull_request' && needs.plan.outputs.changed == 'true'
+    # 承認のゲートがないので、自動では apply しない（main で手動実行したときだけ）
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.plan.outputs.changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: poifo-apply
@@ -121,7 +129,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
-      # 承認時点の状態で plan し直し、同じガードをかけてから適用する
+      # その時点の状態で plan し直し、同じガードをかけてから適用する
       - name: terraform apply（base → app）
         run: |
           for s in base app; do

@@ -62,7 +62,7 @@ if ! grep -rqs "ondrej/php" /etc/apt/sources.list.d/; then
 fi
 apt-get update -q
 apt-get install -y -q \
-  nginx certbot jq unzip curl mysql-client unattended-upgrades \
+  nginx certbot python3-certbot-dns-route53 jq unzip curl mysql-client unattended-upgrades \
   "php${PHP_VER}-fpm" "php${PHP_VER}-cli" "php${PHP_VER}-mbstring" "php${PHP_VER}-intl" "php${PHP_VER}-xml" \
   "php${PHP_VER}-curl" "php${PHP_VER}-mysql" "php${PHP_VER}-bcmath" "php${PHP_VER}-zip" "php${PHP_VER}-opcache"
 dpkg-reconfigure -f noninteractive unattended-upgrades
@@ -134,12 +134,22 @@ systemctl enable -q nginx
 systemctl reload nginx || systemctl restart nginx
 
 if [[ "$ISSUE_CERT" == "true" && -n "$ORIGIN_HOST" && "$have_cert" == "false" ]]; then
-  log "Let's Encrypt（${ORIGIN_HOST}）"
+  log "Let's Encrypt（${ORIGIN_HOST}、DNS で確認）"
+  # DNS-01 で確認するので、固定 IP がまだ別のサーバを指していても（入れ替え用の新しいサーバでも）取れる。
+  # Route 53 への書き込みは deploy agent と同じ IAM ユーザー（_acme-challenge.origin.<domain> の TXT だけ書ける）。
+  # 自動更新（certbot の timer）でも使うので、root の AWS 認証情報として置く
+  install -d -m 700 /root/.aws
+  (
+    # shellcheck disable=SC1091
+    . "$CONF_DIR/deploy-agent.env"
+    umask 077
+    printf '[default]\naws_access_key_id = %s\naws_secret_access_key = %s\n' "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" > /root/.aws/credentials
+  )
   email_args=(--register-unsafely-without-email)
   [[ -n "$CERTBOT_EMAIL" ]] && email_args=(--email "$CERTBOT_EMAIL")
-  certbot certonly --webroot -w /var/www/letsencrypt -d "$ORIGIN_HOST" \
+  certbot certonly --dns-route53 -d "$ORIGIN_HOST" \
     --non-interactive --agree-tos "${email_args[@]}" \
-    || die "証明書を取れませんでした。${ORIGIN_HOST} がこのサーバの固定 IP を指しているか（LB なしの段階か）確認してください"
+    || die "証明書を取れませんでした。ドメインの段階2が済んでいるか（Route 53 のゾーン、deploy agent ユーザーの acme-dns 権限）を確認してください"
   render_nginx true
   nginx -t -q && systemctl reload nginx
 fi
@@ -172,5 +182,5 @@ else
 fi
 
 log "完了"
-echo "nginx: HTTP(80)$( [[ $have_cert == true || ( $ISSUE_CERT == true && -n $ORIGIN_HOST ) ]] && echo " / HTTPS(443, ${ORIGIN_HOST})")"
+if [[ -n "$ORIGIN_HOST" && -f "/etc/letsencrypt/live/${ORIGIN_HOST}/fullchain.pem" ]]; then echo "nginx: HTTP(80) / HTTPS(443, ${ORIGIN_HOST})"; else echo "nginx: HTTP(80)"; fi
 echo "確認: curl -s -o /dev/null -w '%{http_code}\n' http://localhost/up   # デプロイ後は 200"

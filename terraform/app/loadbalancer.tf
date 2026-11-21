@@ -16,10 +16,17 @@ resource "aws_lightsail_lb" "api" {
   }
 }
 
-resource "aws_lightsail_lb_attachment" "api" {
-  count         = var.enable_load_balancer ? var.api_instance_count : 0
+# 1台目の枠は、入れ替え中の新しいサーバ（api_standby）も LB につなぐ（準備が済むまではヘルスチェックで外される）
+resource "aws_lightsail_lb_attachment" "primary" {
+  for_each      = var.enable_load_balancer ? aws_lightsail_instance.primary : {}
   lb_name       = aws_lightsail_lb.api[0].name
-  instance_name = aws_lightsail_instance.api[count.index].name
+  instance_name = each.value.name
+}
+
+resource "aws_lightsail_lb_attachment" "extra" {
+  count         = var.enable_load_balancer ? length(aws_lightsail_instance.extra) : 0
+  lb_name       = aws_lightsail_lb.api[0].name
+  instance_name = aws_lightsail_instance.extra[count.index].name
 }
 
 # LB の証明書（Lightsail が発行。DNS 検証のレコードを Route 53 に作る）

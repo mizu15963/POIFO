@@ -1,6 +1,6 @@
 # AWS 環境の構築・更新・削除（Terraform＋GitHub Actions）
 
-POIFO の AWS 環境は Terraform で定義し、GitHub Actions から承認付きで構築・更新・削除する。
+POIFO の AWS 環境は Terraform で定義し、GitHub Actions から構築・更新・削除する（AWS を変えるのは main での手動実行だけ）。
 AWS の認証はアクセスキーを使わず OIDC（GitHub が発行する一時トークンで IAM ロールに入る）。
 構成の考え方は [サーバ構成計画書](https://claude.ai/artifact/Li3ceqNda1GbgupeQTfVNZ) を参照。
 
@@ -12,8 +12,8 @@ AWS の認証はアクセスキーを使わず OIDC（GitHub が発行する一�
 ```text
 .github/
   workflows/
-    infra-build-destroy.yml  # 構築・削除（Terraform）: 手動実行。plan → 承認 → apply / destroy
-    infra-update.yml         # 更新（Terraform）: PR で plan、main に入ったら plan → 承認 → apply
+    infra-build-destroy.yml  # 構築・削除（Terraform）: 手動実行。plan → apply / destroy
+    infra-update.yml         # 更新（Terraform）: PR・main で plan、手動実行で apply
     oidc-whoami.yml          # 接続確認（OIDC whoami）: 何も作らない
   scripts/terraform.sh       # 両ワークフロー共通の実行スクリプト
   dependabot.yml             # アクションと provider の更新 PR（月1回）
@@ -26,11 +26,11 @@ terraform/
 | ワークフロー | いつ使う | 何をする |
 |---|---|---|
 | 構築・削除（Terraform） | 最初の構築、全部消すとき、作り直すとき | `plan` / `apply` / `destroy` を選んで手動実行。`all` は構築が base → app、削除が app → base |
-| 更新（Terraform） | `terraform/` を変更したとき | PR では plan だけ（差分をジョブサマリーに表示）。main にマージされると plan → 承認 → apply。Variables / Secrets だけ変えたときは手動実行 |
+| 更新（Terraform） | `terraform/` を変更したとき | PR と main へのマージでは plan だけ（差分をジョブサマリーに表示）。AWS に反映するのは手動実行（Run workflow）したとき |
 | 接続確認（OIDC whoami） | 初回・ロールを変えたとき | OIDC で plan ロールに入れるかを確認 |
 
-AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `poifo-apply` で承認されるまで止まる。
-スマホの GitHub アプリからも承認できる。
+AWS に書き込むジョブ（apply / destroy）は、main で手動実行したときだけ動く（自動では動かない）。実行できるのはリポジトリに Write 権限がある人だけ。
+GitHub の Environment `poifo-apply` / `poifo-deploy` は初回の実行で自動作成され、承認者やブランチ制限は付かない（管理者がいれば後から付けられる。下の「Environment」）。
 
 **誤削除の防止**: plan / apply で、1台目の Lightsail インスタンス・固定IP・DB・ホストゾーン・バックアップ用バケットを
 消す（作り直す）変更が含まれると止まる。これらを消せるのは「構築・削除」の `destroy` だけ。
@@ -39,7 +39,7 @@ AWS に書き込むジョブ（apply / destroy）は、GitHub の Environment `p
 |---|---|---|
 | `poifo-gha-plan` | plan・whoami（main ブランチ、同じリポジトリからの PR） | ReadOnlyAccess |
 | `poifo-gha-deploy` | アプリのデプロイ（Environment `poifo-deploy` のジョブだけ） | フロントの S3 同期・CloudFront のキャッシュ削除・バックエンドのリリース置き場への配置だけ（[../deploy/README.md](../deploy/README.md)） |
-| `poifo-gha-apply` | apply・destroy（`poifo-apply` の承認後だけ） | Lightsail・CloudFront・WAF・ACM・Route 53・SES（東京と us-east-1 のみ）、`poifo-*` の S3 バケット、`poifo-*` の IAM ユーザー |
+| `poifo-gha-apply` | apply・destroy（Environment `poifo-apply` のジョブだけ。ワークフロー側で main からの手動実行に限る） | Lightsail・CloudFront・WAF・ACM・Route 53・SES（東京と us-east-1 のみ）、`poifo-*` の S3 バケット、`poifo-*` の IAM ユーザー |
 
 ## 費用と片付け（先に読む）
 
@@ -62,7 +62,7 @@ WAF の従量課金は時間割りなので、段階2の apply の後は早め�
 
 **main ブランチを作り、デフォルトブランチにする。** 理由は2つ。
 - 手動実行（workflow_dispatch）の「Run workflow」ボタンは、デフォルトブランチにあるワークフローにしか出ない
-- plan ロールは `refs/heads/main` からのトークンしか受け付けない（Environment も main だけに絞る）
+- plan ロールは `refs/heads/main` と PR からのトークンしか受け付けない
 
 GitHub の画面で: Branches → New branch で `main` を作成 → Settings → General → Default branch を `main` に変更。
 
@@ -196,23 +196,23 @@ gh secret set DB_MASTER_PASSWORD --body $p
 $p   # パスワードマネージャーに保存。Terraform の state（非公開の S3）にも残る
 ```
 
-### DB のプランと MySQL バージョンの確認（初回 apply 前に1回）
+### DB のプランと MySQL バージョン（自動で確認）
 
-`db_bundle_id = micro_2_0`（標準 $15）と `db_blueprint_id = mysql_8_4` が東京リージョンで使えるかを確かめる。
-一覧になければ、`terraform/base/variables.tf` の既定値を一覧にある ID に変える。
+base の plan / apply の前に、Actions が `db_bundle_id`（既定 `micro_2_0`、標準 $15）と `db_blueprint_id`（既定 `mysql_8_4`）が東京リージョンで使えるかを確かめる。
+使えなければ plan の前に止まり、ジョブサマリーに使える ID の一覧が出るので、`terraform/base/variables.tf` の既定値をその ID に変えて PR を出す。
+DB を作った後は確かめない（後からプランが売り止めになっても、動いている DB の更新は止めない）。
 
-```powershell
-aws lightsail get-relational-database-bundles --region ap-northeast-1 --query "bundles[?isActive].[bundleId,price,ramSizeInGb]" --output table
-aws lightsail get-relational-database-blueprints --region ap-northeast-1 --query "blueprints[?engine=='mysql'].[blueprintId,engineVersion]" --output table
-```
+### Environment（作らなくてよい）
 
-### Environment
+ワークフローが使う Environment（`poifo-apply`・`poifo-deploy`）は、最初にそのジョブを実行したときに GitHub が自動で作る。
+AWS 側（bootstrap）は、この名前の Environment から来たトークンだけを apply / deploy ロールに入れる。
 
-Settings → Environments → New environment → `poifo-apply`
-- Required reviewers: 自分
-- Deployment branches and tags: Selected branches → `main` のみ
+自動で作られた Environment には承認者もブランチ制限も付かないので、次のようにしてある。
+- AWS を変えるジョブ（apply / destroy）は、main で手動実行したときだけ動く。main へのマージで自動 apply はしない
+- デプロイは main へのマージで自動で動く（main 以外のブランチからは動かない）
+- ワークフローのファイル自体を書き換えたブランチなら、ほかのブランチからでもロールに入れてしまう。ブランチを push できる（Write 権限がある）人だけが対象なので、Write 権限は信頼できる人だけに渡す
 
-名前は bootstrap の `apply_environment` とワークフローの `environment:` と同じにする。
+リポジトリの管理者がいれば、後から Settings → Environments → `poifo-apply` に Required reviewers（承認者）と Deployment branches（`main` のみ）を付けると、より安全になる（ワークフローの変更は不要）。
 
 ## 4. actions.lock を作る
 
@@ -224,18 +224,19 @@ gh actions-lock                               # .github/workflows/actions.lock �
 ```
 
 - `uses:` を追加・削除したら `gh actions-lock`、バージョンを上げたら `gh actions-lock --relock`
-- 生成ファイルは手で編集しない。リポジトリ設定の **Require lockfile** を有効にすると、lock に無いアクションは動かない
+- 生成ファイルは手で編集しない
+- （任意・管理者の設定）リポジトリ設定の **Require lockfile** を有効にすると、lock に無いアクションは動かない。管理者がいなければ設定しなくてよい（lock のコミットはそれでも有効）
 
 ## 5. 段階1: ドメインなしで構築
 
 1. Actions → **接続確認（OIDC whoami）** → Run workflow。`sub` と `assumed-role/poifo-gha-plan/...` が出れば OK
 2. **構築・削除（Terraform）** → action `plan`、stack `all` → サマリーで差分を確認
-3. action `apply`、stack `all` → 承認待ちで Approve
+3. action `apply`、stack `all`
 
 できるもの:
 - base: マネージドDB `poifo-db`（MySQL 8.4、標準 1GB、外部非公開、自動バックアップ毎日 3:00 JST・7日分）、
   バックアップ用バケット `poifo-backup-<アカウントID>`、IAM ユーザー `poifo-backup-writer`
-- app: Lightsail `poifo-api`（Ubuntu 24.04、1GB、自動スナップショット毎日 3:00 JST）、固定IP、ファイアウォール（443・80・22）、
+- app: Lightsail `poifo-api-a`（Ubuntu 24.04、1GB、自動スナップショット毎日 3:00 JST）、固定IP、ファイアウォール（443・80・22）、
   フロント用バケットと CloudFront（`https://xxxx.cloudfront.net`）
 
 確認: ジョブサマリーの「接続先」にトップ画面の URL（`front_url`、ドメインなしなら `https://xxxx.cloudfront.net`）が出る。outputs には `db_endpoint`（Laravel の `DB_HOST`）も出る。
@@ -322,20 +323,27 @@ Terraform の外でやること:
 ## 7. 日々の更新
 
 1. ブランチで `terraform/` を変更して PR を作る → **更新（Terraform）** が plan を実行し、ジョブサマリーに差分が出る
-2. 差分を確認して main にマージ → 自動で plan → 変更があれば承認待ち → Approve で apply
-3. Variables / Secrets だけを変えたとき（例: `ADMIN_ALLOWED_CIDRS` の変更、`WAF_COUNT_MODE` を `false` に）は、**更新（Terraform）** を手動実行
+2. 差分を確認して main にマージ → main でもう一度 plan（自動では apply しない）
+3. **更新（Terraform）** を手動実行（Run workflow、main）→ plan → 変更があれば apply。Variables / Secrets だけを変えたとき（例: `ADMIN_ALLOWED_CIDRS` の変更、`WAF_COUNT_MODE` を `false` に）も同じ
 
 1台目のサーバ・固定IP・DB・ホストゾーン・バックアップ用バケットを消す（作り直す）変更は止まる（台数を減らして2台目以降が消えるのは止めない）。
 例えば `lightsail_bundle_id`（プラン）や `lightsail_blueprint_id`（OS）、`db_bundle_id` を変えると作り直しになるので止まる。
 
-### サーバのプランを上げる（1GB → 2GB）
+### サーバのプランを上げる・ミドルウェアを更新する（入れ替え）
 
-Lightsail はプラン変更＝別インスタンスへの作り直しになる。DB は別なので残るが、サーバ上の設定・アップロードファイルを失わないように:
-1. Lightsail コンソールで手動スナップショットを取る
-2. スナップショットから新しいプランのインスタンスを作り、動作を確認
-3. Terraform の state を新インスタンスに付け替える（`terraform state rm` → `terraform import`）か、相談する
+1台目のサーバは、動いているものを直接触らず、新しいサーバを作って固定 IP を移す（入れ替え）。手順は [../server/README.md](../server/README.md) の「サーバの入れ替え」。
 
-DB のプランを上げるときも同じく作り直しになる（DB のスナップショットから新しいプランで作る）。
+| Variables | 既定 | 内容 |
+|---|---|---|
+| `API_ACTIVE_SLOT` | `a` | 固定 IP を付けて使う枠（`a` = `poifo-api-a`、`b` = `poifo-api-b`）。入れ替えのときに切り替える |
+| `API_STANDBY` | `false` | `true` で、使っていない方の枠に新しいサーバを作る。入れ替えが済んだら `false` に戻すと古い方が消える |
+| `API_A_BUNDLE` / `API_B_BUNDLE` | （空） | 枠ごとのプラン（例 `small_3_0` = 2GB）。空なら既定の `micro_3_0`。サイズを変えるときは新しい方の枠に入れる |
+| `API_A_BLUEPRINT` / `API_B_BLUEPRINT` | （空） | 枠ごとの OS イメージ。空なら既定の `ubuntu_24_04` |
+
+更新ワークフローは、固定 IP が付いているサーバを消す・作り直す変更と、まだ無いサーバに固定 IP を移す変更を止める。
+入れ替えは「作る → 移す → 消す」を別々の更新で行うことになり、移した後に問題があれば `API_ACTIVE_SLOT` を戻すだけで元に戻る。
+
+DB のプランを上げるときは作り直しになる（DB のスナップショットから新しいプランで作る）。
 MySQL のマイナー更新は Lightsail のメンテナンス時間（月曜 4:00 JST）に自動で入る。
 
 ### API サーバを増やす（ロードバランサー）
@@ -361,11 +369,11 @@ CloudFront のオリジンは最初から `origin.<domain>` なので、LB を�
 1. **1台目の nginx が LB 用になっているか確かめる**: LB からは HTTP（80番）で届き、ヘルスチェック（`/up`）は秘密ヘッダーなしで来る。
    初期設定スクリプト（[../server/README.md](../server/README.md)）の nginx は最初からそうなっているので、最新のスクリプトで設定していれば作業はない
    （古い設定のままなら `git pull` してスクリプトを再実行）。80番が HTTPS へのリダイレクトのままだと、LB に切り替わった時点でヘルスチェックが失敗し（301）、API が止まる
-2. Variables の `ENABLE_LOAD_BALANCER` を `true` にし、**`API_SERVER_COUNT` は `1` のまま** **更新（Terraform）** を手動実行 → 承認。
+2. Variables の `ENABLE_LOAD_BALANCER` を `true` にし、**`API_SERVER_COUNT` は `1` のまま** **更新（Terraform）** を手動実行。
    `origin.<domain>` が LB に切り替わる。LB の証明書（`origin.<domain>`）の検証に数分かかり、`certificate_attachment` が失敗したら少し待って再実行する。
    Lightsail コンソールで LB のターゲットが「正常」になり、API が LB 経由で動くことを確認する
-3. `API_SERVER_COUNT` を `2` にして、もう一度 **更新（Terraform）** → 承認。2台目が作られ、LB にもつながる（準備が済むまではヘルスチェックで外される）
-4. 2台目を1台目と同じように準備する（[../server/README.md](../server/README.md) の初期設定スクリプト。`ISSUE_CERT=false`、DB ユーザーの作成は不要）。
+3. `API_SERVER_COUNT` を `2` にして、もう一度 **更新（Terraform）** を手動実行。2台目が作られ、LB にもつながる（準備が済むまではヘルスチェックで外される）
+4. 2台目を1台目と同じように準備する（[../server/README.md](../server/README.md) の初期設定スクリプト。LB があるので `ISSUE_CERT=false`、DB ユーザーの作成は不要）。
    **`.env` は全台同じ内容にする**（`APP_KEY` は口座番号の暗号化に使うので、違うと復号できない）。
    deploy agent の設定は `SERVER_NAME=api-2`、**`MIGRATE=false`**（`MIGRATE=true` は必ず1台だけ。2台とも true にすると、migrate の完了前にほかの台が切り替わることがある）
 5. 「デプロイ（バックエンド）」を手動実行し、全台が同じリリースになることを確認する
@@ -377,8 +385,8 @@ CloudFront のオリジンは最初から `origin.<domain>` なので、LB を�
 ## 8. 削除
 
 1. 定額プランに加入しているディストリビューションは、先にコンソールで解約する（Free は即時解約）
-2. **構築・削除** → action `destroy`、stack `app`、confirm に `app` と入力 → 承認
-   - 削除前に Lightsail の手動スナップショット（`poifo-api-before-destroy-日時`）を自動で取る。自動スナップショットはインスタンスと一緒に消えるため
+2. **構築・削除** → action `destroy`、stack `app`、confirm に `app` と入力
+   - 削除前に、固定 IP の付いたサーバの手動スナップショット（`poifo-api-a-before-destroy-日時` など）を自動で取る。自動スナップショットはインスタンスと一緒に消えるため
    - 手動スナップショットは自分で消すまで残り、$0.05/GB・月かかる
 3. base も消すときは、バックアップ用バケットを空にし、`poifo-backup-writer` のアクセスキーを削除してから、`destroy` / `base`（confirm に `base`）。
    DB は最終スナップショット（`poifo-db-final-<DB作成日時>`）を残してから消える。名前の日時は削除日ではなく DB を作った日時。
