@@ -19,6 +19,20 @@
 
 仕様書（[specs/top-page-spec.md](../specs/top-page-spec.md) 7-3）の暫定値 `#81D8D0` は、上の値で置き換える想定です。
 
+## キャラクター「ポイフォックス（Poifox）」
+
+2026-11-21 納品（7ポーズ。同じ画像が2組重複していたので除外）。サイトでは背景を透過にし、長辺480pxの WebP に縮小したものを [frontend/public/images/mascot/](../../frontend/public/images/mascot/) に置いています（1枚 35〜53KB）。納品原本（1254px 前後の PNG、背景は白）はリポジトリには入れず、プロジェクトの共有フォルダ `brand/mascot/original/` に保管しています。
+
+| ファイル | ポーズ | 主な使いどころ |
+| --- | --- | --- |
+| poifox-wave.webp | 手を振る | トップのファーストビュー |
+| poifox-cheer.webp | 座って応援 | 初めての方へ |
+| poifox-point.webp | 指さし | 貯め方 STEP1、404 |
+| poifox-guide.webp | チェックリストで説明 | 貯め方 STEP2 |
+| poifox-get.webp | 「ポイントGET!」 | 貯め方 STEP3 |
+| poifox-line.webp | 「LINEで相談」 | 担当サポート |
+| poifox-event.webp | 「イベント参加」 | イベント |
+
 ## 未対応
 
 - 背景が透過ではなく、周囲の余白も大きいです。ヘッダー用には **透過PNGまたはSVG** の書き出しを依頼してください（白以外の背景に置けないため）

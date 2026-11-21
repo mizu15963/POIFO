@@ -1,12 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Mascot from '../components/Mascot.astro';
 ---
 
 <BaseLayout title="ページが見つかりません" noindex>
   <section class="section">
     <div class="container narrow">
       <h1 class="section__title">ページが見つかりません</h1>
-      <p><a class="more-link" href="/">トップへ戻る</a></p>
+      <div class="with-mascot">
+        <p class="with-mascot__body"><a class="more-link" href="/">トップへ戻る</a></p>
+        <Mascot pose="point" width={150} eager />
+      </div>
     </div>
   </section>
 </BaseLayout>

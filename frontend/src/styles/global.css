@@ -375,3 +375,27 @@ body[data-require-login='true']:not([data-auth='member']) main {
   background: var(--color-brand-bg);
   font-weight: 700;
 }
+
+/* キャラクターを文章の横に添える並び（担当サポート・イベントなど）。
+   スマホでも横並びのまま、画像を小さくして文章を優先する。 */
+.with-mascot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.with-mascot__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.with-mascot .mascot {
+  width: 88px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .with-mascot .mascot {
+    width: 150px;
+  }
+}

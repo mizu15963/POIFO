@@ -1,13 +1,21 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import HowToEarn from '../../components/HowToEarn.astro';
+import Mascot from '../../components/Mascot.astro';
 ---
 
 <BaseLayout title="はじめての方へ・ヘルプ">
   <section class="section">
     <div class="container narrow">
-      <h1 class="section__title">はじめての方へ</h1>
-      <p class="lead">※ 文面は仮です。公開前に運営で確定します。</p>
+      <div class="with-mascot">
+        <div class="with-mascot__body">
+          <h1 class="section__title">はじめての方へ</h1>
+          <p class="lead">※ 文面は仮です。公開前に運営で確定します。</p>
+        </div>
+        <Mascot pose="cheer" width={150} eager />
+      </div>
       <h2 id="earn">ポイントの貯め方</h2>
+      <HowToEarn />
       <p>LINEでログインし、「案件を探す」から気になる案件の「この案件に進む」を押して、条件を達成するとポイントが貯まります。</p>
       <h2 id="status">ポイントの獲得条件・反映について</h2>
       <p>条件を達成すると、ポイントはまず「判定中」として表示されます。広告主の承認後に「確定」となり、交換に使えるようになります。条件を満たしていない場合は「否認」となります。</p>

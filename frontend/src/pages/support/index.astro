@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Mascot from '../../components/Mascot.astro';
 import { LINE_OFFICIAL_URL } from '../../lib/config';
 ---
 
@@ -7,7 +8,10 @@ import { LINE_OFFICIAL_URL } from '../../lib/config';
   <section class="section">
     <div class="container narrow">
       <h1 class="section__title">困ったときは、担当スタッフに相談。</h1>
-      <p>ポイントの貯め方や案件の進め方を、ポイフォ公式LINEで担当スタッフに気軽に相談できます。初回面談の日程調整もLINEで行います。</p>
+      <div class="with-mascot">
+        <p class="with-mascot__body">ポイントの貯め方や案件の進め方を、ポイフォ公式LINEで担当スタッフに気軽に相談できます。初回面談の日程調整もLINEで行います。</p>
+        <Mascot pose="line" width={150} eager />
+      </div>
       {LINE_OFFICIAL_URL ? <a class="btn btn--line btn--block" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <p class="lead">公式LINEは準備中です。</p>}
     </div>
   </section>
