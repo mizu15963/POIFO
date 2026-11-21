@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { LINE_LOGIN_URL } from '../lib/config';
 
 interface Props {
   title?: string;
@@ -17,6 +18,8 @@ const {
   requireLogin = false,
   noindex = false,
 } = Astro.props;
+// スマホで画面下に追従する登録ボタン。マイページ・ログイン・認証まわり（noindex）では出さない
+const stickyCta = !requireLogin && !noindex;
 const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなたのポイ活を、フォロー。';
 ---
 
@@ -24,7 +27,7 @@ const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなた�
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
@@ -33,7 +36,7 @@ const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなた�
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
   </head>
-  <body data-auth="unknown" data-require-login={requireLogin ? 'true' : undefined}>
+  <body data-auth="unknown" data-require-login={requireLogin ? 'true' : undefined} data-sticky-cta={stickyCta ? 'true' : undefined}>
     <Header />
     <main>
       <slot />
@@ -48,9 +51,28 @@ const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなた�
       )
     }
     <Footer />
+    {
+      stickyCta && (
+        <div class="sticky-cta" data-show="guest" id="sticky-cta">
+          <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
+        </div>
+      )
+    }
     <script>
       import { fetchMe } from '../lib/api';
       import { setMe } from '../lib/session';
+
+      // 追従ボタンと同じ登録ボタンがページ内で見えている間は、追従ボタンを引っ込めて二重に見せない
+      const sticky = document.getElementById('sticky-cta');
+      if (sticky && 'IntersectionObserver' in window) {
+        const inPage = document.querySelectorAll('main .btn--line[href*="/auth/line/redirect"]');
+        const visible = new Set<Element>();
+        const observer = new IntersectionObserver((entries) => {
+          for (const e of entries) (e.isIntersecting ? visible.add(e.target) : visible.delete(e.target));
+          sticky.classList.toggle('sticky-cta--away', visible.size > 0);
+        });
+        inPage.forEach((el) => observer.observe(el));
+      }
 
       // ログイン状態を API に問い合わせて、ヘッダーなどの表示を切り替える
       fetchMe()
