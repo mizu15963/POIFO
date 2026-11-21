@@ -58,7 +58,15 @@ API を使う画面はバックエンドも起動しておく（[../backend/READ
 
 main に `frontend/` の変更が入ると、ワークフロー「デプロイ（フロント）」が `dist/` を S3 に同期して CloudFront のキャッシュを削除する。
 本番の `PUBLIC_*` は GitHub Variables に置く。詳しくは [../docs/deploy/README.md](../docs/deploy/README.md)。
-`404.html` は CloudFront のカスタムエラーページに使える。
+
+## エラーページ
+
+| ファイル | 元 | CloudFront で返す場面（`terraform/app/front.tf`） |
+| --- | --- | --- |
+| `404.html` | `src/pages/404.astro` | S3 に無いパス（403・404）。状態コードは 404。通常のレイアウトで行き先を案内する |
+| `500.html` | `src/pages/500.astro` | S3 側の障害（500・502・503・504）。状態コードはそのまま。共通 CSS・API に頼らず単体で表示できるように作っている |
+
+API・管理画面（Laravel）が HTML で返すエラー画面は `../backend/resources/views/errors/` にある。
 
 ## まだやっていないこと
 
