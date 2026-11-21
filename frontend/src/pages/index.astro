@@ -88,9 +88,9 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     <div class="container">
       <h2 class="section__title">ポイフォの特徴</h2>
       <div class="grid grid--3 features">
-        <div class="card"><h3>自由にポイ活</h3><p>興味のある案件を、自分のペースで利用できます。</p></div>
-        <div class="card"><h3>担当者に相談</h3><p>公式LINEで気軽にサポートを受けられます。</p></div>
-        <div class="card"><h3>みんなで楽しむ</h3><p>イベントやオープンチャットで一緒に取り組めます。</p></div>
+        <div class="card feature"><Mascot pose="point" width={96} class="feature__img" /><h3>自由にポイ活</h3><p>興味のある案件を、自分のペースで利用できます。</p></div>
+        <div class="card feature"><Mascot pose="line" width={96} class="feature__img" /><h3>担当者に相談</h3><p>公式LINEで気軽にサポートを受けられます。</p></div>
+        <div class="card feature"><Mascot pose="event" width={96} class="feature__img" /><h3>みんなで楽しむ</h3><p>イベントやオープンチャットで一緒に取り組めます。</p></div>
       </div>
     </div>
   </section>
@@ -107,10 +107,11 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <section class="section section--soft">
     <div class="container">
       <h2 class="section__title">ポイントがもらえるしくみ</h2>
+      <p class="lead">広告主がポイフォに払う広告費の一部が、ポイントとしてあなたに届きます。</p>
       <ol class="flow">
-        <li class="card flow__item"><span class="flow__who">あなた</span><span>ポイフォ経由で、広告主のサービスを利用・申し込み</span></li>
-        <li class="card flow__item"><span class="flow__who">広告主</span><span>利用してくれたお礼として、ポイフォに広告費を支払う</span></li>
-        <li class="card flow__item"><span class="flow__who">ポイフォ</span><span>受け取った広告費の一部を、ポイントとしてあなたに還元</span></li>
+        <li class="card flow__item"><span class="flow__step">1</span><span class="flow__who">あなた</span><span>ポイフォ経由で、広告主のサービスを利用・申し込み</span></li>
+        <li class="card flow__item"><span class="flow__step">2</span><span class="flow__who">広告主</span><span>利用のお礼として、ポイフォに広告費を支払う</span></li>
+        <li class="card flow__item flow__item--get"><span class="flow__step">3</span><span class="flow__who">ポイフォ</span><span>広告費の一部を、ポイントとしてあなたに還元</span><Mascot pose="get" width={84} class="flow__img" /></li>
       </ol>
     </div>
   </section>
@@ -119,9 +120,12 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     <div class="container">
       <h2 class="section__title">貯めたポイントの使い道</h2>
       <div class="exchange card">
-        <p class="exchange__name">現金（銀行振込）</p>
-        <p class="exchange__text">確定したポイントを、登録した銀行口座への振込で受け取れます。交換先は今後追加予定です。</p>
-        <a class="more-link" href="/guide/#exchange">交換方法を見る</a>
+        <Mascot pose="cheer" width={110} class="exchange__img" />
+        <div class="exchange__body">
+          <p class="exchange__name">現金（銀行振込）</p>
+          <p class="exchange__text">確定したポイントを、登録した銀行口座への振込で受け取れます。交換先は今後追加予定です。</p>
+          <a class="more-link" href="/guide/#exchange">交換方法を見る</a>
+        </div>
       </div>
     </div>
   </section>
@@ -129,26 +133,27 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <section class="section section--soft">
     <div class="container">
       <h2 class="section__title">よくある質問</h2>
-      <div class="with-mascot">
-        <div class="faq with-mascot__body">
-          <details>
-            <summary>登録や利用にお金はかかりますか？</summary>
-            <p>かかりません。会員登録・案件の利用・ポイント交換の申請は無料です（案件によっては、広告主のサービス自体が有料のものがあります）。</p>
-          </details>
-          <details>
-            <summary>どうやって会員登録しますか？</summary>
-            <p>「LINEで無料で始める」からLINEでログインするだけで登録できます。メールアドレスやパスワードの入力はいりません。</p>
-          </details>
-          <details>
-            <summary>ポイントはいつもらえますか？</summary>
-            <p>条件を達成すると、まず「判定中」として反映されます。広告主の承認後に「確定」となり、交換に使えるようになります。</p>
-          </details>
-          <details>
-            <summary>困ったときは誰に相談できますか？</summary>
-            <p>ポイフォ公式LINEを友だち追加すると、担当スタッフに相談できます。</p>
-          </details>
-        </div>
-        <Mascot pose="cheer" width={150} />
+      <div class="faq-intro">
+        <Mascot pose="guide" width={110} />
+        <p class="faq-intro__bubble">はじめての方からよく聞かれることをまとめたよ。タップすると答えが開きます。</p>
+      </div>
+      <div class="faq">
+        <details>
+          <summary><span class="faq__mark faq__mark--q" aria-hidden="true">Q</span><span>登録や利用にお金はかかりますか？</span></summary>
+          <div class="faq__answer"><span class="faq__mark faq__mark--a" aria-hidden="true">A</span><p>かかりません。会員登録・案件の利用・ポイント交換の申請は無料です（案件によっては、広告主のサービス自体が有料のものがあります）。</p></div>
+        </details>
+        <details>
+          <summary><span class="faq__mark faq__mark--q" aria-hidden="true">Q</span><span>どうやって会員登録しますか？</span></summary>
+          <div class="faq__answer"><span class="faq__mark faq__mark--a" aria-hidden="true">A</span><p>「LINEで無料で始める」からLINEでログインするだけで登録できます。メールアドレスやパスワードの入力はいりません。</p></div>
+        </details>
+        <details>
+          <summary><span class="faq__mark faq__mark--q" aria-hidden="true">Q</span><span>ポイントはいつもらえますか？</span></summary>
+          <div class="faq__answer"><span class="faq__mark faq__mark--a" aria-hidden="true">A</span><p>条件を達成すると、まず「判定中」として反映されます。広告主の承認後に「確定」となり、交換に使えるようになります。</p></div>
+        </details>
+        <details>
+          <summary><span class="faq__mark faq__mark--q" aria-hidden="true">Q</span><span>困ったときは誰に相談できますか？</span></summary>
+          <div class="faq__answer"><span class="faq__mark faq__mark--a" aria-hidden="true">A</span><p>ポイフォ公式LINEを友だち追加すると、担当スタッフに相談できます。</p></div>
+        </details>
       </div>
       <a class="more-link" href="/guide/">ヘルプをもっと見る</a>
     </div>
@@ -157,6 +162,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <!-- 最後の登録導線（未ログインのときだけ） -->
   <section class="section final-cta" data-show="guest">
     <div class="container">
+      <Mascot pose="wave" width={120} class="final-cta__img" />
       <p class="final-cta__copy">ひとりじゃない、あたらしいポイ活をはじめよう。</p>
       <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
     </div>
@@ -318,12 +324,45 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   .flow__item {
     display: grid;
     gap: 4px;
+    position: relative;
+  }
+  .flow__step {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-text);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .flow__item--get {
+    padding-right: 96px;
+  }
+  .flow__item :global(.flow__img) {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 84px;
   }
   .flow__who {
     font-weight: 600;
     color: var(--color-text);
     border-bottom: 2px solid var(--color-brand);
     justify-self: start;
+  }
+  .exchange {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .exchange :global(.exchange__img) {
+    width: 96px;
+    flex-shrink: 0;
+  }
+  .exchange__body {
+    min-width: 0;
   }
   .exchange__name {
     font-weight: 600;
@@ -333,24 +372,113 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   .exchange__text {
     margin: 0;
   }
+  .faq-intro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .faq-intro :global(.mascot) {
+    width: 96px;
+    flex-shrink: 0;
+  }
+  /* キャラクターの吹き出し（左向きのしっぽ付き） */
+  .faq-intro__bubble {
+    position: relative;
+    margin: 0;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+  }
+  .faq-intro__bubble::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-left: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    transform: translateY(-50%) rotate(45deg);
+  }
+  .faq {
+    display: grid;
+    gap: 8px;
+  }
   .faq details {
     background: #fff;
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    padding: 12px 16px;
-  }
-  .faq details + details {
-    margin-top: 8px;
   }
   .faq summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 40px 12px 14px;
     cursor: pointer;
     font-weight: 600;
+    list-style: none;
+    position: relative;
   }
-  .faq details p {
-    margin: 8px 0 0;
+  .faq summary::-webkit-details-marker {
+    display: none;
+  }
+  /* 開閉の印（＋／－） */
+  .faq summary::after {
+    content: '+';
+    position: absolute;
+    right: 16px;
+    color: var(--color-muted);
+    font-size: 1.2rem;
+    font-weight: 400;
+  }
+  .faq details[open] summary::after {
+    content: '−';
+  }
+  .faq__answer {
+    display: flex;
+    gap: 10px;
+    padding: 0 14px 14px;
+  }
+  .faq__answer p {
+    margin: 0;
+  }
+  .faq__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .faq__mark--q {
+    background: var(--color-brand-bg);
+    border: 1px solid var(--color-brand);
+  }
+  .faq__mark--a {
+    background: var(--color-text);
+    color: #fff;
   }
   .final-cta {
     text-align: center;
+  }
+  .final-cta :global(.final-cta__img) {
+    display: block;
+    margin: 0 auto 8px;
+    width: 120px;
+  }
+  .feature {
+    text-align: center;
+  }
+  .feature :global(.feature__img) {
+    display: block;
+    width: 96px;
+    margin: 0 auto 8px;
   }
   .final-cta__copy {
     font-weight: 600;
@@ -436,6 +564,10 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     .features :global(.card) {
       padding: 10px;
     }
+    .features :global(.feature__img) {
+      width: 64px;
+      margin-bottom: 4px;
+    }
     .features h3 {
       font-size: 0.85rem;
       margin: 0 0 4px;
@@ -471,9 +603,17 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
       padding: 12px;
       font-size: 0.9rem;
     }
+    .flow__item--get {
+      padding-right: 92px;
+    }
     .faq details {
-      padding: 10px 14px;
       font-size: 0.9rem;
+    }
+    .faq-intro :global(.mascot) {
+      width: 80px;
+    }
+    .exchange :global(.exchange__img) {
+      width: 72px;
     }
   }
 </style>
