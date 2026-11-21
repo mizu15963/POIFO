@@ -56,7 +56,7 @@ GitHub Actions                         S3 poifo-deploy-…                サー
 | AWS の権限 | 何ができるか |
 |---|---|
 | ロール `poifo-gha-deploy`（Actions、Environment `poifo-deploy` のジョブだけ） | フロント用バケットへの同期、CloudFront のキャッシュ削除、`releases/` への書き込み、`status/` の読み取り。インフラは変えられない |
-| IAM ユーザー `poifo-deploy-agent`（サーバ） | `releases/` の読み取りと `status/` の読み書きだけ（全台で同じユーザーを使う） |
+| IAM ユーザー `poifo-deploy-agent`（サーバ） | `releases/` の読み取りと `status/` の読み書き、Let's Encrypt の DNS 確認用に `_acme-challenge.origin.<domain>` の TXT レコードの書き込みだけ（全台で同じユーザーを使う） |
 
 費用: S3 の保管（リリースは30日で自動削除）と、サーバが1分ごとに確認するリクエスト（月4万回程度で数円）。
 

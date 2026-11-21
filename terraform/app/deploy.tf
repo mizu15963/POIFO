@@ -72,7 +72,7 @@ resource "aws_s3_bucket_policy" "deploy" {
   depends_on = [aws_s3_bucket_public_access_block.deploy]
 }
 
-# サーバの deploy agent 用。リリースを読むことと、結果を書くことだけできる。
+# サーバ用（deploy agent と Let's Encrypt）。リリースを読むこと、結果を書くこと、証明書の確認用 DNS レコードを書くことだけできる。
 # アクセスキーは Terraform では作らない（state に残るため）。コンソールで発行してサーバに置く
 resource "aws_iam_user" "deploy_agent" {
   name = "${var.project}-deploy-agent"
@@ -101,6 +101,44 @@ data "aws_iam_policy_document" "deploy_agent" {
     actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${aws_s3_bucket.deploy.arn}/status/*"]
   }
+}
+
+# サーバの Let's Encrypt（DNS-01）用。_acme-challenge.origin.<domain> の TXT レコードだけ書ける。
+# DNS で確認するので、固定 IP や LB がどのサーバを向いていても（入れ替え用の新しいサーバでも）証明書を取れる
+data "aws_iam_policy_document" "acme_dns" {
+  count = local.custom_domain ? 1 : 0
+  statement {
+    sid       = "AcmeChallengeRecordOnly"
+    actions   = ["route53:ChangeResourceRecordSets"]
+    resources = ["arn:aws:route53:::hostedzone/${data.aws_route53_zone.main[0].zone_id}"]
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "route53:ChangeResourceRecordSetsNormalizedRecordNames"
+      values   = ["_acme-challenge.${lower(local.origin_host)}"]
+    }
+    condition {
+      test     = "ForAllValues:StringEquals"
+      variable = "route53:ChangeResourceRecordSetsRecordTypes"
+      values   = ["TXT"]
+    }
+  }
+  statement {
+    sid       = "AcmeLookup"
+    actions   = ["route53:ListHostedZones", "route53:GetChange"]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "AcmeListRecords"
+    actions   = ["route53:ListResourceRecordSets"]
+    resources = ["arn:aws:route53:::hostedzone/${data.aws_route53_zone.main[0].zone_id}"]
+  }
+}
+
+resource "aws_iam_user_policy" "acme_dns" {
+  count  = local.custom_domain ? 1 : 0
+  name   = "acme-dns"
+  user   = aws_iam_user.deploy_agent.name
+  policy = data.aws_iam_policy_document.acme_dns[0].json
 }
 
 resource "aws_iam_user_policy" "deploy_agent" {

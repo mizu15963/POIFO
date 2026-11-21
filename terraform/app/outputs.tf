@@ -1,5 +1,15 @@
 output "instance_names" {
-  value = aws_lightsail_instance.api[*].name
+  value = concat([for k in sort(keys(aws_lightsail_instance.primary)) : aws_lightsail_instance.primary[k].name], aws_lightsail_instance.extra[*].name)
+}
+
+output "active_instance" {
+  description = "固定 IP が付いている（CloudFront から届く）1台目のサーバ"
+  value       = aws_lightsail_static_ip_attachment.api.instance_name
+}
+
+output "standby_instance" {
+  description = "入れ替え用に作った新しいサーバ（api_standby = true のときだけ）"
+  value       = var.api_standby ? aws_lightsail_instance.primary[local.standby_slot].name : null
 }
 
 # 固定 IP はオリジンの所在を明かすので、公開ログ（ジョブサマリー）には出さない。
