@@ -246,6 +246,11 @@ body:not([data-auth='guest']) [data-show='guest'] {
   display: none !important;
 }
 
+/* ログイン必須のページは、ログインを確かめ終わるまで本文を出さない（未ログインなら /login/ へ移動する） */
+body[data-require-login='true']:not([data-auth='member']) main {
+  display: none;
+}
+
 /* フォーム */
 .form {
   display: grid;
