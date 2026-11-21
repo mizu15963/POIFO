@@ -2,6 +2,8 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import SideNav from '../components/SideNav.astro';
+import SideAside from '../components/SideAside.astro';
 import { LINE_LOGIN_URL } from '../lib/config';
 
 interface Props {
@@ -37,6 +39,10 @@ const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなた�
     <meta property="og:type" content="website" />
   </head>
   <body data-auth="unknown" data-require-login={requireLogin ? 'true' : undefined} data-sticky-cta={stickyCta ? 'true' : undefined}>
+    <!-- PC はスマホ幅の画面を中央に置き、左にメニュー・右に案内を出す（スマホと同じ画面で見せるため） -->
+    <div class="shell">
+      <aside class="shell__side shell__side--left"><SideNav /></aside>
+      <div class="shell__center">
     <Header />
     <main>
       <slot />
@@ -51,6 +57,9 @@ const fullTitle = title ? `${title}｜ポイフォ` : 'ポイフォ｜あなた�
       )
     }
     <Footer />
+      </div>
+      <aside class="shell__side shell__side--right"><SideAside /></aside>
+    </div>
     {
       stickyCta && (
         <div class="sticky-cta" data-show="guest" id="sticky-cta">

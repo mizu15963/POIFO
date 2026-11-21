@@ -86,7 +86,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <!-- ⑥ ポイフォの特徴 -->
   <section class="section section--soft">
     <div class="container">
-      <h2 class="section__title">ポイフォの特徴</h2>
+      <h2 class="section__title section__title--center">ポイフォの特徴</h2>
       <div class="grid grid--3 features">
         <div class="card feature"><Mascot pose="point" width={96} class="feature__img" /><h3>自由にポイ活</h3><p>興味のある案件を、自分のペースで利用できます。</p></div>
         <div class="card feature"><Mascot pose="line" width={96} class="feature__img" /><h3>担当者に相談</h3><p>公式LINEで気軽にサポートを受けられます。</p></div>
@@ -98,16 +98,16 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <!-- ⑦ 初めての方へ：貯め方 → しくみ → 交換先 → よくある質問 → 登録 -->
   <section class="section">
     <div class="container">
-      <h2 class="section__title">ポイントの貯め方</h2>
+      <h2 class="section__title section__title--center">ポイントの貯め方</h2>
       <HowToEarn />
       <a class="more-link" href="/guide/#earn">くわしい貯め方を見る</a>
     </div>
   </section>
 
-  <section class="section section--soft">
+  <section class="section section--warm">
     <div class="container">
-      <h2 class="section__title">ポイントがもらえるしくみ</h2>
-      <p class="lead">広告主がポイフォに払う広告費の一部が、ポイントとしてあなたに届きます。</p>
+      <h2 class="section__title section__title--center">ポイントがもらえるしくみ</h2>
+      <p class="lead center-text">広告主がポイフォに払う広告費の一部が、ポイントとしてあなたに届きます。</p>
       <ol class="flow">
         <li class="card flow__item"><span class="flow__step">1</span><span class="flow__who">あなた</span><span>ポイフォ経由で、広告主のサービスを利用・申し込み</span></li>
         <li class="card flow__item"><span class="flow__step">2</span><span class="flow__who">広告主</span><span>利用のお礼として、ポイフォに広告費を支払う</span></li>
@@ -118,7 +118,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 
   <section class="section">
     <div class="container">
-      <h2 class="section__title">貯めたポイントの使い道</h2>
+      <h2 class="section__title section__title--center">貯めたポイントの使い道</h2>
       <div class="exchange card">
         <Mascot pose="cheer" width={110} class="exchange__img" />
         <div class="exchange__body">
@@ -132,7 +132,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 
   <section class="section section--soft">
     <div class="container">
-      <h2 class="section__title">よくある質問</h2>
+      <h2 class="section__title section__title--center">よくある質問</h2>
       <div class="faq-intro">
         <Mascot pose="guide" width={110} />
         <p class="faq-intro__bubble">はじめての方からよく聞かれることをまとめたよ。タップすると答えが開きます。</p>
@@ -160,7 +160,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   </section>
 
   <!-- 最後の登録導線（未ログインのときだけ） -->
-  <section class="section final-cta" data-show="guest">
+  <section class="section section--warm final-cta" data-show="guest">
     <div class="container">
       <Mascot pose="wave" width={120} class="final-cta__img" />
       <p class="final-cta__copy">ひとりじゃない、あたらしいポイ活をはじめよう。</p>
@@ -237,20 +237,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   .hero__cta {
     grid-area: cta;
   }
-  @media (min-width: 640px) {
-    .hero__inner {
-      grid-template-columns: 1fr 260px;
-      grid-template-areas:
-        'copy mascot'
-        'lead mascot'
-        'cta mascot';
-      column-gap: 24px;
-    }
-    .hero :global(.hero__mascot) {
-      width: 260px;
-      align-self: center;
-    }
-  }
   .hero__points {
     grid-column: 1 / -1;
     display: flex;
@@ -275,11 +261,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     margin: 0;
     padding: 0;
     list-style: none;
-  }
-  @media (min-width: 640px) {
-    .category-tiles {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
   }
   /* タイルはスクリプトで差し込むので :global で当てる（Astro のスコープ付きスタイルが効かないため） */
   .category-tiles > :global(li:only-child) {
@@ -316,11 +297,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     padding: 0;
     list-style: none;
   }
-  @media (min-width: 640px) {
-    .flow {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
   .flow__item {
     display: grid;
     gap: 4px;
@@ -332,8 +308,8 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--color-text);
-    color: #fff;
+    background: var(--color-accent);
+    color: var(--color-text);
     font-size: 0.8rem;
     font-weight: 600;
   }
@@ -349,7 +325,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   .flow__who {
     font-weight: 600;
     color: var(--color-text);
-    border-bottom: 2px solid var(--color-brand);
+    border-bottom: 2px solid var(--color-accent);
     justify-self: start;
   }
   .exchange {
@@ -461,8 +437,8 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     border: 1px solid var(--color-brand);
   }
   .faq__mark--a {
-    background: var(--color-text);
-    color: #fff;
+    background: var(--color-accent);
+    color: var(--color-text);
   }
   .final-cta {
     text-align: center;
@@ -487,133 +463,132 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   }
   /* スマホ向けの上書きは PC 向けの指定より後に置く（同じ詳細度なので後勝ち） */
   /* ===== スマホ（主なターゲット）: 一般的なポイントサイトのスマホ表示に寄せて、詰めて横に流す ===== */
-  @media (max-width: 639px) {
-    .hero {
-      padding: 24px 0 20px;
-    }
-    .hero__lead {
-      font-size: 0.9rem;
-      margin-bottom: 16px;
-    }
-    .hero__points {
-      margin-top: 14px;
-      gap: 6px;
-    }
-    .hero__points li {
-      font-size: 0.75rem;
-      padding: 2px 10px;
-    }
-    /* 案件とイベントは横スクロールのカード列にし、画面の端まで流して「続きがある」ことを見せる */
-    .hscroll:has(.card) {
-      grid-auto-flow: column;
-      grid-template-columns: none;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      margin: 0 -16px;
-      padding: 2px 16px 8px;
-      scroll-padding-left: 16px;
-      scrollbar-width: none;
-    }
-    .hscroll::-webkit-scrollbar {
-      display: none;
-    }
-    .hscroll > :global(.card) {
-      scroll-snap-align: start;
-    }
-    .hscroll--campaigns:has(.card) {
-      grid-auto-columns: 42%;
-    }
-    .hscroll--events:has(.card) {
-      grid-auto-columns: 78%;
-    }
-    /* 案件カードは縦長にして、アイコン → 名前（2行まで）→ ポイントの順に並べる */
-    .hscroll--campaigns :global(.campaign-card) {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 12px;
-    }
-    .hscroll--campaigns :global(.campaign-card img),
-    .hscroll--campaigns :global(.campaign-card__noicon) {
-      width: 64px;
-      height: 64px;
-    }
-    .hscroll--campaigns :global(.campaign-card__body) {
-      width: 100%;
-    }
-    .hscroll--campaigns :global(.campaign-card__name) {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      white-space: normal;
-      font-size: 0.85rem;
-      line-height: 1.4;
-      min-height: 2.8em;
-    }
-    .hscroll--campaigns :global(.campaign-card__points) {
-      font-size: 1rem;
-    }
-    .hscroll--events :global(.event-card) {
-      padding: 12px;
-    }
-    /* 特徴は3つ横並びの小さなカードにして縦に長くしない */
-    .features {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .features :global(.card) {
-      padding: 10px;
-    }
-    .features :global(.feature__img) {
-      width: 64px;
-      margin-bottom: 4px;
-    }
-    .features h3 {
-      font-size: 0.85rem;
-      margin: 0 0 4px;
-    }
-    .features p {
-      font-size: 0.75rem;
-      line-height: 1.5;
-      margin: 0;
-    }
-    .category-tiles {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 6px;
-    }
-    .category-tiles :global(.category-tile) {
-      flex-direction: column;
-      justify-content: center;
-      gap: 0;
-      min-height: 56px;
-      padding: 6px;
-      text-align: center;
-    }
-    .category-tiles :global(.category-tile__name) {
-      font-size: 0.8rem;
-      line-height: 1.3;
-    }
-    .category-tiles :global(.category-tile__count) {
-      font-size: 0.7rem;
-    }
-    .flow {
-      gap: 8px;
-    }
-    .flow__item {
-      padding: 12px;
-      font-size: 0.9rem;
-    }
-    .flow__item--get {
-      padding-right: 92px;
-    }
-    .faq details {
-      font-size: 0.9rem;
-    }
-    .faq-intro :global(.mascot) {
-      width: 80px;
-    }
-    .exchange :global(.exchange__img) {
-      width: 72px;
-    }
+  .hero {
+    padding: 24px 0 20px;
   }
+  .hero__lead {
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+  }
+  .hero__points {
+    margin-top: 14px;
+    gap: 6px;
+  }
+  .hero__points li {
+    font-size: 0.75rem;
+    padding: 2px 10px;
+  }
+  /* 案件とイベントは横スクロールのカード列にし、画面の端まで流して「続きがある」ことを見せる */
+  .hscroll:has(.card) {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin: 0 -16px;
+    padding: 2px 16px 8px;
+    scroll-padding-left: 16px;
+    scrollbar-width: none;
+  }
+  .hscroll::-webkit-scrollbar {
+    display: none;
+  }
+  .hscroll > :global(.card) {
+    scroll-snap-align: start;
+  }
+  .hscroll--campaigns:has(.card) {
+    grid-auto-columns: 42%;
+  }
+  .hscroll--events:has(.card) {
+    grid-auto-columns: 78%;
+  }
+  /* 案件カードは縦長にして、アイコン → 名前（2行まで）→ ポイントの順に並べる */
+  .hscroll--campaigns :global(.campaign-card) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+  }
+  .hscroll--campaigns :global(.campaign-card img),
+  .hscroll--campaigns :global(.campaign-card__noicon) {
+    width: 64px;
+    height: 64px;
+  }
+  .hscroll--campaigns :global(.campaign-card__body) {
+    width: 100%;
+  }
+  .hscroll--campaigns :global(.campaign-card__name) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    min-height: 2.8em;
+  }
+  .hscroll--campaigns :global(.campaign-card__points) {
+    font-size: 1rem;
+  }
+  .hscroll--events :global(.event-card) {
+    padding: 12px;
+  }
+  /* 特徴は3つ横並びの小さなカードにして縦に長くしない */
+  .features {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .features :global(.card) {
+    padding: 10px;
+  }
+  .features :global(.feature__img) {
+    width: 64px;
+    margin-bottom: 4px;
+  }
+  .features h3 {
+    font-size: 0.85rem;
+    margin: 0 0 4px;
+  }
+  .features p {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .category-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .category-tiles :global(.category-tile) {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    min-height: 56px;
+    padding: 6px;
+    text-align: center;
+  }
+  .category-tiles :global(.category-tile__name) {
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+  .category-tiles :global(.category-tile__count) {
+    font-size: 0.7rem;
+  }
+  .flow {
+    gap: 8px;
+  }
+  .flow__item {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+  .flow__item--get {
+    padding-right: 92px;
+  }
+  .faq details {
+    font-size: 0.9rem;
+  }
+  .faq-intro :global(.mascot) {
+    width: 80px;
+  }
+  .exchange :global(.exchange__img) {
+    width: 72px;
+  }
+
 </style>

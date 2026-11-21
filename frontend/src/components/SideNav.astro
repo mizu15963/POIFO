@@ -1,0 +1,74 @@
+---
+// PC（1024px 以上）で中央のスマホ幅の画面の左に出すメニュー。スマホではヘッダーの「メニュー」を使う
+import { LINE_LOGIN_URL } from '../lib/config';
+---
+
+<nav class="side-nav" aria-label="サイトメニュー">
+  <a href="/" class="side-nav__logo" aria-label="ポイフォ トップへ">
+    <img src="/images/poifo-logo-header.png" alt="POIFO ポイフォ" width="118" height="50" />
+  </a>
+  <p class="side-nav__catch">ひとりじゃない、<br />あたらしいポイ活。</p>
+  <ul class="side-nav__list">
+    <li><a href="/">トップ</a></li>
+    <li><a href="/campaigns/">案件を探す</a></li>
+    <li><a href="/events/">イベント</a></li>
+    <li><a href="/support/">担当サポート</a></li>
+    <li><a href="/guide/">はじめての方へ・ヘルプ</a></li>
+  </ul>
+  <p class="side-nav__label" data-show="member">マイページ</p>
+  <ul class="side-nav__list" data-show="member">
+    <li><a href="/mypage/">マイページ</a></li>
+    <li><a href="/mypage/points/">ポイント履歴</a></li>
+    <li><a href="/mypage/withdraw/">ポイント交換</a></li>
+    <li><a href="/mypage/bank/">振込先口座</a></li>
+  </ul>
+  <div data-show="guest">
+    <a class="btn btn--outline btn--block side-nav__login" href={LINE_LOGIN_URL}>ログイン</a>
+  </div>
+</nav>
+
+<style>
+  .side-nav {
+    display: grid;
+    gap: 12px;
+  }
+  .side-nav__logo img {
+    display: block;
+  }
+  .side-nav__catch {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .side-nav__label {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    letter-spacing: 0.05em;
+  }
+  .side-nav__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .side-nav__list li + li {
+    border-top: 1px solid var(--color-border);
+  }
+  .side-nav__list a {
+    display: block;
+    padding: 12px 16px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .side-nav__list a:hover {
+    background: var(--color-accent-bg);
+  }
+  .side-nav__login {
+    min-height: 44px;
+  }
+</style>
