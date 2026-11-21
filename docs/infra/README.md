@@ -238,7 +238,7 @@ gh actions-lock                               # .github/workflows/actions.lock �
 - app: Lightsail `poifo-api`（Ubuntu 24.04、1GB、自動スナップショット毎日 3:00 JST）、固定IP、ファイアウォール（443・80・22）、
   フロント用バケットと CloudFront（`https://xxxx.cloudfront.net`）
 
-確認: ジョブサマリーの先頭「接続先」にトップ画面の URL（`front_url`、ドメインなしなら `https://xxxx.cloudfront.net`）が出る。outputs には `db_endpoint`（Laravel の `DB_HOST`）も出る。
+確認: ジョブサマリーの「接続先」にトップ画面の URL（`front_url`、ドメインなしなら `https://xxxx.cloudfront.net`）が出る。outputs には `db_endpoint`（Laravel の `DB_HOST`）も出る。
 作り直す（destroy → apply）と CloudFront のアドレスが変わるので、そのたびにここで確かめ、Variables の `PUBLIC_SITE_URL` も直す。手元PCからは `terraform output -raw front_url` でも見られる。
 DB は同じリージョンの Lightsail インスタンスからだけ接続できる（PC から直接はつながらない）。固定IP はサマリーに出さないので Lightsail コンソールか、
 手元PCで `terraform output -raw static_ip`（下の「手元PCから state を見る」）で確認する。
