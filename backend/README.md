@@ -141,7 +141,7 @@ composer dev                # http://localhost:8000
 
 - 画面: `http://api.localhost:8000/docs/api`（Try It でその場で API を呼べる）
 - OpenAPI の JSON: `http://api.localhost:8000/docs/api.json`（Postman などに読み込める）
-- 載せるのは会員 API（`/v1`）・LINE ログイン・案件遷移（`/go`）・成果通知（`/postback`）。管理画面（admin.）は載せない
+- 載せるのは会員 API（`/v1`）・LINE ログイン・案件遷移（`/go`）。管理画面（admin.）と成果通知（`/postback`、受け口の存在を外に見せないため）は載せない
 - false のときはルート自体を作らないので 404 になる。サーバでは `.env` を変えたあと `php artisan route:cache` し直す（デプロイでも実行される）
 - ログインが必要な API は、同じブラウザで LINE ログインを済ませておけば Cookie で通る。POST/PUT は先に `/sanctum/csrf-cookie` を開き、
   発行された `XSRF-TOKEN` Cookie の値（URL デコードしたもの）を Try It の `X-XSRF-TOKEN` 欄に入れる
