@@ -56,6 +56,41 @@ case "${cmd}" in
     ;;
 esac
 
+# DB のプランと MySQL のバージョンが東京リージョンで使えるか、DB を作る前に確かめる（base の plan / apply のとき）。
+# 作成済みなら確かめない（後から売り止めになったプランでも、動いている DB の更新は止めない）
+check_db_ids() {
+  tf state list 2>/dev/null | grep -qx 'aws_lightsail_database.main' && return 0
+  # 値は TF_VAR_ があればそれ、なければ variables.tf の既定値
+  var_value() {
+    local name=$1 env="TF_VAR_$1"
+    if [[ -n "${!env:-}" ]]; then echo "${!env}"; return; fi
+    awk -v n="\"${name}\"" '$1=="variable" && $2==n {f=1} f && $1=="default" {gsub(/"/,"",$3); print $3; exit}' "${dir}/variables.tf"
+  }
+  local bundle blueprint bundles blueprints
+  bundle=$(var_value db_bundle_id)
+  blueprint=$(var_value db_blueprint_id)
+  bundles=$(aws lightsail get-relational-database-bundles --region "${AWS_REGION}" \
+    --query 'bundles[?isActive].[bundleId,price,ramSizeInGb]' --output text)
+  blueprints=$(aws lightsail get-relational-database-blueprints --region "${AWS_REGION}" \
+    --query "blueprints[?engine=='mysql'].[blueprintId,engineVersion]" --output text)
+  local ng=()
+  awk -v id="${bundle}" '$1==id {f=1} END {exit !f}' <<< "${bundles}" || ng+=("プラン db_bundle_id = ${bundle}")
+  awk -v id="${blueprint}" '$1==id {f=1} END {exit !f}' <<< "${blueprints}" || ng+=("MySQL のバージョン db_blueprint_id = ${blueprint}")
+  if [[ ${#ng[@]} -gt 0 ]]; then
+    summary "## ❌ DB の設定が ${AWS_REGION} で使えません" \
+      "$(printf -- '- %s\n' "${ng[@]}")" \
+      "" "terraform/base/variables.tf の既定値を、下の一覧にある ID に変えて PR を出してください。" \
+      "" "### 使えるプラン（ID・月額ドル・メモリGB）" '```' "${bundles}" '```' \
+      "### 使える MySQL（ID・バージョン）" '```' "${blueprints}" '```'
+    echo "::error::DB の設定が ${AWS_REGION} で使えません: ${ng[*]}（一覧はジョブサマリー）"
+    exit 1
+  fi
+  echo "DB の設定を確認しました: ${bundle} / ${blueprint}"
+}
+if [[ "${stack}" == "base" && ( "${cmd}" == "plan" || "${cmd}" == "apply" ) ]]; then
+  check_db_ids
+fi
+
 destroy_flag=""
 if [[ "${cmd}" == "plan-destroy" || "${cmd}" == "destroy" ]]; then
   destroy_flag="-destroy"

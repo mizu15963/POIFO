@@ -196,15 +196,11 @@ gh secret set DB_MASTER_PASSWORD --body $p
 $p   # パスワードマネージャーに保存。Terraform の state（非公開の S3）にも残る
 ```
 
-### DB のプランと MySQL バージョンの確認（初回 apply 前に1回）
+### DB のプランと MySQL バージョン（自動で確認）
 
-`db_bundle_id = micro_2_0`（標準 $15）と `db_blueprint_id = mysql_8_4` が東京リージョンで使えるかを確かめる。
-一覧になければ、`terraform/base/variables.tf` の既定値を一覧にある ID に変える。
-
-```powershell
-aws lightsail get-relational-database-bundles --region ap-northeast-1 --query "bundles[?isActive].[bundleId,price,ramSizeInGb]" --output table
-aws lightsail get-relational-database-blueprints --region ap-northeast-1 --query "blueprints[?engine=='mysql'].[blueprintId,engineVersion]" --output table
-```
+base の plan / apply の前に、Actions が `db_bundle_id`（既定 `micro_2_0`、標準 $15）と `db_blueprint_id`（既定 `mysql_8_4`）が東京リージョンで使えるかを確かめる。
+使えなければ plan の前に止まり、ジョブサマリーに使える ID の一覧が出るので、`terraform/base/variables.tf` の既定値をその ID に変えて PR を出す。
+DB を作った後は確かめない（後からプランが売り止めになっても、動いている DB の更新は止めない）。
 
 ### Environment
 
