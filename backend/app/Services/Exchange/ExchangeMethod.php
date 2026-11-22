@@ -118,7 +118,11 @@ final class ExchangeMethod
         }
     }
 
-    /** 会員向け API で返す条件 */
+    /**
+     * 会員向け API で返す条件
+     *
+     * @return array{code: string, name: string, description: string, icon: string|null, status: 'open'|'suspended'|'hidden', accepting: bool, min_points: int, step_points: int, max_points: int|null, yen_per_point: float, fee: array{type: 'none'|'fixed'|'percent', amount_yen: int, percent: float}, review_days: int, requires_recipient: bool}
+     */
     public function toArray(): array
     {
         return [
@@ -126,10 +130,10 @@ final class ExchangeMethod
             'name' => $this->name,
             'description' => $this->description,
             'icon' => $this->icon,
-            'status' => $this->status,
+            'status' => (string) $this->status,
             'accepting' => $this->isAccepting(),
-            'min_points' => $this->minPoints,
-            'step_points' => $this->stepPoints,
+            'min_points' => (int) $this->minPoints,
+            'step_points' => (int) $this->stepPoints,
             'max_points' => $this->maxPoints,
             'yen_per_point' => $this->yenPerPoint,
             'fee' => [
@@ -137,7 +141,7 @@ final class ExchangeMethod
                 'amount_yen' => (int) ($this->fee['amount_yen'] ?? 0),
                 'percent' => (float) ($this->fee['percent'] ?? 0),
             ],
-            'review_days' => $this->reviewDays,
+            'review_days' => (int) $this->reviewDays,
             'requires_recipient' => $this->handler->requiresRecipient(),
         ];
     }
