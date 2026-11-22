@@ -1,0 +1,37 @@
+---
+// メンテナンス画面（/maintenance/）。API がメンテナンス中（503）を返すと、src/lib/api.ts がここへ移動させる。
+// メンテナンス中は API が使えないので、共通 CSS・API に頼らない StandaloneLayout を使う。
+// ?back= に元のページのパスが入っていれば、「再読み込みする」でそこへ戻る。
+// ほかのページは開くと /v1/me が 503 になってここへ戻ってくるので、ほかのページへのリンクは置かない。
+import StandaloneLayout from '../../layouts/StandaloneLayout.astro';
+import Mascot from '../../components/Mascot.astro';
+---
+
+<StandaloneLayout title="ただいまメンテナンス中です">
+  <Mascot pose="maintenance" width={300} eager />
+  <p class="code">MAINTENANCE</p>
+  <h1>ただいまメンテナンス中です</h1>
+  <p class="text">
+    より快適にご利用いただけるよう、システムのメンテナンスを行っています。ご不便をおかけしますが、終了までしばらくお待ちください。獲得済みのポイントが消えることはありません。
+  </p>
+  <div class="actions">
+    <a class="btn" href="/" id="maintenance-back">再読み込みする</a>
+  </div>
+</StandaloneLayout>
+
+<script>
+  // 元のページへ戻すリンク。外部サイトへ飛ばされないよう、文字列の先頭で判断せずブラウザと同じ規則で URL として解釈し
+  // （/\evil.example やタブ入りの値もブラウザは外部 URL とみなすため）、同じオリジンのときだけ使う
+  const back = new URLSearchParams(location.search).get('back');
+  if (back) {
+    try {
+      const url = new URL(back, location.origin);
+      if (url.origin === location.origin && !url.pathname.startsWith('/maintenance/')) {
+        // パスだけにすると //evil.example のようなプロトコル相対になりうるので、確認済みの絶対 URL をそのまま使う
+        document.getElementById('maintenance-back')!.setAttribute('href', url.href);
+      }
+    } catch {
+      // 解釈できない値は無視してトップへ戻す
+    }
+  }
+</script>

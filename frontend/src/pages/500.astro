@@ -1,79 +1,19 @@
 ---
 // 500系のエラーページ。CloudFront がオリジンの 500/502/503/504 でこのページを返す（terraform/app/front.tf）。
-// 障害時に表示するページなので、共通レイアウト・CSS・API（/v1/me）に頼らず、このファイルだけで表示できるようにする。
-// 色は src/styles/global.css の値と同じものを直接書いている（変えるときは両方そろえる）。
+// 障害時に表示するので、共通 CSS・API に頼らない StandaloneLayout を使う。
+import StandaloneLayout from '../layouts/StandaloneLayout.astro';
 import Mascot from '../components/Mascot.astro';
 ---
 
-<!doctype html>
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="robots" content="noindex" />
-    <title>ただいまつながりにくくなっています｜ポイフォ</title>
-    <link rel="icon" type="image/png" href="/images/poifo-logo-header.png" />
-    <style is:inline>
-      :root {
-        --color-text: #1a1e21;
-        --color-muted: #5f6b70;
-        --color-border: #e3e9ea;
-        --color-brand: #3ad1ce;
-        --color-accent-strong: #b45a00;
-        --color-page-bg: #eef7f7;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        background: var(--color-page-bg);
-        color: var(--color-text);
-        font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-        line-height: 1.7;
-      }
-      /* PC でもスマホ幅の画面を中央に置く（通常ページと同じ見え方） */
-      .screen {
-        max-width: 480px;
-        min-height: 100vh;
-        margin: 0 auto;
-        background: #fff;
-        padding: 24px 16px 40px;
-        text-align: center;
-      }
-      .logo { display: block; width: 120px; height: auto; margin: 0 auto 24px; }
-      .mascot { display: block; width: 180px; height: auto; margin: 0 auto 8px; }
-      .code { margin: 0; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; color: var(--color-accent-strong); }
-      h1 { margin: 4px 0 12px; font-size: 1.4rem; font-weight: 600; line-height: 1.4; }
-      .text { margin: 0 0 24px; color: var(--color-muted); text-align: left; }
-      .actions { display: grid; gap: 12px; }
-      .btn {
-        display: block;
-        padding: 12px 20px;
-        border-radius: 999px;
-        border: 2px solid var(--color-text);
-        background: var(--color-text);
-        color: #fff;
-        font: inherit;
-        font-weight: 600;
-        text-decoration: none;
-        cursor: pointer;
-      }
-      .btn--outline { background: #fff; color: var(--color-text); border-color: var(--color-brand); }
-    </style>
-  </head>
-  <body>
-    <main class="screen">
-      <a href="/"><img class="logo" src="/images/poifo-logo-header.png" alt="ポイフォ" width="120" height="51" /></a>
-      <Mascot pose="guide" width={180} eager />
-      <p class="code">500 Server Error</p>
-      <h1>ただいま<br />つながりにくくなっています</h1>
-      <p class="text">
-        ご不便をおかけして申し訳ありません。時間をおいて、もう一度お試しください。獲得済みのポイントが消えることはありません。
-      </p>
-      <div class="actions">
-        <button class="btn" type="button" onclick="location.reload()">再読み込みする</button>
-        <a class="btn btn--outline" href="/">トップへ戻る</a>
-      </div>
-    </main>
-  </body>
-</html>
+<StandaloneLayout title="ただいまつながりにくくなっています">
+  <Mascot pose="sorry" width={180} eager />
+  <p class="code">500 Server Error</p>
+  <h1>ただいま<br />つながりにくくなっています</h1>
+  <p class="text">
+    ご不便をおかけして申し訳ありません。時間をおいて、もう一度お試しください。獲得済みのポイントが消えることはありません。
+  </p>
+  <div class="actions">
+    <button class="btn" type="button" onclick="location.reload()">再読み込みする</button>
+    <a class="btn btn--outline" href="/">トップへ戻る</a>
+  </div>
+</StandaloneLayout>

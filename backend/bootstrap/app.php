@@ -44,6 +44,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // CloudFront 経由なので、閲覧者の IP は X-Forwarded-For から取る（nginx は CloudFront 以外を通さない）。
         // 先頭の値は閲覧者が偽装できるので、記録用に留める。IP による制限は WAF で行う
         $middleware->trustProxies(at: '*');
+        // メンテナンス中（artisan down）も成果通知だけは受け付ける。GF Rewards が 503 を再送するか未確認で、
+        // 取りこぼすとポイント（お金）に直結するため。DB が止まっているときは処理中の例外で 500 になり、ASP が再送する
+        $middleware->preventRequestsDuringMaintenance(except: ['postback/*']);
         // 未ログインで認証必須の API を呼んだら 401 を返す
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->expectsJson()) {

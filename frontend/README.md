@@ -65,7 +65,9 @@ main に `frontend/` の変更が入ると、ワークフロー「デプロイ�
 | --- | --- | --- |
 | `404.html` | `src/pages/404.astro` | S3 に無いパス（403・404）。状態コードは 404。通常のレイアウトで行き先を案内する |
 | `500.html` | `src/pages/500.astro` | S3 側の障害（500・502・503・504）。状態コードはそのまま。共通 CSS・API に頼らず単体で表示できるように作っている |
+| `maintenance/index.html` | `src/pages/maintenance/index.astro` | CloudFront ではなく、API が 503（メンテナンス中）を返したときに `src/lib/api.ts` がここへ移す |
 
+500 とメンテナンス画面は `src/layouts/StandaloneLayout.astro`（CSS を埋め込んだ単体のレイアウト）を使う。
 API・管理画面（Laravel）が HTML で返すエラー画面は `../backend/resources/views/errors/` にある。
 
 ## まだやっていないこと
