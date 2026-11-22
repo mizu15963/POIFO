@@ -54,6 +54,8 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 
 ### データ（主なテーブル）
 
+カラムまで含めた定義は [../docs/specs/database.md](../docs/specs/database.md)。テーブルを変えたらそちらも直す。
+
 | テーブル | 内容 |
 |---|---|
 | `users` | 会員。LINE のユーザーIDと、ASP に渡す `uid`（ULID）。退会しても行は残す |
