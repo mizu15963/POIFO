@@ -23,7 +23,7 @@ class AdminWithdrawalTest extends TestCase
     {
         parent::setUp();
         $this->admin = Admin::factory()->create();
-        config(['poifo.points.min_withdrawal_points' => 1000, 'poifo.points.withdrawal_review_days' => 7]);
+        config(['poifo.exchange_methods.bank_transfer.min_points' => 1000, 'poifo.exchange_methods.bank_transfer.review_days' => 7]);
     }
 
     /** 口座登録済み・ポイントありの会員 */
@@ -58,8 +58,8 @@ class AdminWithdrawalTest extends TestCase
 
         $this->assertSame(2000, app(PointBalance::class)->for($user)['available']);
         $this->assertSame(3000, $request->amount_yen);
-        $this->assertSame('0123456', $request->bank_snapshot['account_number']);
-        $this->assertSame('ヤマダ タロウ', $request->bank_snapshot['account_holder_kana']);
+        $this->assertSame('0123456', $request->recipient_snapshot['account_number']);
+        $this->assertSame('ヤマダ タロウ', $request->recipient_snapshot['account_holder_kana']);
         // 口座番号は DB には暗号化して入っている
         $this->assertDatabaseMissing('bank_accounts', ['account_number' => '0123456']);
     }

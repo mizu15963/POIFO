@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Exchange\BankTransferHandler;
+
 // POIFO 固有の設定。値は .env で与える（秘密の値はコミットしない）。
 return [
 
@@ -62,11 +64,34 @@ return [
         'campaigns_url' => env('GF_REWARDS_CAMPAIGNS_URL', 'https://api.gf-rewards.com/media/v1/campaigns'),
     ],
 
-    'points' => [
-        // 1ポイント = 何円か
-        'yen_per_point' => (float) env('POIFO_YEN_PER_POINT', 1),
-        'min_withdrawal_points' => (int) env('POIFO_MIN_WITHDRAWAL_POINTS', 1000),
-        // 換金申請から承認できるまでの審査期間（日）
-        'withdrawal_review_days' => (int) env('POIFO_WITHDRAWAL_REVIEW_DAYS', 7),
+    /*
+     * ポイントの交換先（docs/specs/functional-spec.md 7章）。キーが交換先コードで、申請に保存するので変えない・使い回さない。
+     * 交換先ごとに条件を持ち、ほかの交換先の条件には影響しない。条件を変えても、変える前に出た申請には影響しない
+     * （申請した時点のレート・手数料・受け取り情報を申請に保存する）。
+     *
+     * - status: open（受付中）／ suspended（一覧には出すが申請できない）／ hidden（出さない・申請できない）
+     * - fee: type が none（なし）／ fixed（1回 amount_yen 円）／ percent（交換額の percent %、円未満切り捨て）
+     * - handler: 交換先ごとの処理（受け取り情報の控えなど）。App\Services\Exchange\ExchangeMethodHandler を実装する
+     */
+    'exchange_methods' => [
+        'bank_transfer' => [
+            'name' => '銀行振込（現金）',
+            // ポイント履歴に「ポイント交換（銀行振込）」と出す名前
+            'short_name' => '銀行振込',
+            'description' => '登録した口座に、月に1回まとめてお振込みします。',
+            'icon' => null,
+            'status' => env('POIFO_EXCHANGE_BANK_TRANSFER_STATUS', 'open'),
+            'sort' => 1,
+            // 環境変数の名前は交換先を分ける前のまま（既存の .env をそのまま使う）
+            'min_points' => (int) env('POIFO_MIN_WITHDRAWAL_POINTS', 1000),
+            'step_points' => 1,
+            'max_points' => null,
+            // 1ポイント = 何円か
+            'yen_per_point' => (float) env('POIFO_YEN_PER_POINT', 1),
+            'fee' => ['type' => 'none'],
+            // 申請から承認できるまでの審査期間（日）
+            'review_days' => (int) env('POIFO_WITHDRAWAL_REVIEW_DAYS', 7),
+            'handler' => BankTransferHandler::class,
+        ],
     ],
 ];

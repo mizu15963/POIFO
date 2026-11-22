@@ -56,6 +56,12 @@ class PointTransaction extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** 交換（換金）とその取り消しの行が、どの申請（＝どの交換先）のものか */
+    public function withdrawalRequest(): BelongsTo
+    {
+        return $this->belongsTo(WithdrawalRequest::class);
+    }
+
     public function conversion(): BelongsTo
     {
         return $this->belongsTo(Conversion::class);

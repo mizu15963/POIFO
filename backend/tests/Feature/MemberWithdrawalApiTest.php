@@ -26,7 +26,7 @@ class MemberWithdrawalApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['poifo.points.min_withdrawal_points' => 1000]);
+        config(['poifo.exchange_methods.bank_transfer.min_points' => 1000]);
     }
 
     public function test_member_registers_bank_account_and_sees_it_masked(): void

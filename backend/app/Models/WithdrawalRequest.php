@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Services\Exchange\ExchangeMethod;
+use App\Services\Exchange\ExchangeMethods;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * 換金申請。requested → approved / rejected → paid
+ * ポイント交換（換金）の申請。requested → approved / rejected → paid。状態の種類は全交換先で共通。
+ * exchange_method が交換先コード（config/poifo.php の exchange_methods のキー）。
  */
 class WithdrawalRequest extends Model
 {
@@ -23,7 +26,9 @@ class WithdrawalRequest extends Model
     protected function casts(): array
     {
         return [
-            'bank_snapshot' => 'encrypted:array',
+            // 申請時点の受け取り情報（銀行振込なら口座。BankTransferHandler::snapshot）
+            'recipient_snapshot' => 'encrypted:array',
+            'yen_per_point' => 'float',
             'reviewed_at' => 'datetime',
             'reviewable_after' => 'datetime',
             'paid_at' => 'datetime',
@@ -53,6 +58,22 @@ class WithdrawalRequest extends Model
     public function isReviewable(): bool
     {
         return $this->reviewable_after === null || $this->reviewable_after->isPast();
+    }
+
+    /** 交換先の設定（設定から消えた交換先は null） */
+    public function exchangeMethod(): ?ExchangeMethod
+    {
+        return app(ExchangeMethods::class)->find($this->exchange_method);
+    }
+
+    public function exchangeMethodName(): string
+    {
+        return app(ExchangeMethods::class)->nameOf($this->exchange_method ?? ExchangeMethod::BANK_TRANSFER);
+    }
+
+    public function isBankTransfer(): bool
+    {
+        return ($this->exchange_method ?? ExchangeMethod::BANK_TRANSFER) === ExchangeMethod::BANK_TRANSFER;
     }
 
     public function user(): BelongsTo

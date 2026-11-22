@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\BankAccountController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\EventController;
+use App\Http\Controllers\Api\ExchangeMethodController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\WithdrawalController;
 use App\Http\Middleware\EnsureMemberIsActive;
@@ -14,6 +15,8 @@ Route::prefix('v1')->middleware('throttle:member-api')->group(function () {
     Route::get('/campaigns/{campaign}', [CampaignController::class, 'show']);
     Route::get('/campaign-categories', [CampaignController::class, 'categories']);
     Route::get('/events', [EventController::class, 'index']);
+    // ポイントの交換先と条件（docs/specs/functional-spec.md 7章）
+    Route::get('/exchange-methods', [ExchangeMethodController::class, 'index']);
     Route::get('/events/{event}', [EventController::class, 'show']);
 
     Route::middleware(['auth:sanctum', EnsureMemberIsActive::class])->group(function () {

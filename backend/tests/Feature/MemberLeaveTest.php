@@ -32,7 +32,7 @@ class MemberLeaveTest extends TestCase
         $user = User::factory()->create();
         WithdrawalRequest::create([
             'user_id' => $user->id, 'points' => 1000, 'amount_yen' => 1000, 'fee_yen' => 0,
-            'status' => WithdrawalRequest::STATUS_APPROVED, 'bank_snapshot' => [], 'reviewable_after' => now(),
+            'status' => WithdrawalRequest::STATUS_APPROVED, 'recipient_snapshot' => [], 'reviewable_after' => now(),
         ]);
 
         $this->actingAs($user)->asApiHost()->postJson('/v1/me/leave', ['agree' => true])

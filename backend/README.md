@@ -92,9 +92,12 @@ php artisan postback:release <ID> --by=<管理者のメールアドレス>  # �
 
 ### 換金（当面は月1回・手作業で振込）
 
+交換先は `config/poifo.php` の `exchange_methods` で交換先ごとに設定する（いまは銀行振込 `bank_transfer` だけ。条件は `GET /v1/exchange-methods`）。
+銀行振込の条件は交換先を分ける前と同じ環境変数（`POIFO_YEN_PER_POINT`・`POIFO_MIN_WITHDRAWAL_POINTS`・`POIFO_WITHDRAWAL_REVIEW_DAYS`）で変えられる。
+
 1. 会員が換金を申請 → 申請時点の口座情報を保存し、ポイントを台帳から引く（審査期間 `POIFO_WITHDRAWAL_REVIEW_DAYS` 日は承認できない）
 2. 月末に管理者が `admin.<domain>/withdrawals` でその月の申請を確認し、承認する（不審なものは却下 → ポイントを会員に戻す）
-3. 状態「承認済み（振込待ち）」で CSV を出力（氏名・口座名義カナ・銀行／支店コードと名前・種別・口座番号・振込額）
+3. 状態「承認済み（振込待ち）」で CSV を出力（銀行振込の申請だけ。氏名・口座名義カナ・銀行／支店コードと名前・種別・口座番号・振込額）
 4. 銀行で人の手で振り込む → 振り込んだ申請を選んで「振込済みにする」
 
 CSV の出力・承認・却下・振込済み・ログインは `admin_audit_logs` に記録する。
