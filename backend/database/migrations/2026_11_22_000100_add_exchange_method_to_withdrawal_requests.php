@@ -38,7 +38,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('withdrawal_requests', function (Blueprint $table) {
-            $table->json('bank_snapshot')->nullable()->after('status');
+            // 暗号化した文字列は JSON ではないので、戻すときも text にする（json だと MySQL で入らない）
+            $table->text('bank_snapshot')->nullable()->after('status');
         });
 
         DB::table('withdrawal_requests')->update(['bank_snapshot' => DB::raw('recipient_snapshot')]);
