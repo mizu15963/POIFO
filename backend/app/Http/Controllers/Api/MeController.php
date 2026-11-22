@@ -32,6 +32,7 @@ class MeController extends Controller
     {
         $page = PointTransaction::query()
             ->where('user_id', $request->user()->id)
+            ->with('withdrawalRequest:id,exchange_method')
             ->latest('id')
             ->paginate(20);
 
@@ -43,6 +44,9 @@ class MeController extends Controller
                 'status' => $t->status,
                 'points' => $t->points,
                 'description' => $t->description,
+                // 交換（換金）とその取り消しの行だけ。どの交換先か
+                'exchange_method' => $t->withdrawalRequest?->exchange_method,
+                'exchange_method_name' => $t->withdrawalRequest?->exchangeMethodName(),
                 'created_at' => $t->created_at?->toIso8601String(),
                 'confirmed_at' => $t->confirmed_at?->toIso8601String(),
             ]),

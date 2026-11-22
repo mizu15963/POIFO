@@ -64,8 +64,9 @@ API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` の�
 
 ## 換金と管理画面の決まりごと
 
-- 換金の状態は `WithdrawalService` だけで変える（申請 → 承認 → 振込済み、却下はポイントを戻す）。コントローラや画面から `status` を直接書き換えない。
-- 振込に使う口座情報は申請時点の `bank_snapshot`（暗号化）。CSV や一覧は現在の `bank_accounts` ではなくスナップショットから出す。
+- 換金の状態は `WithdrawalService` だけで変える（申請 → 承認 → 完了、却下はポイントを戻す）。コントローラや画面から `status` を直接書き換えない。
+- 交換先（いまは銀行振込 `bank_transfer` だけ）は `config/poifo.php` の `exchange_methods` に交換先ごとの条件を持つ。申請・審査・却下・台帳の流れは `WithdrawalService` で共通にし、交換先ごとに違う部分（受け取り情報の控えなど）は `App\Services\Exchange\ExchangeMethodHandler` の実装に置く。交換先コードは申請に保存するので、変えない・使い回さない。新しい交換先の受け取り情報は専用のテーブルを足し、`bank_accounts` に混ぜない。
+- 申請には申請時点のレート・手数料・受け取り情報（`recipient_snapshot`、暗号化）を保存する。振込に使う口座情報はこの控えから出し、CSV や一覧に現在の `bank_accounts` を使わない。振込用 CSV は銀行振込の申請だけを出す。
 - 個人情報（氏名・口座番号）を出す画面・CSV は管理画面（admin.）だけ。出力したら操作ログに残す。会員向け API に口座番号を返さない。
 - 会員の更新系 API（特にお金・口座に関わるもの）には会員単位の回数制限（`AppServiceProvider::configureRateLimiting`）を付ける。
 - 会員の状態（有効・停止・退会）は `MemberService` だけで変える。停止・退会した会員のセッションは `EnsureMemberIsActive` が次の API 呼び出しで切る。

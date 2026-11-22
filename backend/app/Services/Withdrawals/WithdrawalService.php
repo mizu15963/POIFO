@@ -3,29 +3,31 @@
 namespace App\Services\Withdrawals;
 
 use App\Models\Admin;
-use App\Models\BankAccount;
 use App\Models\PointTransaction;
 use App\Models\User;
 use App\Models\WithdrawalRequest;
+use App\Services\Exchange\ExchangeMethod;
+use App\Services\Exchange\ExchangeMethods;
 use App\Services\Points\PointBalance;
 use Illuminate\Support\Facades\DB;
 
 /**
- * 換金（銀行振込）。当面は月1回、管理者が申請を確認して CSV を出し、人の手で振り込む。
+ * ポイント交換（換金）の共通の流れ。交換先（銀行振込など）ごとに違う部分は ExchangeMethodHandler に分けている。
  *
- *   申請（requested）── 承認 ──> 承認済み（approved）── 振込後 ──> 振込済み（paid）
+ *   申請（requested）── 承認 ──> 承認済み（approved）── 処理後 ──> 完了（paid）
  *        └──────────── 却下（rejected）<────┘   ※却下するとポイントを戻す
  *
  * ポイントは申請の時点で台帳から引く（二重に申請・利用されないように）。
+ * 銀行振込は月1回、管理者が申請を確認して CSV を出し、人の手で振り込む。
  */
 class WithdrawalService
 {
-    public function __construct(private PointBalance $balance) {}
+    public function __construct(private PointBalance $balance, private ExchangeMethods $methods) {}
 
-    /** 会員の換金申請（会員向け画面・API から使う） */
-    public function request(User $user, int $points): WithdrawalRequest
+    /** 会員の交換申請（会員向け画面・API から使う）。交換先を省略したら銀行振込 */
+    public function request(User $user, int $points, string $method = ExchangeMethod::BANK_TRANSFER): WithdrawalRequest
     {
-        return DB::transaction(function () use ($user, $points) {
+        return DB::transaction(function () use ($user, $points, $method) {
             // 同じ会員の同時申請で残高を超えないよう、会員の行をロックしてから残高を見る
             $user = User::query()->lockForUpdate()->findOrFail($user->id);
 
@@ -33,28 +35,29 @@ class WithdrawalService
                 throw new WithdrawalException('現在このアカウントでは換金できません。');
             }
 
-            $bank = $user->bankAccount;
+            $exchange = $this->methods->acceptingOrFail($method);
+            // 受け取り情報が未登録なら、ここで例外になる
+            $recipient = $exchange->handler->recipientSnapshot($user);
 
-            if (! $bank) {
-                throw new WithdrawalException('振込先の口座を登録してください。');
-            }
-
-            if ($points < config('poifo.points.min_withdrawal_points')) {
-                throw new WithdrawalException('換金できるのは '.number_format(config('poifo.points.min_withdrawal_points')).' ポイントからです。');
-            }
+            $exchange->assertPoints($points);
 
             if ($points > $this->balance->for($user)['available']) {
                 throw new WithdrawalException('利用可能なポイントが足りません。');
             }
 
+            // 申請した時点のレート・手数料・受け取り情報を申請に残す（あとで設定を変えても影響しない）
+            $amountYen = $exchange->amountYen($points);
+
             $request = WithdrawalRequest::create([
                 'user_id' => $user->id,
+                'exchange_method' => $exchange->code,
                 'points' => $points,
-                'amount_yen' => (int) floor($points * config('poifo.points.yen_per_point')),
-                'fee_yen' => 0,
+                'yen_per_point' => $exchange->yenPerPoint,
+                'amount_yen' => $amountYen,
+                'fee_yen' => $exchange->feeYen($amountYen),
                 'status' => WithdrawalRequest::STATUS_REQUESTED,
-                'bank_snapshot' => self::snapshot($bank),
-                'reviewable_after' => now()->addDays(config('poifo.points.withdrawal_review_days')),
+                'recipient_snapshot' => $recipient,
+                'reviewable_after' => now()->addDays($exchange->reviewDays),
             ]);
 
             PointTransaction::create([
@@ -62,7 +65,7 @@ class WithdrawalService
                 'type' => PointTransaction::TYPE_WITHDRAWAL,
                 'status' => PointTransaction::STATUS_CONFIRMED,
                 'points' => -$points,
-                'description' => '換金申請（銀行振込）',
+                'description' => "ポイント交換（{$exchange->shortName}）",
                 'withdrawal_request_id' => $request->id,
                 'confirmed_at' => now(),
             ]);
@@ -98,7 +101,7 @@ class WithdrawalService
                 'type' => PointTransaction::TYPE_WITHDRAWAL_REFUND,
                 'status' => PointTransaction::STATUS_CONFIRMED,
                 'points' => $r->points,
-                'description' => '換金申請の取り消し（ポイントを戻しました）',
+                'description' => 'ポイント交換の取り消し（返却）',
                 'withdrawal_request_id' => $r->id,
                 'admin_id' => $admin->id,
                 'confirmed_at' => now(),
@@ -106,7 +109,7 @@ class WithdrawalService
         });
     }
 
-    /** 銀行で振り込んだあとに記録する */
+    /** 交換先ごとの方法で処理し終えたあとに記録する（銀行振込なら振り込んだあと） */
     public function markPaid(WithdrawalRequest $request, Admin $admin): void
     {
         $this->transition($request, [WithdrawalRequest::STATUS_APPROVED], function (WithdrawalRequest $r) use ($admin) {
@@ -127,22 +130,5 @@ class WithdrawalService
             $apply($locked);
             $request->setRawAttributes($locked->getAttributes(), true);
         });
-    }
-
-    /** 申請時点の口座情報（あとで口座が変更されても、振り込む先は申請時のもの） */
-    public static function snapshot(BankAccount $bank): array
-    {
-        return [
-            'holder_name' => $bank->holder_name,
-            'account_holder_kana' => $bank->account_holder_kana,
-            'bank_code' => $bank->bank_code,
-            'bank_name' => $bank->bank_name,
-            'branch_code' => $bank->branch_code,
-            'branch_name' => $bank->branch_name,
-            'account_type' => $bank->account_type,
-            'account_number' => $bank->account_number,
-            'account_fingerprint' => $bank->account_fingerprint,
-            'holder_name_key' => $bank->holder_name_key,
-        ];
     }
 }

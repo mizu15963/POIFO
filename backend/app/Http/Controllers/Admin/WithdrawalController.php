@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use App\Models\WithdrawalRequest;
 use App\Services\Admin\AuditLogger;
+use App\Services\Exchange\ExchangeMethod;
+use App\Services\Exchange\ExchangeMethods;
 use App\Services\Withdrawals\WithdrawalException;
 use App\Services\Withdrawals\WithdrawalService;
 use Carbon\CarbonImmutable;
@@ -19,20 +21,23 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * 換金申請の月次確認。月末に管理者が申請を確認（承認・却下）→ CSV を出して銀行で振り込む → 振込済みにする。
+ * 交換（換金）申請の月次確認。月末に管理者が申請を確認（承認・却下）→ 交換先ごとの方法で処理 → 完了にする。
+ * 銀行振込は CSV を出して銀行で振り込み、振込済みにする。
  */
 class WithdrawalController extends Controller
 {
-    public function __construct(private WithdrawalService $withdrawals, private AuditLogger $audit) {}
+    public function __construct(private WithdrawalService $withdrawals, private AuditLogger $audit, private ExchangeMethods $methods) {}
 
     public function index(Request $request): View
     {
-        [$month, $status] = $this->filters($request);
-        $requests = $this->query($month, $status)->with('user')->get();
+        [$month, $status, $method] = $this->filters($request);
+        $requests = $this->query($month, $status, $method)->with('user')->get();
 
         return view('admin.withdrawals.index', [
             'month' => $month,
             'status' => $status,
+            'method' => $method,
+            'methodLabels' => $this->methods->all()->map(fn (ExchangeMethod $m) => $m->name)->all(),
             'requests' => $requests,
             'warnings' => $this->duplicateWarnings($requests),
             'totals' => [
@@ -79,18 +84,19 @@ class WithdrawalController extends Controller
     }
 
     /**
-     * 振込用の CSV（Excel で開けるよう UTF-8 BOM 付き）。画面の絞り込みと同じ条件で出す。
+     * 振込用の CSV（Excel で開けるよう UTF-8 BOM 付き）。画面の絞り込みと同じ条件で、銀行振込の申請だけを出す。
      * 個人情報を含むので、出力したことを操作ログに残す。
      */
     public function export(Request $request): StreamedResponse
     {
         [$month, $status] = $this->filters($request, defaultStatus: WithdrawalRequest::STATUS_APPROVED);
-        $requests = $this->query($month, $status)->with('user')->get();
+        $requests = $this->query($month, $status, ExchangeMethod::BANK_TRANSFER)->with('user')->get();
         $warnings = $this->duplicateWarnings($requests);
 
         $this->audit->log(Auth::guard('admin')->user(), 'withdrawal.export', payload: [
             'month' => $month->format('Y-m'),
             'status' => $status,
+            'exchange_method' => ExchangeMethod::BANK_TRANSFER,
             'count' => $requests->count(),
         ]);
 
@@ -102,7 +108,7 @@ class WithdrawalController extends Controller
             fputcsv($out, ['申請ID', '申請日時', '会員ID', '氏名', '口座名義（カナ）', '銀行コード', '銀行名', '支店コード', '支店名', '口座種別', '口座番号', '換金ポイント', '換金額（円）', '手数料（円）', '振込額（円）', '状態', '注意'], escape: '', eol: "\r\n");
 
             foreach ($requests as $r) {
-                $bank = $r->bank_snapshot;
+                $bank = $r->recipient_snapshot ?? [];
                 fputcsv($out, array_map(self::csvCell(...), [
                     $r->id,
                     $r->created_at->format('Y-m-d H:i'),
@@ -142,12 +148,14 @@ class WithdrawalController extends Controller
         return $value;
     }
 
-    /** @return array{0: CarbonImmutable, 1: ?string} */
+    /** @return array{0: CarbonImmutable, 1: ?string, 2: ?string} */
     private function filters(Request $request, ?string $defaultStatus = null): array
     {
         $data = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
             'status' => ['nullable', Rule::in(array_merge(array_keys(WithdrawalRequest::STATUS_LABELS), ['all']))],
+            // 設定から消した交換先の申請も絞り込めるよう、値は文字列なら受け付ける
+            'method' => ['nullable', 'string', 'max:40'],
         ]);
 
         $month = isset($data['month'])
@@ -155,28 +163,32 @@ class WithdrawalController extends Controller
             : CarbonImmutable::now()->startOfMonth();
         $status = $data['status'] ?? $defaultStatus;
 
-        return [$month, $status === 'all' ? null : $status];
+        $method = $data['method'] ?? null;
+
+        return [$month, $status === 'all' ? null : $status, $method === 'all' ? null : $method];
     }
 
     /** 申請日がその月の申請（月末の締めで、その月に出た申請をまとめて確認する） */
-    private function query(CarbonImmutable $month, ?string $status): Builder
+    private function query(CarbonImmutable $month, ?string $status, ?string $method = null): Builder
     {
         return WithdrawalRequest::query()
             ->whereBetween('created_at', [$month->startOfMonth(), $month->endOfMonth()])
             ->when($status, fn (Builder $q) => $q->where('status', $status))
+            ->when($method, fn (Builder $q) => $q->where('exchange_method', $method))
             ->orderBy('id');
     }
 
     /**
-     * 不正対策: 同じ口座・同じ名義が、ほかの会員にも登録されていないか。
+     * 不正対策: 同じ口座・同じ名義が、ほかの会員にも登録されていないか（銀行振込の申請だけ）。
      *
      * @param  Collection<int, WithdrawalRequest>  $requests
      * @return array<int, list<string>>
      */
     private function duplicateWarnings(Collection $requests): array
     {
-        $fingerprints = $requests->map(fn ($r) => $r->bank_snapshot['account_fingerprint'] ?? null)->filter()->unique()->values();
-        $names = $requests->map(fn ($r) => $r->bank_snapshot['holder_name_key'] ?? null)->filter()->unique()->values();
+        $requests = $requests->filter(fn (WithdrawalRequest $r) => $r->isBankTransfer());
+        $fingerprints = $requests->map(fn ($r) => $r->recipient_snapshot['account_fingerprint'] ?? null)->filter()->unique()->values();
+        $names = $requests->map(fn ($r) => $r->recipient_snapshot['holder_name_key'] ?? null)->filter()->unique()->values();
 
         $accounts = BankAccount::query()
             ->whereIn('account_fingerprint', $fingerprints)
@@ -188,11 +200,11 @@ class WithdrawalController extends Controller
         foreach ($requests as $r) {
             $others = $accounts->where('user_id', '!=', $r->user_id);
 
-            if ($others->where('account_fingerprint', $r->bank_snapshot['account_fingerprint'] ?? '')->isNotEmpty()) {
+            if ($others->where('account_fingerprint', $r->recipient_snapshot['account_fingerprint'] ?? '')->isNotEmpty()) {
                 $warnings[$r->id][] = '同じ口座がほかの会員にも登録されています';
             }
 
-            if ($others->where('holder_name_key', $r->bank_snapshot['holder_name_key'] ?? '')->isNotEmpty()) {
+            if ($others->where('holder_name_key', $r->recipient_snapshot['holder_name_key'] ?? '')->isNotEmpty()) {
                 $warnings[$r->id][] = '同じ口座名義の会員がいます';
             }
         }
