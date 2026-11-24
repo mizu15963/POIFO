@@ -53,7 +53,7 @@ API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` の�
 ## ポストバック（成果通知）の決まりごと
 
 - 応答は **HTTP 200 と本文 `0` / `1` / `2` だけ**（空白・改行・HTML なし）。処理中の例外だけ 500（ASP がリトライする）。
-- 受信口は「WAF の IP 制限 → URL の秘密の文字列 → 送信元 IP（`VerifyPostbackSource`）→ hash → 案件情報との突き合わせ」の順に多重に確かめる。どれかを外さない。
+- 受信口は「URL の秘密の文字列 → 送信元 IP（`VerifyPostbackSource`。WAF では IP 制限しないので、これが唯一の IP 制限）→ hash → 案件情報との突き合わせ」の順に多重に確かめる。どれかを外さない。
 - 送信元 IP は `App\Support\ClientIp` で取る（CloudFront Function が付ける `x-poifo-viewer-ip`）。`$request->ip()`（X-Forwarded-For の先頭）は偽装できるので、制限や回数制限のキーに使わない。
 - `hash`（HMAC-SHA256）を必ず検証する。比較は `hash_equals`。
 - 会員・案件・成果地点が見つからない、またはポイント数が案件APIの値と合わない通知は保留（`conversions.hold_reason`）にし、ポイントを確定しない。保留は自動で解除しない。

@@ -80,9 +80,10 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         // LINE ログインの入口（/auth/line/redirect・callback）: 未ログインなので IP 単位。
-        // 1回のログインで2回（redirect と callback）使う。以前は WAF で5分50回にしていたが、
-        // CloudFront 定額プラン（Free）ではパスで絞った WAF ルールが使えないのでアプリで行う
-        RateLimiter::for('line-login', fn (Request $request) => Limit::perMinute(10)->by('line-login:ip:'.ClientIp::forLog($request)));
+        // 同一 IP から5分に50回まで（以前 WAF でかけていた値。CloudFront 定額プラン Free ではパスで絞った WAF ルールが使えないのでアプリで行う）。
+        // キーは CloudFront Function が付ける x-poifo-viewer-ip。取れないときは偽装できる X-Forwarded-For に落とさず、1つの枠にまとめる
+        RateLimiter::for('line-login', fn (Request $request) => Limit::perMinutes(5, 50)
+            ->by('line-login:'.(ClientIp::trusted($request) ?? 'unknown')));
 
         // 案件への遷移（/go/{id}）: ログイン済みの会員単位（未ログインは IP）。計測リンクの連打を抑える
         RateLimiter::for('campaign-click', fn (Request $request) => Limit::perMinute(30)->by('campaign-click:'.$key($request)));

@@ -193,6 +193,19 @@ class PostbackTest extends TestCase
         Mail::assertQueued(AdminAlert::class);
     }
 
+    public function test_empty_allow_list_rejects_everything_in_production(): void
+    {
+        $user = User::factory()->create();
+        config(['poifo.postback.allowed_ips' => []]);
+        $this->app['env'] = 'production';
+
+        $this->fromAsp()->get(self::PATH.'?'.http_build_query($this->params($user, ['cv_status' => 1])))
+            ->assertNotFound();
+
+        $this->assertSame(0, Conversion::count());
+        $this->assertDatabaseHas('postback_logs', ['result' => 'ip_denied']);
+    }
+
     public function test_source_ip_in_an_allowed_range_is_accepted(): void
     {
         $user = User::factory()->create();
