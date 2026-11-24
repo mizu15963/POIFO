@@ -55,7 +55,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * 会員単位の回数制限（WAF の IP 単位の制限に加える）。カウントは共有のキャッシュ（DB）に置くので全台で共通。
+     * 会員単位・IP 単位の回数制限（WAF は全体のレート制限だけなので、パスごとの制限はアプリで行う）。カウントは共有のキャッシュ（DB）に置くので全台で共通。
      * 静的フロントから API を直接呼ぶ構成なので、お金や本人確認に関わる操作は特に厳しくする。
      */
     private function configureRateLimiting(): void
@@ -63,6 +63,13 @@ class AppServiceProvider extends ServiceProvider
         $key = fn (Request $request) => $request->user()
             ? 'user:'.$request->user()->getAuthIdentifier()
             : 'ip:'.ClientIp::forLog($request);
+
+        // LINE ログインの入口（/auth/line/*）: 同一 IP から5分に50回まで。
+        // CloudFront の定額プラン Free では WAF にパスごとのルールを置けないため、アプリで行う。
+        // キーは CloudFront Function が付ける x-poifo-viewer-ip（偽装できる X-Forwarded-For は使わない）。
+        // 取れないときは1つの枠にまとめる（制限が外れるより厳しい側に倒す）
+        RateLimiter::for('line-login', fn (Request $request) => Limit::perMinutes(5, 50)
+            ->by('line-login:'.(ClientIp::trusted($request) ?? 'unknown')));
 
         // 会員 API 全体
         RateLimiter::for('member-api', fn (Request $request) => Limit::perMinute(120)->by($key($request)));
