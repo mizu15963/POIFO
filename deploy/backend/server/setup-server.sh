@@ -84,7 +84,7 @@ chmod 600 "$CONF_DIR"/*.env
 # ---------------- アプリのディレクトリ ----------------
 log "ディレクトリと .env"
 install -d -m 755 "$APP_DIR" "$APP_DIR/releases" "$APP_DIR/shared" /var/www/letsencrypt
-for d in app/public framework/cache/data framework/sessions framework/views logs; do
+for d in app/public framework/cache/data framework/cache/locks framework/sessions framework/views logs; do
   install -d -o www-data -g www-data -m 775 "$APP_DIR/shared/storage/$d"
 done
 if [[ ! -f $APP_DIR/shared/.env ]]; then
