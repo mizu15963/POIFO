@@ -7,7 +7,7 @@ locals {
 
   # AWS 管理のポリシー（定額プランでも使える）
   cache_policy_caching_optimized        = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-  cache_policy_caching_disabled         = "4135ea2d-6df8-44a3-9df3-4b5e84be39ad"
+  cache_policy_caching_disabled         = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
   origin_request_all_viewer_except_host = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   response_headers_security_headers     = "67f7725c-6f97-4210-82d7-5512b31e9d03"
 }
