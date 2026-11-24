@@ -61,6 +61,8 @@ sudo /opt/poifo-src/deploy/backend/server/setup-server.sh
 ### 4. 最初のデプロイ
 
 Actions → **デプロイ（バックエンド）** → Run workflow。1〜2分で取り込まれる。
+空の DB への初回の migrate もそのまま通る（`cache_locks` テーブルがまだ無いときは、deploy agent が `--isolated` なしで migrate し直す）。
+サーバのメッセージは、ブラウザの SSH で文字化けしないよう英語で出る。
 取り込んだあと、キューのワーカーを起動するためにもう一度スクリプトを実行する（`poifo-queue` が有効になる）。
 
 確認:
@@ -92,7 +94,7 @@ CloudFront のオリジン（`origin.<domain>`）は固定 IP を指したまま
    - `/etc/poifo/deploy-agent.env` は `SERVER_NAME=api-b`、**`MIGRATE=false`**（migrate は a が行う）
    - Actions → **デプロイ（バックエンド）** を手動実行する（a が migrate し、b はそれを待ってから同じリリースに切り替える）。
      `curl -s -o /dev/null -w '%{http_code}\n' http://localhost/up` が 200 になり、`sudo journalctl -u poifo-deploy-agent` にエラーがないことを確かめる。
-     準備中に b が古いデプロイを取り込もうとして「primary の migrate 待ち」で失敗していても、この手動実行で取り込み直せる
+     準備中に b が古いデプロイを取り込もうとして `wait for the primary migrate` で失敗していても、この手動実行で取り込み直せる
      秘密ヘッダー付きで主な API を叩いて確かめてもよい（`curl -H "X-Origin-Verify: <値>" -H "x-poifo-viewer-host: api.<domain>" http://localhost/v1/campaigns`）
 3. **固定 IP を移す**: `API_ACTIVE_SLOT` を `b` にして **更新（Terraform）** を手動実行。数秒〜数十秒で CloudFront からのリクエストが b に届く。
    サイトと管理画面で動作を確かめる。**問題があれば `API_ACTIVE_SLOT` を `a` に戻して更新するだけで元に戻る**
@@ -155,3 +157,5 @@ sudo /usr/local/bin/poifo-db-backup      # 1回試す。ログは /var/log/poifo
 | `/up` が 502 | まだデプロイしていない、または PHP-FPM が止まっている（`systemctl status php8.4-fpm`） |
 | 何でも 403 | 秘密ヘッダーの値が GitHub Secrets と違う。`/etc/poifo/server.env` を直して再実行し、**更新（Terraform）** で CloudFront 側も同じ値か確認 |
 | DB に繋がらない | `.env` の `MYSQL_ATTR_SSL_CA` と `DB_HOST`。アプリ用ユーザーは TLS 必須（`REQUIRE SSL`） |
+| `cannot read s3://.../latest.json` と `403` | `/etc/poifo/deploy-agent.env` のアクセスキー（IAM ユーザー `poifo-deploy-agent`）か `DEPLOY_BUCKET` が違う。`no release yet` はまだ一度もデプロイしていないだけ（正常） |
+| `failed at "..."` | 失敗した段階の名前。詳細は `sudo journalctl -u poifo-deploy-agent`。直したあと同じデプロイを取り込み直すときは `sudo rm /var/www/poifo/.last_deploy_id` → `sudo /usr/local/bin/poifo-deploy-agent`（一度試したデプロイは自動では再試行しない） |
