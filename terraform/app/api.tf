@@ -1,6 +1,8 @@
 # 独自ドメインを有効にしたときだけ作るもの（enable_custom_domain = true）
 #   - ACM 証明書（ドメイン本体・api.・admin.）
-#   - API・管理画面用 CloudFront（api. と admin. → origin.<domain> の Lightsail）
+#   - API 用と管理画面用の CloudFront（api. と admin. を別々に。どちらも origin.<domain> の Lightsail へ）
+#     定額プラン（Free）の WAF はヘッダー（Host）で条件を書けないので、admin. の IP 制限は管理画面用の CloudFront の WAF で行う。
+#     Free はアカウントに3つまでなので、フロント・API・管理画面でちょうど3つ
 #   - DNS レコード
 data "aws_route53_zone" "main" {
   count = local.custom_domain ? 1 : 0
@@ -50,22 +52,31 @@ resource "aws_acm_certificate_validation" "main" {
   validation_record_fqdns = [for r in aws_route53_record.cert_validation : r.fqdn]
 }
 
-# ---------------- API・管理画面用 CloudFront ----------------
+# ---------------- API 用・管理画面用 CloudFront ----------------
+# 2つは同じ設定で、別名（aliases）・コメント・WAF・x-poifo-viewer-host の値だけが違う
 resource "aws_cloudfront_function" "api_viewer_host" {
   count   = local.custom_domain ? 1 : 0
   name    = "${var.project}-api-viewer-host"
   runtime = "cloudfront-js-2.0"
   publish = true
-  code    = file("${path.module}/functions/api-viewer-host.js")
+  code    = templatefile("${path.module}/functions/viewer-headers.js", { viewer_host = lower(local.api_host) })
+}
+
+resource "aws_cloudfront_function" "admin_viewer_host" {
+  count   = local.custom_domain ? 1 : 0
+  name    = "${var.project}-admin-viewer-host"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  code    = templatefile("${path.module}/functions/viewer-headers.js", { viewer_host = lower(local.admin_host) })
 }
 
 resource "aws_cloudfront_distribution" "api" {
   count           = local.custom_domain ? 1 : 0
   enabled         = true
-  comment         = "${var.project} api/admin"
+  comment         = "${var.project} api"
   is_ipv6_enabled = true
   http_version    = "http2and3"
-  aliases         = [local.api_host, local.admin_host]
+  aliases         = [local.api_host]
   web_acl_id      = aws_wafv2_web_acl.api[0].arn
 
   origin {
@@ -127,6 +138,74 @@ resource "aws_cloudfront_distribution" "api" {
   }
 }
 
+resource "aws_cloudfront_distribution" "admin" {
+  count           = local.custom_domain ? 1 : 0
+  enabled         = true
+  comment         = "${var.project} admin"
+  is_ipv6_enabled = true
+  http_version    = "http2and3"
+  aliases         = [local.admin_host]
+  web_acl_id      = aws_wafv2_web_acl.admin[0].arn
+
+  origin {
+    origin_id   = "lightsail"
+    domain_name = local.origin_host
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+      origin_read_timeout    = 30
+    }
+
+    # nginx はこのヘッダーがないリクエストを拒否する（CloudFront＝WAF を通らない直接アクセスを防ぐ）
+    custom_header {
+      name  = "X-Origin-Verify"
+      value = var.origin_verify_secret
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "lightsail"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    # キャッシュ・オリジンへ渡すものは API 用と同じ（理由は API 用のコメント）
+    cache_policy_id          = local.cache_policy_caching_disabled
+    origin_request_policy_id = local.origin_request_all_viewer_except_host
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.admin_viewer_host[0].arn
+    }
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = aws_acm_certificate_validation.main[0].certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  # 以前は API 用の CloudFront が admin. も持っていた。同じ別名は2つの CloudFront に同時には付けられないので、
+  # API 用から admin. を外し終えてから作る（切り替えの数分、admin. はつながらない）
+  depends_on = [aws_cloudfront_distribution.api]
+
+  lifecycle {
+    precondition {
+      condition     = length(var.origin_verify_secret) >= 32
+      error_message = "ORIGIN_VERIFY_SECRET（32文字以上のランダムな文字列）を GitHub Secrets に登録してください。"
+    }
+  }
+}
+
 # ---------------- DNS レコード ----------------
 # origin.<domain>: CloudFront のオリジン。LB なしなら1台目の固定 IP、LB ありなら LB を指す。
 # CloudFront 側はこの名前のままなので、LB を入れる・外すときは DNS の向き先が変わるだけ
@@ -154,8 +233,8 @@ locals {
     "front-AAAA" = { name = var.domain_name, type = "AAAA", cf = aws_cloudfront_distribution.front }
     "api-A"      = { name = local.api_host, type = "A", cf = aws_cloudfront_distribution.api[0] }
     "api-AAAA"   = { name = local.api_host, type = "AAAA", cf = aws_cloudfront_distribution.api[0] }
-    "admin-A"    = { name = local.admin_host, type = "A", cf = aws_cloudfront_distribution.api[0] }
-    "admin-AAAA" = { name = local.admin_host, type = "AAAA", cf = aws_cloudfront_distribution.api[0] }
+    "admin-A"    = { name = local.admin_host, type = "A", cf = aws_cloudfront_distribution.admin[0] }
+    "admin-AAAA" = { name = local.admin_host, type = "AAAA", cf = aws_cloudfront_distribution.admin[0] }
   } : {}
 }
 

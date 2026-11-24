@@ -8,8 +8,8 @@
 ```text
 閲覧者 ─ https://<domain>        ─ CloudFront ─ S3（frontend/ の静的サイト）
        ─ https://api.<domain>    ┐
-       ─ https://admin.<domain>  ┴ CloudFront＋WAF ─ Lightsail（nginx＋PHP-FPM＋この Laravel）─ Lightsail マネージドDB（MySQL）
-GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（WAF とアプリの両方で送信元 IP を制限）
+       ─ https://admin.<domain>  ┴ CloudFront＋WAF（api. 用と admin. 用で1つずつ）─ Lightsail（nginx＋PHP-FPM＋この Laravel）─ Lightsail マネージドDB（MySQL）
+GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（送信元 IP はアプリで制限）
 ```
 
 - api. と admin. は同じ Laravel。閲覧者のホスト名（CloudFront が付ける `x-poifo-viewer-host`）でルートを分ける
@@ -70,7 +70,7 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（W
 
 上から順に確かめ、どこかで通らなければポイントを確定しない。
 
-1. WAF: `/postback/` 配下は GF Rewards の送信元 IP 以外を拒否
+1. WAF: 全体のレート制限とコアルールだけ（CloudFront の定額プラン Free ではパスごとの IP 制限ができないため、送信元 IP は 3 で確かめる）
 2. URL の秘密の文字列（`POIFO_POSTBACK_PATH_TOKEN`）。違えば 404。値はアプリの `.env` だけに置き、GF Rewards の管理画面に URL ごと登録する
 3. 送信元 IP（`POIFO_POSTBACK_ALLOWED_IPS`、CIDR 可）。IP は CloudFront Function が付ける `x-poifo-viewer-ip` から取る（`X-Forwarded-For` の先頭は偽装できるので使わない）。
    本番で許可リストが空なら全て拒否する
