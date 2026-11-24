@@ -70,4 +70,15 @@ class LineLoginTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_login_entry_is_rate_limited_per_viewer_ip(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $this->asApiHost()->withHeader('x-poifo-viewer-ip', '192.0.2.1')->get('/auth/line/redirect')->assertRedirect();
+        }
+
+        $this->asApiHost()->withHeader('x-poifo-viewer-ip', '192.0.2.1')->get('/auth/line/redirect')->assertStatus(429);
+        // 別の IP は影響を受けない
+        $this->asApiHost()->withHeader('x-poifo-viewer-ip', '192.0.2.2')->get('/auth/line/redirect')->assertRedirect();
+    }
 }

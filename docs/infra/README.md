@@ -172,7 +172,7 @@ gh variable set PROJECT --body "poifo"
 | `ENABLE_CUSTOM_DOMAIN` | Variables | `true` | ネームサーバの委任が済んでから `true` にする |
 | `ORIGIN_VERIFY_SECRET` | Secrets | 48文字のランダム値 | CloudFront → Lightsail の秘密ヘッダー。nginx にも同じ値を設定 |
 | `ADMIN_ALLOWED_CIDRS` | Secrets | `["203.0.113.10/32"]` | admin. を許可する IP（管理画面用 CloudFront の WAF）。空なら IP 制限ルールなし |
-| `WAF_COUNT_MODE` | Variables | `true` / `false` | AWS マネージドルールを検知のみにするか。既定 `true`。提携先とのテストで誤検知がないのを確かめてから `false` |
+| `WAF_COUNT_MODE` | Variables | `true` / `false` | AWS マネージドルールを検知のみにするか。既定 `true`。提携先とのテストで誤検知がないのを確かめてから `false`。管理画面はコアルールの `SizeRestrictions_BODY`（本文 8KB 超）でフォーム送信が止まることがあるので、検知のみの間に WAF のサンプルリクエストで `poifo-admin` に該当がないか確かめる |
 
 リストの値（`["..."]`）は、Windows PowerShell から `gh` に渡すと `"` が消えることがあるので、
 GitHub の画面（Settings → Secrets and variables → Actions）で貼り付けて登録する。
