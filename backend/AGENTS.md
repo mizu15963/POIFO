@@ -71,7 +71,7 @@ API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` の�
 - 会員の更新系 API（特にお金・口座に関わるもの）には会員単位の回数制限（`AppServiceProvider::configureRateLimiting`）を付ける。
 - 会員の状態（有効・停止・退会）は `MemberService` だけで変える。停止・退会した会員のセッションは `EnsureMemberIsActive` が次の API 呼び出しで切る。
 - イベントの参加は `event_participants`（イベントと会員の組で1行）で判定し、状態は `EventParticipationService` だけで変える。上限人数はイベントの行を `lockForUpdate()` してから数える。参加ポイントは `point_transactions.event_participant_id`（unique）で1回だけ付与する。オープンチャットの URL は参加した会員にだけ返す。
-- 機能の仕様は [../docs/specs/functional-spec.md](../docs/specs/functional-spec.md)、画面（管理画面を含む）は [../docs/specs/screen-spec.md](../docs/specs/screen-spec.md)。仕様を変えたらこれらの文書も直す。
+- 機能の仕様は [../docs/specs/functional-spec.md](../docs/specs/functional-spec.md)、画面（管理画面を含む）は [../docs/specs/screen-spec.md](../docs/specs/screen-spec.md)、テーブル定義は [../docs/specs/database.md](../docs/specs/database.md)。仕様やマイグレーションを変えたらこれらの文書も直す。
 - 管理者のログインは「パスワード → 二要素認証」が両方通ってから `Auth::guard('admin')->login()` する。途中の状態でログイン扱いにしない。
 
 ## コーディング
