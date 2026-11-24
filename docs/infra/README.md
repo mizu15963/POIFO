@@ -20,7 +20,7 @@ AWS の認証はアクセスキーを使わず OIDC（GitHub が発行する一�
 terraform/
   bootstrap/  # 手元PCから apply（state 用 S3・OIDC・Actions 用ロール）。state は state バケットの bootstrap/
   base/       # 消すと困るもの: DB（Lightsail マネージドデータベース）、DB バックアップ用 S3、バックアップ送信用 IAM ユーザー、Route 53 ホストゾーン
-  app/        # 本体: Lightsail、フロント用 S3＋CloudFront、（ドメイン設定後）証明書・API 用 CloudFront・WAF
+  app/        # 本体: Lightsail、フロント用 S3＋CloudFront、（ドメイン設定後）証明書・API 用と管理画面用の CloudFront・WAF
 ```
 
 | ワークフロー | いつ使う | 何をする |
@@ -46,7 +46,7 @@ GitHub の Environment `poifo-apply` / `poifo-deploy` は初回の実行で自�
 | 段階 | 主な費用（月額・税別、1ドル=150円） |
 |---|---|
 | 段階1: ドメインなし | Lightsail 1GB $7（約1,050円）＋マネージドDB 標準 $15（約2,250円、自動バックアップ込み）＋自動スナップショット（数十円）＋S3 少額。フロントの CloudFront は従量課金だが常時無料枠内 |
-| 段階2: ドメインあり（定額プラン加入前） | 上記＋Route 53 ホストゾーン $0.50＋WAF 従量（API 用 $5＋ルール5個 $5、フロント用 $5＋ルール2個 $2、時間割り） |
+| 段階2: ドメインあり（定額プラン加入前） | 上記＋Route 53 ホストゾーン $0.50＋WAF 従量（Web ACL 3つ $15＋ルール計6〜7個 $6〜7、時間割り） |
 | 段階2: 定額プラン（Free）加入後 | WAF は定額プランに含まれて $0。合計は約3,400円 |
 
 WAF の従量課金は時間割りなので、段階2の apply の後は早めに定額プランへ加入する（手順6）。
@@ -171,8 +171,7 @@ gh variable set PROJECT --body "poifo"
 | `DOMAIN_NAME` | Variables | `example.jp` | サイトのドメイン。base がホストゾーンを作る |
 | `ENABLE_CUSTOM_DOMAIN` | Variables | `true` | ネームサーバの委任が済んでから `true` にする |
 | `ORIGIN_VERIFY_SECRET` | Secrets | 48文字のランダム値 | CloudFront → Lightsail の秘密ヘッダー。nginx にも同じ値を設定 |
-| `ADMIN_ALLOWED_CIDRS` | Secrets | `["203.0.113.10/32"]` | admin. を許可する IP。空なら IP 制限ルールなし |
-| `POSTBACK_ALLOWED_CIDRS` | Secrets | `["<ASPの送信元IP>/32", ...]` | ポストバック受信パス（`/postback/`）を許可する ASP の送信元 IP。値は ASP 資料を参照（資料は社外秘なのでリポジトリに書かない） |
+| `ADMIN_ALLOWED_CIDRS` | Secrets | `["203.0.113.10/32"]` | admin. を許可する IP（管理画面用 CloudFront の WAF）。空なら IP 制限ルールなし |
 | `WAF_COUNT_MODE` | Variables | `true` / `false` | AWS マネージドルールを検知のみにするか。既定 `true`。提携先とのテストで誤検知がないのを確かめてから `false` |
 
 リストの値（`["..."]`）は、Windows PowerShell から `gh` に渡すと `"` が消えることがあるので、
@@ -254,32 +253,37 @@ DB のバックアップ・OS 更新は Lightsail が行う。S3 への mysqldum
 1. Variables に `DOMAIN_NAME` を登録 → **構築・削除** → `apply` / `base`。outputs の `name_servers`（4つ）を控える
 2. ドメインの管理元（クライアント側）で、ネームサーバをこの4つに変更する（サブドメインだけ使う場合はそのサブドメインの NS レコードを委任）。
    反映確認: `Resolve-DnsName example.jp -Type NS`
-3. Secrets に `ORIGIN_VERIFY_SECRET`、必要なら `ADMIN_ALLOWED_CIDRS`・`POSTBACK_ALLOWED_CIDRS` を登録
+3. Secrets に `ORIGIN_VERIFY_SECRET`、必要なら `ADMIN_ALLOWED_CIDRS` を登録（ASP の送信元 IP はアプリの `.env` の `POIFO_POSTBACK_ALLOWED_IPS` に入れる。backend/README.md）
 4. Variables の `ENABLE_CUSTOM_DOMAIN` を `true` → **構築・削除** → `apply` / `app`
-   - 証明書（`example.jp`・`api.`・`admin.`）、API 用 CloudFront、WAF 2つ、DNS レコード（`origin.` は固定IP）、通知メール用の SES（下の「通知メール」）ができる
+   - 証明書（`example.jp`・`api.`・`admin.`）、API 用と管理画面用の CloudFront、WAF 3つ、DNS レコード（`origin.` は固定IP）、通知メール用の SES（下の「通知メール」）ができる
    - 証明書の DNS 検証で数分かかる。ネームサーバが委任されていないと、ここで待ち続けて失敗する
 5. サーバで `origin.example.jp` の Let's Encrypt 証明書を取る（[../server/README.md](../server/README.md) の5。`ORIGIN_HOST` と `ISSUE_CERT=true` を入れて初期設定スクリプトを再実行）
 6. **CloudFront の定額プラン（Free）に加入する**（Terraform では扱えないのでコンソールで）
-   - CloudFront コンソールで、フロント用（`poifo front`）と API 用（`poifo api/admin`）のそれぞれに Free プランを選ぶ。Web ACL は Terraform が作った `poifo-front` / `poifo-api` を使う
-   - Free プランはアカウントにつき3つまで、ルールは5個まで、ログ出力やカスタムのキャッシュ・オリジンリクエストポリシーは使えない（この構成はその範囲に収めてある）
+   - CloudFront コンソールで、フロント用（`poifo front`）・API 用（`poifo api`）・管理画面用（`poifo admin`）の3つそれぞれに Free プランを選ぶ。Web ACL は Terraform が作った `poifo-front` / `poifo-api` / `poifo-admin` を使う
+   - Free プランはアカウントにつき3つまで（この3つでちょうど）、ルールは5個まで、ログ出力やカスタムのキャッシュ・オリジンリクエストポリシーは使えない。
+     WAF でもヘッダー（Host など）を条件にするルールや SQLi・PHP・WordPress のマネージドルールは Pro 以上で、URI パスで絞り込むルールも拒否された例があるので使っていない（この構成はその範囲に収めてある）
+   - Free が灰色で選べないときは、プラン画面に出る「含まれない機能」を見て相談する
    - 加入後に **更新（Terraform）** を手動実行し、plan が「No changes」になることを確認する。差分が出たら（特に `web_acl_id`）、apply せずに相談する
    - AWS の無料プラン（Free Tier プラン）のアカウントでは定額プランに加入できない
 
 📝 学習メモ: Lightsail には AWS WAF を直接付けられないので、CloudFront を入口にして WAF を付け、
 CloudFront を通らない直接アクセスは nginx が秘密ヘッダーの有無で拒否する。
-CloudFront からオリジンへの Host は `origin.example.jp` になるため、閲覧者がアクセスしたホスト名は
-CloudFront Function が `x-poifo-viewer-host` ヘッダーに入れて渡す。
+CloudFront からオリジンへの Host は `origin.example.jp` になるため、どちらの入口か（`api.` / `admin.`）は
+CloudFront Function が `x-poifo-viewer-host` ヘッダーに入れて渡す。値は CloudFront ごとに Terraform が埋め込んだ固定値で、閲覧者の Host ヘッダーは使わない
+（API 用の CloudFront から管理画面のルートに入って、管理画面用 WAF の IP 制限を避けることはできない）。
 閲覧者の IP も同じ Function が `x-poifo-viewer-ip`（ポートなし）に入れて渡す（ポストバックの送信元確認・回数制限用。LB を挟んでも変わらない）。
 どちらも閲覧者が同名のヘッダーを送ってきても上書きされ、秘密ヘッダーのない直接アクセスは nginx が拒否するので、偽装できない。
 
-API 用 WAF のルール（定額プランの上限5個）:
+WAF のルール（定額プラン Free の範囲。マネージドルールは `WAF_COUNT_MODE=true` の間は検知のみ）:
 
-| # | ルール | 内容 |
-|---|---|---|
-| 1 | 送信元 IP 制限 | `admin.` で `ADMIN_ALLOWED_CIDRS` 以外、または `/postback/` 配下で `POSTBACK_ALLOWED_CIDRS` 以外をブロック（OR で1ルール。未設定の側は条件に入らない） |
-| 2 | ログイン関連の回数制限 | `/auth/` 配下は同一 IP から5分に50回まで（`waf_auth_rate_limit`） |
-| 3〜4 | AWS マネージドルール | コアルール・SQLi（`WAF_COUNT_MODE=true` の間は検知のみ） |
-| 5 | 全体のレート制限 | 同一 IP から5分に1,000回まで（`waf_rate_limit`） |
+| Web ACL | ルール |
+|---|---|
+| `poifo-api`（api.） | AWS マネージドのコアルール / 同一 IP から5分に1,000回まで（`waf_rate_limit`） |
+| `poifo-admin`（admin.） | `ADMIN_ALLOWED_CIDRS` 以外をブロック（IP セットだけで判定。未設定ならルールなし） / コアルール / 同一 IP から5分に500回まで（`waf_admin_rate_limit`） |
+| `poifo-front`（フロント） | コアルール / 同一 IP から5分に1,000回まで |
+
+成果通知（`/postback/`）の送信元 IP の確認と、ログイン関連の回数制限は WAF ではなくアプリで行う
+（Free では URI パスで絞り込むルールが使えないため。送信元 IP は `POIFO_POSTBACK_ALLOWED_IPS` と `x-poifo-viewer-ip`、backend/README.md の「成果通知の受信」）。
 
 ### オリジン（サーバ）側の設定
 

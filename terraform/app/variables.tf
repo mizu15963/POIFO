@@ -134,44 +134,25 @@ variable "origin_verify_secret" {
 
 # ---------------- WAF ----------------
 variable "admin_allowed_cidrs" {
-  description = "admin. へのアクセスを許可する IP。空ならルールを作らない（二要素認証とレート制限で守る）。GitHub Secrets: ADMIN_ALLOWED_CIDRS"
+  description = "admin.（管理画面用の CloudFront）へのアクセスを許可する IP。空ならルールを作らない（二要素認証とレート制限で守る）。GitHub Secrets: ADMIN_ALLOWED_CIDRS"
   type        = list(string)
   default     = []
   sensitive   = true
-}
-
-variable "postback_allowed_cidrs" {
-  description = "ポストバック受信パスを許可する ASP の送信元 IP。空ならルールを作らない。GitHub Secrets: POSTBACK_ALLOWED_CIDRS"
-  type        = list(string)
-  default     = []
-  sensitive   = true
-}
-
-variable "postback_path_prefix" {
-  description = "ポストバック受信パスの先頭"
-  type        = string
-  default     = "/postback/"
 }
 
 variable "waf_managed_rules_count_mode" {
-  description = "true の間、AWS マネージドルールは検知（カウント）のみでブロックしない。ポストバックの誤検知がないことを確かめてから false にする。GitHub Variables: WAF_COUNT_MODE"
+  description = "true の間、AWS マネージドルールは検知（カウント）のみでブロックしない。成果通知（ポストバック）や管理画面の誤検知がないことを確かめてから false にする。GitHub Variables: WAF_COUNT_MODE"
   type        = bool
   default     = true
 }
 
-variable "auth_path_prefix" {
-  description = "ログイン関連のパスの先頭（WAF の厳しい回数制限の対象）"
-  type        = string
-  default     = "/auth/"
-}
-
-variable "waf_auth_rate_limit" {
-  description = "同一 IP から 5 分間に許すログイン関連（auth_path_prefix 配下）のリクエスト数。超えるとブロック"
+variable "waf_admin_rate_limit" {
+  description = "同一 IP から 5 分間に許す管理画面（admin.）へのリクエスト数。超えるとブロック"
   type        = number
-  default     = 50
+  default     = 500
 
   validation {
-    condition     = var.waf_auth_rate_limit >= 10
+    condition     = var.waf_admin_rate_limit >= 10
     error_message = "WAF のレート制限は 10 以上にしてください。"
   }
 }
