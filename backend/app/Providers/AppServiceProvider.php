@@ -55,7 +55,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * 会員単位の回数制限（WAF の IP 単位の制限に加える）。カウントは共有のキャッシュ（DB）に置くので全台で共通。
+     * 会員単位・IP 単位の回数制限（WAF の IP 単位の全体レート制限に加える）。カウントは共有のキャッシュ（DB）に置くので全台で共通。
      * 静的フロントから API を直接呼ぶ構成なので、お金や本人確認に関わる操作は特に厳しくする。
      */
     private function configureRateLimiting(): void
@@ -78,6 +78,15 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(10)->by('event-min:'.$key($request)),
             Limit::perDay(50)->by('event-day:'.$key($request)),
         ]);
+
+        // LINE ログインの入口（/auth/line/redirect・callback）: 未ログインなので IP 単位。
+        // 同一 IP から5分に50回まで（以前 WAF でかけていた値。CloudFront 定額プラン Free ではパスで絞った WAF ルールが使えないのでアプリで行う）。
+        // キーは CloudFront Function が付ける x-poifo-viewer-ip。取れないときは偽装できる X-Forwarded-For に落とさず、1つの枠にまとめる
+        RateLimiter::for('line-login', fn (Request $request) => Limit::perMinutes(5, 50)
+            ->by('line-login:'.(ClientIp::trusted($request) ?? 'unknown')));
+
+        // 案件への遷移（/go/{id}）: ログイン済みの会員単位（未ログインは IP）。計測リンクの連打を抑える
+        RateLimiter::for('campaign-click', fn (Request $request) => Limit::perMinute(30)->by('campaign-click:'.$key($request)));
 
         // 振込先口座の登録・変更: 他人の口座を総当たりで試す・頻繁に付け替えるのを抑える
         RateLimiter::for('bank-account-update', fn (Request $request) => [

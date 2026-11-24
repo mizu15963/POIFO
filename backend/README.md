@@ -90,7 +90,8 @@ php artisan postback:release <ID> --by=<管理者のメールアドレス>  # �
 拒否・保留を含めて全件を `postback_logs` に残す。次の場合は `POIFO_ALERT_EMAILS` にメールで知らせる（同じ種類は10分に1通。送信はキュー）:
 パスの文字列や送信元 IP の不一致、署名の不一致、保留、処理の失敗、1分間に `POIFO_POSTBACK_BURST_PER_MINUTE` 件を超える受信。
 
-会員単位の回数制限: 会員 API 全体は1分120回、口座の登録・変更は1分3回・1日5回、換金申請は1分3回・1日10回（`AppServiceProvider`）。
+会員単位の回数制限: 会員 API 全体は1分120回、口座の登録・変更は1分3回・1日5回、換金申請は1分3回・1日10回、案件への遷移（`/go/{id}`）は1分30回。
+LINE ログインの入口（`/auth/line/*`）は IP（`x-poifo-viewer-ip`）ごとに5分50回（`AppServiceProvider`）。WAF は IP ごとの全体の制限だけなので、パスごとの制限はアプリで行う。
 
 ### 換金（当面は月1回・手作業で振込）
 
