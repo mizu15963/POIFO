@@ -18,7 +18,7 @@ class ApiDocsTest extends TestCase
     {
         $this->asApiHost()->get('/docs/api')->assertNotFound();
         $this->asApiHost()->getJson('/docs/api.json')->assertNotFound();
-        // デバッグ用ログインも同じフラグで止まる
+        // デバッグ用ログインも既定では止まっている
         $this->asApiHost()->get('/auth/debug/login')->assertNotFound();
     }
 
@@ -36,6 +36,8 @@ class ApiDocsTest extends TestCase
         // 管理画面のルートは載せない
         $this->assertNotContains('/withdrawals/export', $paths);
         $this->assertNotContains('/login', $paths);
+        // デバッグ用ログインは別のスイッチなので、仕様書を出しても有効にならない
+        $this->asApiHost()->get('/auth/debug/login')->assertNotFound();
     }
 
     public function test_docs_are_not_reachable_from_the_admin_host_even_when_enabled(): void

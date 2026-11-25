@@ -37,7 +37,7 @@ CloudFront Function が付ける `x-poifo-viewer-host` ヘッダーで判断す�
 | `routes/auth.php` | api. | `web` | LINE ログイン、案件への遷移（`/go/{id}`） |
 | `routes/postback.php` | api. | `VerifyPostbackSource`（パスの秘密の文字列・送信元 IP） | ASP の成果通知（`/postback/{token}/...`） |
 | `routes/admin.php` | admin. | `web`（Cookie は admin. 専用） | 管理画面 |
-| `routes/debug.php` | api. | `web`（`POIFO_API_DOCS_ENABLED=true` のときだけ読み込む） | デバッグ用ログイン（`/auth/debug/login`） |
+| `routes/debug.php` | api. | `web`（`POIFO_DEBUG_LOGIN_ENABLED=true` のときだけ読み込む） | デバッグ用ログイン（`/auth/debug/login`） |
 
 新しいルートを足すときは、どのホストから届くべきかを決めてから該当ファイルに書く。`bootstrap/app.php` の振り分けを崩さない。
 

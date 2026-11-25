@@ -155,7 +155,7 @@ composer dev                # http://localhost:8000
 
 ### デバッグ用ログイン（開発期間中だけ）
 
-LINE を通さずに会員としてログインする。API 仕様書と同じ `POIFO_API_DOCS_ENABLED=true` のときだけ使える（false なら 404）。
+LINE を通さずに会員としてログインする。`POIFO_DEBUG_LOGIN_ENABLED=true` のときだけ使える（false なら 404）。API 仕様書（`POIFO_API_DOCS_ENABLED`）とは別に切り替える。
 
 - ブラウザで `http://api.localhost:8000/auth/debug/login?user=tester` を開くと、ログインしてフロントの `/auth/complete/` に戻る
 - `user`（英数字・`_`・`-`、32文字まで。省略時 `tester`）ごとにデバッグ用の会員を初回に作る。同じ `user` なら同じ会員
@@ -173,7 +173,8 @@ LINE を通さずに会員としてログインする。API 仕様書と同じ `
 | `POIFO_API_HOST` / `POIFO_ADMIN_HOST` | `api.<domain>` / `admin.<domain>` |
 | `POIFO_ALLOW_HOST_FALLBACK` | `false` |
 | `POIFO_FRONT_URL` | `https://<domain>` |
-| `POIFO_API_DOCS_ENABLED` | `false`（開発期間中に API 仕様書・デバッグ用ログインを使うときだけ `true`） |
+| `POIFO_API_DOCS_ENABLED` | `false`（開発期間中に API 仕様書を使うときだけ `true`） |
+| `POIFO_DEBUG_LOGIN_ENABLED` | `false`（開発期間中にデバッグ用ログインを使うときだけ `true`） |
 | `DB_HOST` など | Lightsail マネージドDB のエンドポイント・ユーザー・パスワード |
 | `MYSQL_ATTR_SSL_CA` | AWS の CA バンドル（`global-bundle.pem`）のパス |
 | `SESSION_DOMAIN` | `.<domain>`（フロントと api. で Cookie を共有） |

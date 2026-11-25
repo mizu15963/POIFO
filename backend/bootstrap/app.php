@@ -24,13 +24,17 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware(['viewer.host:api'])->prefix('postback')->group(base_path('routes/postback.php'));
             // 管理画面（admin. からだけ。WAF と nginx で IP 制限）
             Route::middleware(['web', 'viewer.host:admin'])->group(base_path('routes/admin.php'));
-            // API 仕様書とデバッグ用ログイン（開発の確認中だけ。POIFO_API_DOCS_ENABLED=true のときだけルートを作る）。
+            // API 仕様書（開発の確認中だけ。POIFO_API_DOCS_ENABLED=true のときだけルートを作る）。
             // Try It で会員の Cookie を使えるよう api. に置く
             if (config('poifo.api_docs_enabled')) {
                 Route::middleware(['viewer.host:api'])->group(function () {
                     Scramble::registerUiRoute('docs/api')->name('api-docs.ui');
                     Scramble::registerJsonSpecificationRoute('docs/api.json')->name('api-docs.json');
                 });
+            }
+            // デバッグ用ログイン（開発の確認中だけ。POIFO_DEBUG_LOGIN_ENABLED=true のときだけルートを作る）。
+            // 仕様書は閉じたまま、スマホなどで会員画面を確かめたいことがあるので、仕様書とは別に切り替える
+            if (config('poifo.debug_login_enabled')) {
                 Route::middleware(['web', 'viewer.host:api'])->group(base_path('routes/debug.php'));
             }
         },
