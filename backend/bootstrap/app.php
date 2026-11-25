@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\RestrictViewerHost;
+use App\Http\Middleware\UseViewerHostForUrls;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -36,6 +37,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['viewer.host' => RestrictViewerHost::class]);
+        // リダイレクト先の URL をオリジン名（origin.<domain>）ではなく閲覧者のホスト名で作る
+        $middleware->prepend(UseViewerHostForUrls::class);
         // ホストの判定はセッション・認証より先に行う（api. から管理画面の URL を叩いたとき、ログイン画面へ
         // リダイレクトせずに 404 を返し、管理画面の存在を見せないため）
         $middleware->prependToPriorityList(before: EncryptCookies::class, prepend: RestrictViewerHost::class);
