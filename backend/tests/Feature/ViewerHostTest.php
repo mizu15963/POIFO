@@ -32,4 +32,18 @@ class ViewerHostTest extends TestCase
     {
         $this->get('/up')->assertOk();
     }
+
+    public function test_redirects_use_the_viewer_host_instead_of_the_origin_host(): void
+    {
+        // 本番では CloudFront からオリジンへの Host がオリジン名になる。リダイレクト先はそれではなく閲覧者のホストにする
+        $this->asAdminHost()->withHeader('Host', 'origin.poifo.test')
+            ->get('/withdrawals')
+            ->assertRedirect('https://admin.poifo.test/login');
+    }
+
+    public function test_unknown_viewer_host_is_not_used_for_urls(): void
+    {
+        $this->withHeader('x-poifo-viewer-host', 'evil.example')->withHeader('Host', 'origin.poifo.test')
+            ->get('/login')->assertNotFound();
+    }
 }
