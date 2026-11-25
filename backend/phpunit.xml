@@ -31,9 +31,9 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="POIFO_API_HOST" value="api.poifo.test"/>
         <env name="POIFO_ADMIN_HOST" value="admin.poifo.test"/>
+        <env name="POIFO_ADMIN_URL" value="https://admin.poifo.test"/>
         <env name="POIFO_ALLOW_HOST_FALLBACK" value="false"/>
         <env name="POIFO_FRONT_URL" value="https://poifo.test"/>
-        <env name="POIFO_API_DOCS_ENABLED" value="false"/>
         <env name="POIFO_DEBUG_LOGIN_ENABLED" value="false"/>
         <env name="GF_REWARDS_API_KEY" value="test"/>
         <env name="POIFO_POSTBACK_PATH_TOKEN" value="test-path-token"/>

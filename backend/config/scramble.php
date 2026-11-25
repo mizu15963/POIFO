@@ -3,11 +3,11 @@
 use Dedoc\Scramble\OpenApiVersion;
 
 // API 仕様書（Swagger 相当）。開発期間中だけ使う。
-// 公開するかどうかは POIFO_API_DOCS_ENABLED で切り替え、ルートは bootstrap/app.php で登録する
+// 管理画面（admin.）の中に置き、管理者のログイン後だけ見せる。ルートは bootstrap/app.php で登録する
 // （Scramble 既定のルートは AppServiceProvider で無効化している）。
 return [
     // 仕様書に載せるルート（URI の先頭で判定）。開発中の確認用なので成果通知（postback/）も載せる。
-    // 仕様書自体は POIFO_API_DOCS_ENABLED=true の間だけ公開する
+    // 仕様書自体は管理者のログイン後だけ見られる
     'api_path' => [
         'include' => ['v1', 'auth', 'go', 'postback'],
     ],
@@ -26,8 +26,9 @@ return [
 
     'info' => [
         'version' => env('API_VERSION', '0.1.0'),
-        'description' => 'POIFO 会員向け API・LINE ログイン・成果通知の仕様書（開発用。本番では公開しない）。'
-            .' Try It は同じ api. ホストから Cookie 付きで呼ぶ。POST/PUT は先に /sanctum/csrf-cookie を開いて XSRF-TOKEN を取得すること。',
+        'description' => 'POIFO 会員向け API・LINE ログイン・成果通知の仕様書（管理者のログイン後だけ見られる）。'
+            .' Try It は api. へ Cookie 付きで送る。ログインが必要な API は、同じブラウザで先に会員としてログイン（デバッグ用ログインなど）しておくこと。'
+            .' POST/PUT は先に api. の /sanctum/csrf-cookie を開いて XSRF-TOKEN を取得すること。',
     ],
 
     'ui' => [
@@ -64,7 +65,7 @@ return [
 
     'flatten_deep_query_parameters' => true,
 
-    // 公開の可否は POIFO_API_DOCS_ENABLED だけで決める（ルート自体を登録しない）
+    // ログインの確認は bootstrap/app.php のルートグループ（auth:admin）で行う
     'middleware' => [
         'web',
     ],

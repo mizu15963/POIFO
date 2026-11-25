@@ -140,22 +140,21 @@ composer dev                # http://localhost:8000
 - フロント（`http://localhost:4321`）からの Cookie 認証のため、`SESSION_DOMAIN=localhost`・`SANCTUM_STATEFUL_DOMAINS=localhost:4321`
 - LINE ログインを試すには LINE Developers でチャネルを作り、コールバックURLに `http://api.localhost:8000/auth/line/callback` を登録する
 
-### API 仕様書（Swagger 相当。開発期間中だけ）
+### API 仕様書（Swagger 相当）
 
-`POIFO_API_DOCS_ENABLED=true` のとき、api. に API 仕様書が出る。`.env.example` と本番は false なので、見るときだけ手元の `.env` を true にする。
+管理画面（admin.）の中にあり、管理者のログイン（パスワード＋二要素認証）が済んだ人だけが見られる。管理画面のメニュー「API 仕様書」から開く。api. には出さない。
 ルートやバリデーション・返却値から自動で作るので、手で書く仕様書はない（[Scramble](https://scramble.dedoc.co/)）。
 
-- 画面: `http://api.localhost:8000/docs/api`（Try It でその場で API を呼べる）
-- OpenAPI の JSON: `http://api.localhost:8000/docs/api.json`（Postman などに読み込める）
-- 載せるのは会員 API（`/v1`）・LINE ログイン・案件遷移（`/go`）・成果通知（`/postback`）。管理画面（admin.）は載せない。開発の確認中だけ true にする
-- false のときはルート自体を作らないので 404 になる。サーバでは `.env` を変えたあと `php artisan route:cache` し直す（デプロイでも実行される）
-- ログインが必要な API は、同じブラウザで LINE ログインを済ませておけば Cookie で通る。POST/PUT は先に `/sanctum/csrf-cookie` を開き、
+- 画面: `http://admin.localhost:8000/docs/api`（Try It でその場で API を呼べる。送り先は api.（`APP_URL`））
+- OpenAPI の JSON: `http://admin.localhost:8000/docs/api.json`
+- 載せるのは会員 API（`/v1`）・LINE ログイン・案件遷移（`/go`）・成果通知（`/postback`）。管理画面（admin.）は載せない
+- Try It から会員 API を Cookie 付きで呼べるよう、管理画面のオリジン（`POIFO_ADMIN_URL`。省略時 `https://<POIFO_ADMIN_HOST>`）を CORS と Sanctum の stateful に足している
+- ログインが必要な API は、同じブラウザで先に会員としてログイン（LINE ログインかデバッグ用ログイン）しておけば Cookie で通る。POST/PUT は先に api. の `/sanctum/csrf-cookie` を開き、
   発行された `XSRF-TOKEN` Cookie の値（URL デコードしたもの）を Try It の `X-XSRF-TOKEN` 欄に入れる
-- サーバ上で使うときは `SANCTUM_STATEFUL_DOMAINS` に `api.<domain>` も足す（足さないとログインが必要な API が 401 になる）。開発期間が終わったら両方戻す
 
 ### デバッグ用ログイン（開発期間中だけ）
 
-LINE を通さずに会員としてログインする。`POIFO_DEBUG_LOGIN_ENABLED=true` のときだけ使える（false なら 404）。API 仕様書（`POIFO_API_DOCS_ENABLED`）とは別に切り替える。
+LINE を通さずに会員としてログインする。`POIFO_DEBUG_LOGIN_ENABLED=true` のときだけ使える（false なら 404）。
 
 - ブラウザで `http://api.localhost:8000/auth/debug/login?user=tester` を開くと、ログインしてフロントの `/auth/complete/` に戻る
 - `user`（英数字・`_`・`-`、32文字まで。省略時 `tester`）ごとにデバッグ用の会員を初回に作る。同じ `user` なら同じ会員
@@ -173,7 +172,6 @@ LINE を通さずに会員としてログインする。`POIFO_DEBUG_LOGIN_ENABL
 | `POIFO_API_HOST` / `POIFO_ADMIN_HOST` | `api.<domain>` / `admin.<domain>` |
 | `POIFO_ALLOW_HOST_FALLBACK` | `false` |
 | `POIFO_FRONT_URL` | `https://<domain>` |
-| `POIFO_API_DOCS_ENABLED` | `false`（開発期間中に API 仕様書を使うときだけ `true`） |
 | `POIFO_DEBUG_LOGIN_ENABLED` | `false`（開発期間中にデバッグ用ログインを使うときだけ `true`） |
 | `DB_HOST` など | Lightsail マネージドDB のエンドポイント・ユーザー・パスワード |
 | `MYSQL_ATTR_SSL_CA` | AWS の CA バンドル（`global-bundle.pem`）のパス |

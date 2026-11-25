@@ -41,10 +41,10 @@ CloudFront Function が付ける `x-poifo-viewer-host` ヘッダーで判断す�
 
 新しいルートを足すときは、どのホストから届くべきかを決めてから該当ファイルに書く。`bootstrap/app.php` の振り分けを崩さない。
 
-API 仕様書（`/docs/api`、Scramble）は `POIFO_API_DOCS_ENABLED=true` のときだけ api. にルートを作る（本番は false）。
+API 仕様書（`/docs/api`、Scramble）は管理画面（admin.）の中に置き、管理者のログイン後だけ見せる（`bootstrap/app.php` の `auth:admin` のグループ）。api. には出さない。
 仕様書はコードから自動生成されるので、API を変えたらバリデーション（`$request->validate()`）と返却値の形を明示し、
 `/docs/api` で意図どおりに載っているか確かめる。コントローラのメソッドの PHPDoc 1行目が各 API の説明になる。
-サーバ上の仕様書には成果通知（`postback/`）も含めて全部載せ、開発の確認中だけ true にする（確認が済んだら false に戻す）。
+仕様書には成果通知（`postback/`）も含めて全部載せる。そのため、管理者のログインを外さない。
 書き出した OpenAPI（YAML）はリポジトリにコミットしない（public のため）。
 
 デバッグ用ログイン（`DebugLoginController`）も同じフラグで有効になる。ログインできるのは `line_user_id` が `debug:` で始まる
