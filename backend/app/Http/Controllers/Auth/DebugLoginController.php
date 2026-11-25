@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 /**
  * 開発確認用のログイン（LINE を通さずに会員としてログインする）。
  *
- * POIFO_API_DOCS_ENABLED=true のときだけルートを作る（API 仕様書と同じフラグ。本番は必ず false）。
+ * POIFO_DEBUG_LOGIN_ENABLED=true のときだけルートを作る（本番は必ず false）。
  * ログインできるのはこの機能で作ったデバッグ用の会員（line_user_id が「debug:」で始まる）だけで、
  * 実際の会員にはなりすませない。
  */

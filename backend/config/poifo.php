@@ -37,9 +37,8 @@ return [
     // 同じ種類の通知は、この秒数のあいだ1通にまとめる（全台で共有のキャッシュで判定）
     'alert_interval_seconds' => (int) env('POIFO_ALERT_INTERVAL_SECONDS', 600),
 
-    // API 仕様書（Swagger 相当、/docs/api）とデバッグ用ログイン（/auth/debug/login）を出すか。
-    // 開発の確認中だけ true にする。本番は必ず false
-    'api_docs_enabled' => (bool) env('POIFO_API_DOCS_ENABLED', false),
+    // デバッグ用ログイン（/auth/debug/login）を出すか。開発の確認中だけ true にする。本番は必ず false
+    'debug_login_enabled' => (bool) env('POIFO_DEBUG_LOGIN_ENABLED', false),
 
     // フロント（Astro 静的サイト）の URL。ログイン後のリダイレクト先などに使う
     'front_url' => rtrim(env('POIFO_FRONT_URL', 'http://localhost:4321'), '/'),

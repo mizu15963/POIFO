@@ -20,10 +20,10 @@ class AppServiceProvider extends ServiceProvider
         // Scramble 既定の /docs/api は使わない（env で出し分けたいので bootstrap/app.php で登録する）
         Scramble::ignoreDefaultRoutes();
 
-        // Try It の送り先は開いているページと同じオリジン（相対パス）にする。
-        // 本番構成では Host がオリジン名になるので、APP_URL や Host から作った絶対 URL は使わない
+        // 仕様書は管理画面（admin.）に置くので、Try It の送り先は api.（APP_URL）にする。
+        // 会員の Cookie で呼べるよう、CORS と Sanctum の stateful に管理画面を足している
         Scramble::configure()->withDocumentTransformers(function (OpenApi $openApi) {
-            $openApi->servers = [Server::make('/')];
+            $openApi->servers = [Server::make(rtrim((string) config('app.url'), '/'))];
             // 会員 API は Cookie（Sanctum）で認証し、POST/PUT は CSRF トークンを X-XSRF-TOKEN ヘッダーで送る。
             // Try It でそのヘッダーを入力できるようにする（値は /sanctum/csrf-cookie で発行される XSRF-TOKEN Cookie を URL デコードしたもの）
             $openApi->secure(

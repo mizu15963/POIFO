@@ -5,6 +5,10 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
+// 管理画面のホスト（ポート付き。例: admin.poifo.com / admin.localhost:8000）
+$adminUrl = parse_url((string) env('POIFO_ADMIN_URL', 'https://'.env('POIFO_ADMIN_HOST', 'admin.localhost')));
+$adminHost = ($adminUrl['host'] ?? 'admin.localhost').(isset($adminUrl['port']) ? ':'.$adminUrl['port'] : '');
+
 return [
 
     /*
@@ -18,12 +22,13 @@ return [
     |
     */
 
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
+    // 管理画面（API 仕様書の Try It）からの呼び出しも、会員の Cookie で認証する
+    'stateful' => array_merge(explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
         '%s%s',
         'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
         Sanctum::currentApplicationUrlWithPort(),
         // Sanctum::currentRequestHost(),
-    ))),
+    ))), [$adminHost]),
 
     /*
     |--------------------------------------------------------------------------

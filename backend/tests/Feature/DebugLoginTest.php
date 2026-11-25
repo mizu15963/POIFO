@@ -6,22 +6,21 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-// デバッグ用ログインは API 仕様書と同じ POIFO_API_DOCS_ENABLED=true のときだけ使える
-// （無効のときに 404 になることは ApiDocsTest で確かめる）
+// デバッグ用ログインは POIFO_DEBUG_LOGIN_ENABLED=true のときだけ使える（API 仕様書とは別のスイッチ）
 class DebugLoginTest extends TestCase
 {
     use RefreshDatabase;
 
     protected function setUp(): void
     {
-        $this->setDocsEnv('true');
+        $this->setDebugEnv('true');
         parent::setUp();
     }
 
     protected function tearDown(): void
     {
         parent::tearDown();
-        $this->setDocsEnv('false');
+        $this->setDebugEnv('false');
     }
 
     public function test_creates_a_debug_member_and_logs_in(): void
@@ -72,15 +71,20 @@ class DebugLoginTest extends TestCase
         $this->assertGuest('web');
     }
 
+    public function test_api_docs_stay_closed_while_debug_login_is_enabled(): void
+    {
+        $this->asApiHost()->get('/docs/api')->assertNotFound();
+    }
+
     public function test_not_reachable_from_the_admin_host(): void
     {
         $this->asAdminHost()->get('/auth/debug/login')->assertNotFound();
         $this->assertGuest('web');
     }
 
-    private function setDocsEnv(string $value): void
+    private function setDebugEnv(string $value): void
     {
-        putenv("POIFO_API_DOCS_ENABLED={$value}");
-        $_ENV['POIFO_API_DOCS_ENABLED'] = $_SERVER['POIFO_API_DOCS_ENABLED'] = $value;
+        putenv("POIFO_DEBUG_LOGIN_ENABLED={$value}");
+        $_ENV['POIFO_DEBUG_LOGIN_ENABLED'] = $_SERVER['POIFO_DEBUG_LOGIN_ENABLED'] = $value;
     }
 }
