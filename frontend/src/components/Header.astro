@@ -20,6 +20,9 @@ const icons = {
   doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>',
   shield: '<path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/>',
   building: '<path d="M5 21V4h10v17"/><path d="M15 9h4v12"/><path d="M8 8h4M8 12h4M8 16h4"/>',
+  bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+  star: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
 } as const;
 type Icon = keyof typeof icons;
 
@@ -38,14 +41,16 @@ const banners = [
   { href: '/support/', pose: 'line', title: '担当スタッフに相談', text: '困ったらLINEで気軽に相談できます' },
 ] as const;
 
+// 会員メニュー（docs/specs/screen-spec.md 1.2）。ポイント履歴はマイページの通帳に入れたので置かない
 const myLinks: { href: string; label: string; icon: Icon }[] = [
-  { href: '/mypage/', label: 'マイページ', icon: 'home' },
-  { href: '/mypage/points/', label: 'ポイント履歴', icon: 'history' },
+  { href: '/mypage/', label: 'マイページ（ポイント通帳）', icon: 'home' },
+  { href: '/mypage/favorites/', label: 'お気に入り', icon: 'star' },
   { href: '/mypage/withdraw/', label: 'ポイント交換', icon: 'coin' },
-  { href: '/mypage/bank/', label: '振込先口座', icon: 'bank' },
+  { href: '/mypage/account/', label: '登録情報', icon: 'user' },
 ];
 
 const otherLinks: { href: string; label: string; icon: Icon }[] = [
+  { href: '/news/', label: 'お知らせ', icon: 'bell' },
   { href: '/guide/', label: 'サービスについて・ヘルプ', icon: 'help' },
   { href: '/contact/', label: 'お問い合わせ', icon: 'mail' },
   { href: '/terms/', label: '利用規約', icon: 'doc' },
@@ -63,9 +68,17 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
       <span data-show="guest">
         <a class="btn btn--outline site-header__btn" href={LINE_LOGIN_URL}>ログイン</a>
       </span>
-      <span data-show="member">
-        <a class="btn site-header__btn" href="/mypage/">マイページ</a>
-      </span>
+      <a class="site-header__me" data-show="member" href="/mypage/" aria-label="マイページ">
+        <span class="site-header__me-name"><span id="header-name">会員</span> さん</span>
+        <span class="site-header__me-points" id="header-points">—</span>
+      </a>
+      <a class="site-header__icon" href="/news/" aria-label="お知らせ">
+        <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons.bell} />
+        <span class="site-header__badge" id="header-news-badge" data-news-badge hidden></span>
+      </a>
+      <a class="site-header__icon" data-show="member" href="/mypage/favorites/" aria-label="お気に入り">
+        <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons.star} />
+      </a>
       <button class="burger" type="button" id="menu-open" aria-controls="site-menu" aria-expanded="false">
         <span class="burger__lines" aria-hidden="true"><span></span></span>
         <span class="burger__label">メニュー</span>
@@ -99,7 +112,7 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
       <p class="drawer__pending">判定中 <span id="menu-pending">—</span></p>
       <div class="drawer__status-actions">
         <a class="btn btn--block" href="/mypage/withdraw/">ポイント交換</a>
-        <a class="btn btn--outline btn--block" href="/mypage/points/">ポイント履歴</a>
+        <a class="btn btn--outline btn--block" href="/mypage/">ポイント通帳</a>
       </div>
     </div>
 
@@ -229,6 +242,15 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
   // ログイン中なら残高を出す（/v1/me は BaseLayout が1回だけ取る）
   whenMe().then((me) => {
     if (!me) return;
+    document.getElementById('header-name')!.textContent = me.display_name ?? '会員';
+    document.getElementById('header-points')!.textContent = formatPoints(me.points.available);
+    // お知らせの未読の数（お知らせ一覧を開くと0になる）
+    const badge = document.getElementById('header-news-badge')!;
+    if (me.unread_news_count > 0 && !location.pathname.startsWith('/news/')) {
+      badge.textContent = me.unread_news_count > 99 ? '99+' : String(me.unread_news_count);
+      badge.hidden = false;
+      badge.parentElement!.setAttribute('aria-label', `お知らせ（未読 ${me.unread_news_count}件）`);
+    }
     document.getElementById('menu-name')!.textContent = me.display_name ?? '会員';
     document.getElementById('menu-points')!.textContent = formatPoints(me.points.available);
     document.getElementById('menu-pending')!.textContent = formatPoints(me.points.pending);
@@ -255,7 +277,61 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
   .site-header__actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+  }
+  /* ログイン中: 表示名と利用可能ポイント（押すとマイページ） */
+  .site-header__me {
+    display: grid;
+    justify-items: end;
+    max-width: 120px;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+  .site-header__me-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    color: var(--color-muted);
+  }
+  .site-header__me-points {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-accent-strong);
+  }
+  .site-header__icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 40px;
+    color: var(--color-text);
+  }
+  .site-header__icon svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* 未読の数。オレンジの丸に濃い文字（白文字は載せない） */
+  .site-header__badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: var(--color-text);
+    font-size: 0.65rem;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
   }
   .site-header__btn {
     min-height: 36px;

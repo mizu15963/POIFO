@@ -1,102 +1,123 @@
 ---
+// ポイント交換＝交換先の一覧（docs/specs/screen-spec.md S12）。交換先が1つでも一覧を出し、選んで詳細（S20）へ進む
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="ポイント交換（銀行振込）" requireLogin noindex>
+<BaseLayout title="ポイント交換" requireLogin noindex>
   <section class="section">
     <div class="container narrow">
-      <h1 class="section__title">ポイント交換（銀行振込）</h1>
-      <p id="saved" class="notice" hidden>振込先口座を登録しました。</p>
-      <div class="card">
-        <div class="lead">交換できるポイント</div>
-        <div class="big" id="available">—</div>
+      <h1 class="section__title">ポイント交換</h1>
+      <div class="card exchange-balance">
+        <span class="lead">交換できるポイント</span>
+        <span class="exchange-balance__value" id="available">—</span>
       </div>
-      <div id="no-bank" hidden>
-        <p>換金するには、先に振込先口座を登録してください。</p>
-        <a class="btn btn--block" href="/mypage/bank/">振込先口座を登録する</a>
-      </div>
-      <form id="withdraw-form" class="form" hidden novalidate>
-        <div id="form-errors" class="form-errors" role="alert" hidden></div>
-        <label>交換するポイント<input name="points" type="number" inputmode="numeric" min="1" step="1" required /></label>
-        <p class="lead" id="rule"></p>
-        <button class="btn btn--block" type="submit">申請する</button>
-        <p><a class="more-link" href="/mypage/bank/">振込先口座を確認・変更する</a></p>
-      </form>
-      <ul class="lead guide-list">
-        <li>振込は月に1回まとめて行います。申請から振込まで、審査のため日数がかかります。</li>
-        <li>申請したポイントは、申請の時点で残高から差し引かれます。審査の結果お振込みできない場合は、ポイントをお戻しします。</li>
-      </ul>
-      <h2>申請履歴</h2>
-      <ul id="history" class="history"><li class="loading">読み込み中…</li></ul>
-      <p><a class="more-link" href="/mypage/">マイページへ戻る</a></p>
+      <div id="methods" aria-live="polite"><p class="loading">読み込み中…</p></div>
+      <p><a class="more-link" href="/mypage/?tab=exchanges">交換履歴を見る</a></p>
     </div>
   </section>
 </BaseLayout>
 
 <script>
-  import { ApiError, fetchWithdrawals, requestWithdrawal, type WithdrawalItem } from '../../../lib/api';
-  import { escapeHtml, formatDate, formatPoints } from '../../../lib/format';
+  import { fetchExchangeMethods, type ExchangeMethod } from '../../../lib/api';
+  import { escapeHtml, formatPoints, safeUrl } from '../../../lib/format';
+  import { exchangeFeeText } from '../../../lib/exchange';
+  import { emptyState } from '../../../lib/render';
   import { whenMe } from '../../../lib/session';
 
-  // 会員には「却下」を「お振込みできませんでした（ポイント返却）」として見せる
-  const statusLabel: Record<WithdrawalItem['status'], string> = {
-    requested: '審査中',
-    approved: '振込準備中',
-    paid: '振込済み',
-    rejected: 'お振込みできませんでした（ポイント返却済み）',
+  const root = document.getElementById('methods')!;
+
+  const card = (m: ExchangeMethod) => {
+    const icon = safeUrl(m.icon);
+    return `
+      <a class="card method-card" href="/mypage/withdraw/detail/?method=${encodeURIComponent(m.code)}">
+        ${icon ? `<img src="${escapeHtml(icon)}" alt="" width="48" height="48">` : '<span class="method-card__icon" aria-hidden="true">¥</span>'}
+        <span class="method-card__body">
+          <span class="method-card__name">${escapeHtml(m.name)}${m.accepting ? '' : '<span class="badge badge--muted">受付停止中</span>'}</span>
+          <span class="method-card__desc">${escapeHtml(m.description)}</span>
+          <span class="method-card__terms">
+            <span>最低 ${escapeHtml(formatPoints(m.min_points))}</span>
+            <span>手数料 ${escapeHtml(exchangeFeeText(m))}</span>
+            ${m.delivery_note ? `<span>${escapeHtml(m.delivery_note)}</span>` : ''}
+          </span>
+        </span>
+      </a>`;
   };
 
-  const form = document.getElementById('withdraw-form') as HTMLFormElement;
-  const errors = document.getElementById('form-errors')!;
-  const history = document.getElementById('history')!;
-
-  if (new URLSearchParams(location.search).get('bank') === 'saved') document.getElementById('saved')!.hidden = false;
-
-  async function load() {
+  whenMe().then(async (me) => {
+    if (!me) return;
+    document.getElementById('available')!.textContent = formatPoints(me.points.available);
     try {
-      const res = await fetchWithdrawals();
-      const { available_points, min_points, yen_per_point, has_bank_account } = res.meta;
-      document.getElementById('available')!.textContent = formatPoints(available_points);
-      document.getElementById('no-bank')!.hidden = has_bank_account;
-      form.hidden = !has_bank_account;
-      document.getElementById('rule')!.textContent = `${min_points.toLocaleString('ja-JP')}ポイントから申請できます（1ポイント＝${yen_per_point}円）。`;
-      (form.elements.namedItem('points') as HTMLInputElement).min = String(min_points);
-      history.innerHTML = res.data.length
-        ? res.data
-            .map(
-              (w) => `<li class="history__item history__item--${w.status === 'rejected' ? 'rejected' : 'confirmed'}">
-                <span class="history__date">${escapeHtml(formatDate(w.created_at))} 申請</span>
-                <span class="history__desc">${escapeHtml(formatPoints(w.points))} → ${w.amount_yen.toLocaleString('ja-JP')}円</span>
-                <span class="history__points"></span>
-                <span class="badge">${escapeHtml(statusLabel[w.status])}</span>
-              </li>`,
-            )
-            .join('')
-        : '<li class="empty">まだ申請はありません。</li>';
+      const methods = await fetchExchangeMethods();
+      if (!methods.length) {
+        root.innerHTML = emptyState('交換先は準備中です。');
+        return;
+      }
+      // 交換先の種類が増えたら、カテゴリ（現金・ギフト券など）ごとに見出しを付けて分ける
+      const groups = new Map<string, ExchangeMethod[]>();
+      for (const m of methods) groups.set(m.category, [...(groups.get(m.category) ?? []), m]);
+      const grouped = groups.size > 1;
+      root.innerHTML = [...groups]
+        .map(([category, items]) => `${grouped && category ? `<h2 class="method-group">${escapeHtml(category)}</h2>` : ''}<div class="grid">${items.map(card).join('')}</div>`)
+        .join('');
     } catch {
-      history.innerHTML = '<li class="empty">読み込めませんでした。</li>';
-    }
-  }
-
-  whenMe().then((me) => me && load());
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errors.hidden = true;
-    const points = Number((form.elements.namedItem('points') as HTMLInputElement).value);
-    if (!confirm(`${formatPoints(points)}を換金申請します。よろしいですか？`)) return;
-    const button = form.querySelector('button')!;
-    button.disabled = true;
-    try {
-      await requestWithdrawal(points);
-      form.reset();
-      await load();
-    } catch (err) {
-      const messages = err instanceof ApiError && err.status === 422 ? Object.values(err.errors).flat() : ['申請できませんでした。時間をおいてもう一度お試しください。'];
-      errors.innerHTML = `<ul>${messages.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
-      errors.hidden = false;
-    } finally {
-      button.disabled = false;
+      root.innerHTML = emptyState('交換先を読み込めませんでした。時間をおいて再度お試しください。');
     }
   });
 </script>
+
+<style>
+  .exchange-balance {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    background: var(--color-accent-bg);
+    border-color: var(--color-accent);
+  }
+  .exchange-balance__value {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--color-accent-strong);
+  }
+  #methods :global(.method-card) {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  #methods :global(.method-card img),
+  #methods :global(.method-card__icon) {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 12px;
+  }
+  #methods :global(.method-card__icon) {
+    display: grid;
+    place-items: center;
+    background: var(--color-brand-bg);
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  #methods :global(.method-card__body) {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  #methods :global(.method-card__name) {
+    font-weight: 600;
+  }
+  #methods :global(.method-card__desc) {
+    font-size: 0.85rem;
+  }
+  #methods :global(.method-card__terms) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  #methods :global(.method-group) {
+    margin: 20px 0 8px;
+    font-size: 1rem;
+  }
+</style>

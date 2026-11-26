@@ -8,9 +8,24 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 ---
 
 <BaseLayout>
+  <!-- ログイン中の並び（docs/specs/screen-spec.md S01）: 保有ポイント → 重要なお知らせ → カテゴリ → おすすめ → イベント → 担当サポート → よくある質問。
+       初めての人向けの説明（ファーストビュー・特徴・貯め方・しくみ・使い道・最後の登録導線）はログイン中は出さない -->
+  <section class="member-top" data-show="member">
+    <div class="container">
+      <a class="member-points" href="/mypage/">
+        <span class="member-points__main">
+          <span class="member-points__label">利用可能ポイント</span>
+          <span class="member-points__value" id="member-available">—</span>
+        </span>
+        <span class="member-points__pending">判定中 <span id="member-pending">—</span></span>
+      </a>
+      <a id="important-news" class="important-news" href="#" hidden></a>
+    </div>
+  </section>
+
   <!-- ② ファーストビュー -->
   <!-- キービジュアル kv-aqua-mascot はコピーと説明文が画像に入っているので、見出しは画面に出さず HTML にも書く（検索・読み上げ用） -->
-  <section class="hero">
+  <section class="hero" data-show="guest">
     <h1 class="sr-only">ひとりじゃない、あたらしいポイ活。</h1>
     <Visual
       name="kv-aqua-mascot"
@@ -19,12 +34,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     />
     <div class="container hero__inner">
       <div class="hero__cta">
-        <div data-show="guest">
-          <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
-        </div>
-        <div data-show="member">
-          <a class="btn" href="/campaigns/">ポイントを貯める</a>
-        </div>
+        <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
       </div>
       <ul class="hero__points">
         <li>登録・利用は無料</li>
@@ -89,7 +99,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   </section>
 
   <!-- ⑥ ポイフォの特徴 -->
-  <section class="section section--soft">
+  <section class="section section--soft" data-show="guest">
     <div class="container">
       <h2 class="section__title section__title--center">ポイフォの特徴</h2>
       <div class="grid grid--3 features">
@@ -101,7 +111,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   </section>
 
   <!-- ⑦ 初めての方へ：貯め方 → しくみ → 交換先 → よくある質問 → 登録 -->
-  <section class="section">
+  <section class="section" data-show="guest">
     <div class="container">
       <h2 class="section__title section__title--center">ポイントの貯め方</h2>
       <HowToEarn />
@@ -109,7 +119,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     </div>
   </section>
 
-  <section class="section section--warm">
+  <section class="section section--warm" data-show="guest">
     <div class="container">
       <h2 class="section__title section__title--center">ポイントがもらえるしくみ</h2>
       <!-- 説明画像 how-points-work（文言入り）。図の流れも alt に書いて読み上げで伝わるようにする -->
@@ -121,7 +131,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     </div>
   </section>
 
-  <section class="section">
+  <section class="section" data-show="guest">
     <div class="container">
       <h2 class="section__title section__title--center">貯めたポイントの使い道</h2>
       <Visual name="banner-wide-plain" alt="" class="exchange__visual" />
@@ -175,9 +185,28 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 </BaseLayout>
 
 <script>
-  import { fetchCampaignCategories, fetchCampaigns, fetchEvents } from '../lib/api';
-  import { escapeHtml } from '../lib/format';
+  import { fetchCampaignCategories, fetchCampaigns, fetchEvents, fetchNews } from '../lib/api';
+  import { bindFavoriteButtons } from '../lib/favorite';
+  import { escapeHtml, formatPoints } from '../lib/format';
   import { campaignCard, emptyState, eventCard } from '../lib/render';
+  import { whenMe } from '../lib/session';
+
+  // ログイン中: 保有ポイントの帯と、重要なお知らせ（公開中の新しい1件）
+  whenMe().then((me) => {
+    if (!me) return;
+    document.getElementById('member-available')!.textContent = formatPoints(me.points.available);
+    document.getElementById('member-pending')!.textContent = formatPoints(me.points.pending);
+    fetchNews({ important: true, perPage: 1 })
+      .then((res) => {
+        const n = res.data[0];
+        if (!n) return;
+        const el = document.getElementById('important-news') as HTMLAnchorElement;
+        el.href = `/news/detail/?id=${n.id}`;
+        el.innerHTML = `<span class="badge badge--important">重要</span><span>${escapeHtml(n.title)}</span>`;
+        el.hidden = false;
+      })
+      .catch(() => undefined);
+  });
 
   // カテゴリは ASP から取り込んだ案件の分類（件数の多い順）。上位だけを出し、残りは案件一覧で絞り込む
   const categories = document.getElementById('campaign-categories')!;
@@ -193,11 +222,12 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     .catch(() => (categories.innerHTML = `<li>${emptyState('カテゴリを読み込めませんでした。')}</li>`));
 
   const campaigns = document.getElementById('featured-campaigns')!;
+  bindFavoriteButtons(campaigns);
   fetchCampaigns({ featured: true, perPage: 6 })
     .then(async (res) => {
       // おすすめが未設定なら新着を出す
       const items = res.data.length ? res.data : (await fetchCampaigns({ perPage: 6 })).data;
-      campaigns.innerHTML = items.length ? items.map(campaignCard).join('') : emptyState('現在掲載中の案件はありません。');
+      campaigns.innerHTML = items.length ? items.map((c) => campaignCard(c)).join('') : emptyState('現在掲載中の案件はありません。');
     })
     .catch(() => (campaigns.innerHTML = emptyState('案件を読み込めませんでした。時間をおいて再度お試しください。')));
 
@@ -208,6 +238,51 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 </script>
 
 <style>
+  .member-top {
+    padding: 16px 0 0;
+  }
+  .member-points {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius);
+    background: var(--color-accent-bg);
+    text-decoration: none;
+  }
+  .member-points__main {
+    display: grid;
+    line-height: 1.3;
+  }
+  .member-points__label {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .member-points__value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-accent-strong);
+  }
+  .member-points__pending {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+  .member-points__pending::after {
+    content: '';
+    display: inline-block;
+    margin-left: 8px;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid var(--color-muted);
+    border-right: 2px solid var(--color-muted);
+    transform: rotate(45deg);
+  }
+  .member-top .important-news {
+    margin-bottom: 0;
+  }
   /* ファーストビューはキービジュアル（画像の下端が濃いアクアの波）の下に、主ボタンと特徴3つを置く */
   .hero {
     background: linear-gradient(180deg, var(--color-brand-bg), #fff);
@@ -449,10 +524,19 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   }
   /* 案件カードは縦長にして、アイコン → 名前（2行まで）→ ポイントの順に並べる */
   .hscroll--campaigns :global(.campaign-card) {
+    position: relative;
+    padding: 12px;
+  }
+  .hscroll--campaigns :global(.campaign-card__link) {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    padding: 12px;
+  }
+  /* 縦長のカードでは、お気に入りボタンを右上に重ねる */
+  .hscroll--campaigns :global(.fav-btn) {
+    position: absolute;
+    top: 6px;
+    right: 6px;
   }
   .hscroll--campaigns :global(.campaign-card img),
   .hscroll--campaigns :global(.campaign-card__noicon) {

@@ -72,6 +72,8 @@ class ExchangeMethodTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.code', 'bank_transfer')
             ->assertJsonPath('data.0.name', '銀行振込（現金）')
+            ->assertJsonPath('data.0.category', '現金')
+            ->assertJsonPath('data.0.delivery_note', '月1回まとめて振込')
             ->assertJsonPath('data.0.accepting', true)
             ->assertJsonPath('data.0.min_points', 1000)
             ->assertJsonPath('data.0.step_points', 1)

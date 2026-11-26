@@ -14,12 +14,14 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 <script>
   import { fetchCampaign } from '../../../lib/api';
   import { campaignGoUrl, LINE_LOGIN_URL } from '../../../lib/config';
+  import { bindFavoriteButtons, favoriteButton } from '../../../lib/favorite';
   import { escapeHtml, formatPoints, safeUrl } from '../../../lib/format';
   import { emptyState } from '../../../lib/render';
   import { whenMe } from '../../../lib/session';
 
   const root = document.getElementById('campaign')!;
   const id = new URLSearchParams(location.search).get('id');
+  bindFavoriteButtons(root);
 
   async function render() {
     if (!id) {
@@ -36,7 +38,8 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
       root.innerHTML = `
         <div class="detail-head">
           ${icon ? `<img src="${escapeHtml(icon)}" alt="" width="96" height="96">` : ''}
-          <div><h1>${escapeHtml(c.name)}</h1><p class="lead">${escapeHtml(c.category)}</p></div>
+          <div class="detail-head__text"><h1>${escapeHtml(c.name)}</h1><p class="lead">${escapeHtml(c.category)}</p></div>
+          ${favoriteButton(c.id, c.is_favorite)}
         </div>
         ${c.points != null ? `<p class="detail-points">最大 ${formatPoints(c.points)}</p>` : ''}
         ${me ? `<a class="btn btn--block" href="${campaignGoUrl(c.id)}" rel="noopener">この案件に進む</a>` : `<a class="btn btn--line btn--block" href="${LINE_LOGIN_URL}">LINEでログインして進む</a><p class="lead">ログインしないとポイントが付きません。</p>`}
@@ -56,6 +59,10 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
     display: flex;
     gap: 16px;
     align-items: center;
+  }
+  .detail-head__text {
+    flex: 1;
+    min-width: 0;
   }
   .detail-head img {
     border-radius: 16px;

@@ -1,0 +1,186 @@
+---
+// 交換先の詳細・申請（docs/specs/screen-spec.md S20）。/mypage/withdraw/detail/?method=<交換先コード>
+// 受け取り情報が要る交換先を足すときは、その交換先専用の登録画面を振込先口座（S11）と同じように作り、ここで出し分ける
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ポイント交換" requireLogin noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title" id="title">ポイント交換</h1>
+      <p id="saved" class="notice" hidden>振込先口座を登録しました。</p>
+      <div id="loading"><p class="loading">読み込み中…</p></div>
+      <div id="content" hidden>
+        <p id="description"></p>
+        <dl class="terms card" id="terms"></dl>
+        <p id="stopped" class="notice" hidden>現在、受付を停止しています。</p>
+
+        <div id="bank-missing" hidden>
+          <p>換金するには、先に振込先口座を登録してください。</p>
+          <a class="btn btn--block" href="/mypage/bank/">振込先口座を登録する</a>
+        </div>
+
+        <form id="withdraw-form" class="form" hidden novalidate>
+          <div class="card recipient" id="recipient" hidden></div>
+          <div class="card exchange-balance">
+            <span class="lead">交換できるポイント</span>
+            <span class="exchange-balance__value" id="available">—</span>
+          </div>
+          <div id="form-errors" class="form-errors" role="alert" hidden></div>
+          <label>交換するポイント<input name="points" type="number" inputmode="numeric" min="1" step="1" required /></label>
+          <p class="lead" id="rule"></p>
+          <p class="lead" id="preview" aria-live="polite"></p>
+          <button class="btn btn--block" type="submit">申請する</button>
+          <p id="bank-change" hidden><a class="more-link" href="/mypage/bank/">振込先口座を確認・変更する</a></p>
+        </form>
+
+        <ul class="lead guide-list" id="notes" hidden>
+          <li>振込は月に1回まとめて行います。申請から振込まで、審査のため日数がかかります。</li>
+          <li>申請したポイントは、申請の時点で残高から差し引かれます。審査の結果お振込みできない場合は、ポイントをお戻しします。</li>
+        </ul>
+      </div>
+      <p><a class="more-link" href="/mypage/withdraw/">交換先の一覧へ戻る</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { ApiError, fetchBankAccount, fetchExchangeMethods, requestWithdrawal } from '../../../../lib/api';
+  import { exchangeFeeText, exchangeYen } from '../../../../lib/exchange';
+  import { escapeHtml, formatPoints } from '../../../../lib/format';
+  import { emptyState } from '../../../../lib/render';
+  import { whenMe } from '../../../../lib/session';
+
+  const params = new URLSearchParams(location.search);
+  const code = params.get('method') ?? '';
+  const loading = document.getElementById('loading')!;
+  const content = document.getElementById('content')!;
+  const form = document.getElementById('withdraw-form') as HTMLFormElement;
+  const errors = document.getElementById('form-errors')!;
+  const input = form.elements.namedItem('points') as HTMLInputElement;
+
+  if (params.get('bank') === 'saved') document.getElementById('saved')!.hidden = false;
+
+  whenMe().then(async (me) => {
+    if (!me) return;
+    try {
+      const method = (await fetchExchangeMethods()).find((m) => m.code === code);
+      if (!method) {
+        loading.innerHTML = emptyState('この交換先は選べません。');
+        return;
+      }
+      document.title = `${method.name}｜ポイント交換｜ポイフォ`;
+      document.getElementById('title')!.textContent = method.name;
+      document.getElementById('description')!.textContent = method.description;
+      document.getElementById('terms')!.innerHTML = [
+        ['最低交換ポイント', formatPoints(method.min_points)],
+        ['交換レート', `1pt＝${method.yen_per_point}円`],
+        ['手数料', exchangeFeeText(method)],
+        ...(method.delivery_note ? [['受け取りまでの目安', method.delivery_note]] : []),
+      ]
+        .map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`)
+        .join('');
+      document.getElementById('available')!.textContent = formatPoints(me.points.available);
+
+      const isBank = method.code === 'bank_transfer';
+      document.getElementById('notes')!.hidden = !isBank;
+
+      if (!method.accepting) {
+        document.getElementById('stopped')!.hidden = false;
+      } else if (isBank) {
+        const bank = await fetchBankAccount();
+        if (!bank) {
+          document.getElementById('bank-missing')!.hidden = false;
+        } else {
+          const recipient = document.getElementById('recipient')!;
+          recipient.innerHTML = `<span class="lead">振込先</span><span>${escapeHtml(bank.bank_name ?? '')} ${escapeHtml(bank.branch_name ?? '')}</span><span>${escapeHtml(bank.account_type_label)} ${escapeHtml(bank.account_number_masked)}</span>`;
+          recipient.hidden = false;
+          document.getElementById('bank-change')!.hidden = false;
+          form.hidden = false;
+        }
+      } else {
+        form.hidden = false;
+      }
+
+      input.min = String(method.min_points);
+      input.step = String(method.step_points);
+      if (method.max_points) input.max = String(method.max_points);
+      document.getElementById('rule')!.textContent =
+        `${method.min_points.toLocaleString('ja-JP')}ポイントから申請できます${method.max_points ? `（1回 ${method.max_points.toLocaleString('ja-JP')}ポイントまで）` : ''}。`;
+      const preview = document.getElementById('preview')!;
+      input.addEventListener('input', () => {
+        const points = Number(input.value);
+        if (!points) {
+          preview.textContent = '';
+          return;
+        }
+        const y = exchangeYen(method, points);
+        preview.textContent = y.fee > 0 ? `受け取り ${y.receive.toLocaleString('ja-JP')}円（手数料 ${y.fee.toLocaleString('ja-JP')}円）` : `受け取り ${y.receive.toLocaleString('ja-JP')}円`;
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errors.hidden = true;
+        const points = Number(input.value);
+        if (!confirm(`${formatPoints(points)}を「${method.name}」に交換申請します。よろしいですか？`)) return;
+        const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        button.disabled = true;
+        try {
+          await requestWithdrawal(points, method.code);
+          location.href = '/mypage/?tab=exchanges';
+        } catch (err) {
+          const messages = err instanceof ApiError && err.status === 422 ? Object.values(err.errors).flat() : ['申請できませんでした。時間をおいてもう一度お試しください。'];
+          errors.innerHTML = `<ul>${messages.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
+          errors.hidden = false;
+          button.disabled = false;
+        }
+      });
+
+      loading.hidden = true;
+      content.hidden = false;
+    } catch {
+      loading.innerHTML = emptyState('読み込めませんでした。時間をおいて再度お試しください。');
+    }
+  });
+</script>
+
+<style>
+  #notes {
+    margin-top: 20px;
+  }
+  .terms {
+    display: grid;
+    gap: 6px;
+    margin: 0 0 16px;
+  }
+  .terms :global(div) {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.9rem;
+  }
+  .terms :global(dt) {
+    color: var(--color-muted);
+  }
+  .terms :global(dd) {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+  }
+  .recipient {
+    display: grid;
+    gap: 2px;
+  }
+  .exchange-balance {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    background: var(--color-accent-bg);
+    border-color: var(--color-accent);
+  }
+  .exchange-balance__value {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--color-accent-strong);
+  }
+</style>

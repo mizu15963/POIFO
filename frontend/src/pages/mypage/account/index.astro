@@ -1,0 +1,126 @@
+---
+// 登録情報（docs/specs/screen-spec.md S21）。LINE ログインなので名前・パスワードの変更はない
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="登録情報" requireLogin noindex>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section__title">登録情報</h1>
+      <div class="card account-profile">
+        <img id="avatar" src="" alt="" width="56" height="56" hidden />
+        <div>
+          <p class="account-profile__name" id="name">—</p>
+          <p class="lead account-profile__note">LINEの表示名・アイコンです。LINEで変更すると、次のログインで反映されます。</p>
+        </div>
+      </div>
+
+      <dl class="account-list">
+        <div>
+          <dt>会員ID</dt>
+          <dd><span id="uid" class="account-list__uid">—</span><small>お問い合わせのときにお伝えください。</small></dd>
+        </div>
+        <div>
+          <dt>登録日</dt>
+          <dd id="registered">—</dd>
+        </div>
+        <div>
+          <dt>振込先口座</dt>
+          <dd><span id="bank">読み込み中…</span><a class="more-link account-list__link" href="/mypage/bank/">登録・変更する</a></dd>
+        </div>
+        <div id="line-friend" hidden>
+          <dt>公式LINE</dt>
+          <dd><a class="btn btn--line" href="#" rel="noopener">ポイフォ公式LINEを追加</a><small>担当スタッフへの相談に使います（任意）。</small></dd>
+        </div>
+      </dl>
+
+      <p class="account-leave"><a href="/mypage/leave/">退会する</a></p>
+      <p><a class="more-link" href="/mypage/">マイページへ戻る</a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { fetchBankAccount } from '../../../lib/api';
+  import { formatDate, safeUrl } from '../../../lib/format';
+  import { whenMe } from '../../../lib/session';
+
+  whenMe().then((me) => {
+    if (!me) return;
+    document.getElementById('name')!.textContent = `${me.display_name ?? '会員'} さん`;
+    const avatar = safeUrl(me.avatar_url);
+    if (avatar) {
+      const img = document.getElementById('avatar') as HTMLImageElement;
+      img.src = avatar;
+      img.hidden = false;
+    }
+    document.getElementById('uid')!.textContent = me.uid;
+    document.getElementById('registered')!.textContent = me.registered_at ? formatDate(me.registered_at) : '—';
+    const friend = safeUrl(me.line_friend_url);
+    if (friend) {
+      const row = document.getElementById('line-friend')!;
+      row.querySelector('a')!.href = friend;
+      row.hidden = false;
+    }
+    const bank = document.getElementById('bank')!;
+    fetchBankAccount()
+      .then((b) => (bank.textContent = b ? `${b.bank_name ?? ''} ${b.account_type_label} ${b.account_number_masked}` : '未登録'))
+      .catch(() => (bank.textContent = '読み込めませんでした'));
+  });
+</script>
+
+<style>
+  .account-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .account-profile img {
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .account-profile__name {
+    margin: 0;
+    font-weight: 600;
+  }
+  .account-profile__note {
+    margin: 0;
+    font-size: 0.8rem;
+  }
+  .account-list {
+    margin: 16px 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+  .account-list > div {
+    padding: 12px 14px;
+  }
+  .account-list > div + div {
+    border-top: 1px solid var(--color-border);
+  }
+  .account-list dt {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .account-list dd {
+    display: grid;
+    gap: 4px;
+    justify-items: start;
+    margin: 0;
+  }
+  .account-list small {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .account-list__uid {
+    font-family: ui-monospace, Menlo, monospace;
+    overflow-wrap: anywhere;
+  }
+  .account-list__link {
+    margin-top: 0;
+  }
+  .account-leave {
+    margin-top: 32px;
+    font-size: 0.9rem;
+  }
+</style>

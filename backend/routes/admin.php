@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\MemberController;
+use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\PostbackController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Models\PostbackLog;
@@ -41,6 +42,9 @@ Route::name('admin.')->group(function () {
         Route::resource('events', EventController::class);
         Route::post('/events/{event}/participants/check', [EventController::class, 'check'])->name('events.check');
         Route::get('/events/{event}/participants/export', [EventController::class, 'export'])->name('events.export');
+
+        // お知らせ（docs/specs/functional-spec.md 11.1）
+        Route::resource('news', NewsController::class)->except(['show'])->parameters(['news' => 'news']);
 
         // 会員
         Route::get('/members', [MemberController::class, 'index'])->name('members.index');

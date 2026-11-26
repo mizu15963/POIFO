@@ -1,7 +1,7 @@
 # ポイフォ｜テーブル定義
 
 - 作成日: 2026年11月23日
-- 元にしたもの: `backend/database/migrations/` の全マイグレーション（2026-11-22 の交換先対応まで）
+- 元にしたもの: `backend/database/migrations/` の全マイグレーション（2026-11-26 のお気に入り・お知らせまで）
 - DB: MySQL（Lightsail マネージドデータベース）。文字コードは utf8mb4
 - 機能のルール: [functional-spec.md](functional-spec.md)
 
@@ -23,8 +23,8 @@
 | 10 | `withdrawal_requests` | 換金（ポイント交換）の申請 | 7章 |
 | 11 | `events` | イベント | 8.1 |
 | 12 | `event_participants` | イベントの参加 | 8.2 |
-| 13 | `favorites`（未実装） | お気に入り | 4.5 |
-| 14 | `news`（未実装） | お知らせ | 11.1 |
+| 13 | `favorites` | お気に入り | 4.5 |
+| 14 | `news` | お知らせ | 11.1 |
 | — | `sessions` `cache` `cache_locks` `jobs` `job_batches` `failed_jobs` | Laravel の仕組み用（セッション・キャッシュ・ロック・キュー）。API サーバを増やせるよう、すべて DB に置く | — |
 
 ## 2. テーブルのつながり
@@ -45,6 +45,9 @@ erDiagram
     admins ||--o{ admin_audit_logs : "操作"
     admins ||--o{ withdrawal_requests : "審査・振込"
     admins ||--o{ event_participants : "参加確認"
+    users ||--o{ favorites : "お気に入り"
+    campaigns ||--o{ favorites : ""
+    admins ||--o{ news : "登録"
     admins ||--o{ point_transactions : "手動調整"
 ```
 
@@ -73,6 +76,7 @@ erDiagram
 | `avatar_url` | VARCHAR(1024) | ○ | | LINE のアイコン URL。退会で消す |
 | `status` | VARCHAR(20) | | `active` | `active`（有効）／`suspended`（停止中）／`withdrawn`（退会済み） |
 | `last_login_at` | TIMESTAMP | ○ | | 最終ログイン |
+| `news_seen_at` | TIMESTAMP | ○ | | 最後にお知らせ一覧を開いた日時。未読の数はこれより後に公開されたお知らせの件数（空なら登録日時から数える） |
 | `suspended_at` | TIMESTAMP | ○ | | 停止した日時 |
 | `suspended_reason` | VARCHAR(255) | ○ | | 停止の理由（会員には見せない） |
 | `withdrawn_at` | TIMESTAMP | ○ | | 退会した日時 |
@@ -149,7 +153,7 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 ### 4.5 `campaign_clicks`（案件への遷移）
 
-問い合わせ対応・不正調査用。`updated_at` はない。
+問い合わせ対応・不正調査用。会員にもマイページの「案件の利用履歴」で直近90日を見せる（IP・ブラウザ情報は見せない）。`updated_at` はない。
 
 | カラム | 型 | NULL | 既定 | 説明 |
 |---|---|---|---|---|
@@ -159,6 +163,8 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `ip_address` | VARCHAR(45) | ○ | | 会員の IP |
 | `user_agent` | TEXT | ○ | | ブラウザ情報 |
 | `created_at` | TIMESTAMP | | 現在時刻 | 遷移した日時 |
+
+インデックス: `user_id` + `created_at`（会員の利用履歴）
 
 ### 4.6 `postback_logs`（成果通知の受信ログ）
 
@@ -311,11 +317,9 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 インデックス: `event_id` + `user_id`（一意）、`event_id` + `status`
 
-## 5. これから足すテーブル・カラム（未実装）
+### 4.13 `favorites`（お気に入り）
 
-2026-11-26 に作ることが決まった機能の分。実装でマイグレーションを作ったら、4章に移す。
-
-### `favorites`（お気に入り。機能仕様 4.5）
+機能仕様 4.5。1人200件まで。掲載が終わった案件も行は残す（一覧で「掲載終了」と出す）。`updated_at` はない。
 
 | カラム | 型 | NULL | 既定 | 説明 |
 |---|---|---|---|---|
@@ -326,7 +330,9 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 インデックス: `user_id` + `campaign_id`（一意）、`campaign_id`（案件ごとのお気に入り数）
 
-### `news`（お知らせ。機能仕様 11.1）
+### 4.14 `news`（お知らせ）
+
+機能仕様 11.1。会員サイトに出すのは `published` で `published_at` を過ぎ、`expires_at` の前のもの。削除できるのは下書きだけ。
 
 | カラム | 型 | NULL | 既定 | 説明 |
 |---|---|---|---|---|
@@ -337,17 +343,12 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `status` | VARCHAR(16) | | `draft` | `draft`（下書き）／`published`（公開） |
 | `published_at` | TIMESTAMP | ○ | | 公開日時（公開にするときは必須） |
 | `expires_at` | TIMESTAMP | ○ | | 公開終了日時 |
-| `created_by` | BIGINT UNSIGNED | ○ | | 登録した管理者（→ `admins`） |
+| `created_by` | BIGINT UNSIGNED | ○ | | 登録した管理者（→ `admins`。管理者を消したら空にする） |
+| `created_at` / `updated_at` | TIMESTAMP | ○ | | |
 
 インデックス: `status` + `published_at`
 
-### `users` に足すカラム
-
-| カラム | 型 | NULL | 既定 | 説明 |
-|---|---|---|---|---|
-| `news_seen_at` | TIMESTAMP | ○ | | 最後にお知らせ一覧を開いた日時（未読の数に使う） |
-
-## 6. 気づいた点
+## 5. 気づいた点
 
 - `events` を作ったマイグレーションのコメントに「参加管理はしない」とあるが、2026-11-20 の方針変更で参加を管理するようになっている（`event_participants`）。動きには関係ない
 - `point_transactions.withdrawal_request_id` だけ外部キーを張っていない（ほかの参照列は張っている）。必要なら実装スレッドで追加する
