@@ -4,7 +4,9 @@ use App\Http\Controllers\Api\BankAccountController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\ExchangeMethodController;
+use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\MeController;
+use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\WithdrawalController;
 use App\Http\Middleware\EnsureMemberIsActive;
 use Illuminate\Support\Facades\Route;
@@ -18,10 +20,22 @@ Route::prefix('v1')->middleware('throttle:member-api')->group(function () {
     // ポイントの交換先と条件（docs/specs/functional-spec.md 7章）
     Route::get('/exchange-methods', [ExchangeMethodController::class, 'index']);
     Route::get('/events/{event}', [EventController::class, 'show']);
+    // お知らせ（ログインしなくても見られる。docs/specs/functional-spec.md 11.1）
+    Route::get('/news', [NewsController::class, 'index']);
+    Route::get('/news/{news}', [NewsController::class, 'show']);
 
     Route::middleware(['auth:sanctum', EnsureMemberIsActive::class])->group(function () {
         Route::get('/me', [MeController::class, 'show']);
         Route::get('/me/points', [MeController::class, 'pointHistory']);
+        // 案件の利用履歴（マイページの通帳のタブ。docs/specs/functional-spec.md 3.3）
+        Route::get('/me/clicks', [MeController::class, 'clicks']);
+        // お知らせ一覧を開いた日時（未読の数を0にする）
+        Route::post('/me/news/seen', [NewsController::class, 'seen']);
+
+        // お気に入り（docs/specs/functional-spec.md 4.5）
+        Route::get('/me/favorites', [FavoriteController::class, 'index']);
+        Route::put('/me/favorites/{campaign}', [FavoriteController::class, 'store'])->middleware('throttle:favorite-update');
+        Route::delete('/me/favorites/{campaign}', [FavoriteController::class, 'destroy'])->middleware('throttle:favorite-update');
         Route::post('/logout', [MeController::class, 'logout']);
         // 退会（手続き中の換金申請があるときはできない。docs/specs/functional-spec.md 3.4）
         Route::post('/me/leave', [MeController::class, 'leave'])->middleware('throttle:withdrawal-request');

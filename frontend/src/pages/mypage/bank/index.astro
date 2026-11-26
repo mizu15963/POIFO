@@ -27,7 +27,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
         <p class="lead">金融機関コード・支店コードは、通帳やキャッシュカード、各金融機関のサイトで確認できます。</p>
         <button class="btn btn--block" type="submit">登録する</button>
       </form>
-      <p><a class="more-link" href="/mypage/">マイページへ戻る</a></p>
+      <p><a class="more-link" href="/mypage/account/">登録情報へ戻る</a></p>
     </div>
   </section>
 </BaseLayout>
@@ -68,7 +68,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
     button.disabled = true;
     try {
       await saveBankAccount(input);
-      location.href = '/mypage/withdraw/?bank=saved';
+      location.href = '/mypage/withdraw/detail/?method=bank_transfer&bank=saved';
     } catch (err) {
       const messages = err instanceof ApiError && err.status === 422 ? Object.values(err.errors).flat() : ['登録できませんでした。時間をおいてもう一度お試しください。'];
       errors.innerHTML = `<ul>${messages.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;

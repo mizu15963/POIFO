@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignClick;
+use App\Models\Favorite;
+use App\Models\User;
 use App\Support\ClientIp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -12,6 +14,11 @@ use Illuminate\Http\Request;
 
 class CampaignController extends Controller
 {
+    /**
+     * 掲載中の案件の一覧（20件ずつ、最大50件）。
+     *
+     * ログイン中なら各案件の is_favorite（お気に入り登録済みか）を返す。未ログインでは常に false。
+     */
     public function index(Request $request): JsonResponse
     {
         $query = Campaign::listed()->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id');
@@ -25,9 +32,10 @@ class CampaignController extends Controller
         }
 
         $page = $query->paginate(min((int) $request->query('per_page', 20), 50));
+        $favoriteIds = self::favoriteIdsOf(self::member($request), collect($page->items())->pluck('id')->all());
 
         return response()->json([
-            'data' => collect($page->items())->map(fn (Campaign $c) => $this->summary($c)),
+            'data' => collect($page->items())->map(fn (Campaign $c) => self::summary($c) + ['is_favorite' => isset($favoriteIds[$c->id])]),
             'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage()],
         ]);
     }
@@ -42,11 +50,14 @@ class CampaignController extends Controller
         return response()->json(['data' => $rows->map(fn ($r) => ['name' => $r->category, 'count' => (int) $r->count])]);
     }
 
-    public function show(Campaign $campaign): JsonResponse
+    /** 案件の詳細。ログイン中なら is_favorite（お気に入り登録済みか）を返す */
+    public function show(Request $request, Campaign $campaign): JsonResponse
     {
         abort_unless(Campaign::listed()->whereKey($campaign->id)->exists(), 404);
+        $favoriteIds = self::favoriteIdsOf(self::member($request), [$campaign->id]);
 
-        return response()->json(['data' => $this->summary($campaign) + [
+        return response()->json(['data' => self::summary($campaign) + [
+            'is_favorite' => isset($favoriteIds[$campaign->id]),
             'description' => $campaign->description,
             'conversion_condition' => $campaign->conversion_condition,
             'actions' => collect($campaign->conversion_actions ?? [])->map(fn (array $a) => [
@@ -81,7 +92,36 @@ class CampaignController extends Controller
         return redirect()->away($campaign->click_url.$separator.http_build_query(['user_id' => $user->uid]));
     }
 
-    private function summary(Campaign $c): array
+    /** 公開の API でも、Cookie でログインしていれば会員を返す（停止・退会した会員は未ログイン扱い） */
+    private static function member(Request $request): ?User
+    {
+        $user = $request->user('sanctum');
+
+        return $user instanceof User && $user->isActive() ? $user : null;
+    }
+
+    /**
+     * 指定した案件のうち、会員がお気に入りにしているものの ID（キーが案件 ID）
+     *
+     * @param  list<int>  $campaignIds
+     * @return array<int, int>
+     */
+    private static function favoriteIdsOf(?User $user, array $campaignIds): array
+    {
+        if (! $user || $campaignIds === []) {
+            return [];
+        }
+
+        return Favorite::query()->where('user_id', $user->id)->whereIn('campaign_id', $campaignIds)
+            ->pluck('campaign_id')->flip()->all();
+    }
+
+    /**
+     * 案件カードに出す項目（お気に入り一覧でも使う）
+     *
+     * @return array{id: int, name: string, category: string|null, platform: string|null, icon_url: string|null, points: int|null, is_featured: bool, ends_at: string|null}
+     */
+    public static function summary(Campaign $c): array
     {
         return [
             'id' => $c->id,

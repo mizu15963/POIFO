@@ -32,8 +32,12 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（�
 | `GET /v1/campaign-categories` | api. | — | 掲載中の案件のカテゴリと件数（一覧のタブ用） |
 | `GET /v1/events/{id}` | api. | — | イベント詳細（残りの枠、ログイン中なら自分の参加状況。オープンチャット URL は参加した会員にだけ返す） |
 | `POST/DELETE /v1/events/{id}/participation` | api. | 会員 | イベントに参加・参加を取り消す（開始前だけ。上限人数まで） |
-| `GET /v1/me` | api. | 会員 | 表示名・ポイント（利用可能／判定中）・公式LINE の友だち追加URL |
+| `GET /v1/news` / `GET /v1/news/{id}` | api. | — | お知らせの一覧（`?important=1`）・詳細 |
+| `GET /v1/me` | api. | 会員 | 会員ID・表示名・登録日・ポイント（利用可能／判定中）・お知らせの未読の数・公式LINE の友だち追加URL |
 | `GET /v1/me/points` | api. | 会員 | ポイント履歴 |
+| `GET /v1/me/clicks` | api. | 会員 | 案件の利用履歴（直近90日） |
+| `POST /v1/me/news/seen` | api. | 会員 | お知らせ一覧を開いた（未読の数を0にする） |
+| `GET /v1/me/favorites`、`PUT/DELETE /v1/me/favorites/{campaign}` | api. | 会員 | お気に入りの一覧・登録・解除（1人200件まで） |
 | `POST /v1/logout` | api. | 会員 | ログアウト |
 | `POST /v1/me/leave` | api. | 会員 | 退会（`agree` が必要。手続き中の換金申請があるとできない） |
 | `GET/PUT /v1/me/bank-account` | api. | 会員 | 振込先口座の表示（口座番号は末尾3桁以外伏せ字）・登録／変更。同じ口座がほかの会員にあれば登録できない |
@@ -45,7 +49,8 @@ GF Rewards ─ https://api.<domain>/postback/<秘密の文字列>/gf-rewards（�
 | `POST /withdrawals/bulk` | admin. | 管理者 | 選んだ申請を承認／却下（ポイントを戻す）／振込済みにする |
 | `GET /withdrawals/export` | admin. | 管理者 | 振込用 CSV（UTF-8 BOM 付き・CRLF。Excel で開ける） |
 | `/members` | admin. | 管理者 | 会員の検索・詳細・停止／再開・ポイントの手動調整 |
-| `/campaigns` | admin. | 管理者 | 案件の表示設定（非表示・おすすめ・並び順） |
+| `/campaigns` | admin. | 管理者 | 案件の表示設定（非表示・おすすめ・並び順）、お気に入り数 |
+| `/news` | admin. | 管理者 | お知らせの登録・編集・削除（下書きのみ） |
 | `/events` | admin. | 管理者 | イベントの登録・編集、参加者一覧（参加済み／不参加を付けて参加ポイントを付与）・CSV |
 | `/postbacks` / `/conversions/held` | admin. | 管理者 | 成果通知の受信ログ、保留した成果の確認・解除 |
 | `GET /up` | どちらも | — | ヘルスチェック |

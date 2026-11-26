@@ -43,6 +43,7 @@ class User extends Authenticatable
     {
         return [
             'last_login_at' => 'datetime',
+            'news_seen_at' => 'datetime',
             'suspended_at' => 'datetime',
             'withdrawn_at' => 'datetime',
         ];
@@ -71,6 +72,19 @@ class User extends Authenticatable
     public function eventParticipations(): HasMany
     {
         return $this->hasMany(EventParticipant::class);
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /** お知らせの未読の数（最後にお知らせ一覧を開いた日時より後に公開されたもの。開いたことがなければ登録日時から） */
+    public function unreadNewsCount(): int
+    {
+        $since = $this->news_seen_at ?? $this->created_at;
+
+        return News::visible()->when($since, fn ($q) => $q->where('published_at', '>', $since))->count();
     }
 
     public function bankAccount(): HasOne

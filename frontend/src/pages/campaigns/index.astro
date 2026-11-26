@@ -24,6 +24,7 @@ import Visual from '../../components/Visual.astro';
 <script>
   import { fetchCampaignCategories, fetchCampaigns } from '../../lib/api';
   import { escapeHtml } from '../../lib/format';
+  import { bindFavoriteButtons } from '../../lib/favorite';
   import { campaignCard, emptyState } from '../../lib/render';
 
   const list = document.getElementById('campaigns')!;
@@ -32,12 +33,13 @@ import Visual from '../../components/Visual.astro';
   // ?category= で絞り込んだ状態を共有できるようにする
   let category = new URLSearchParams(location.search).get('category') ?? '';
   let page = 1;
+  bindFavoriteButtons(list);
 
   async function load() {
     try {
       const res = await fetchCampaigns({ page, perPage: 20, category: category || undefined });
       if (page === 1) list.innerHTML = res.data.length ? '' : emptyState('現在掲載中の案件はありません。');
-      list.insertAdjacentHTML('beforeend', res.data.map(campaignCard).join(''));
+      list.insertAdjacentHTML('beforeend', res.data.map((c) => campaignCard(c)).join(''));
       more.hidden = res.meta.current_page >= res.meta.last_page;
     } catch {
       list.innerHTML = emptyState('案件を読み込めませんでした。時間をおいて再度お試しください。');

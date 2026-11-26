@@ -215,8 +215,90 @@ a.card:hover {
 
 .campaign-card {
   display: flex;
+  min-width: 0;
+  gap: 4px;
+  align-items: center;
+  padding: 12px 8px 12px 12px;
+}
+
+.campaign-card:hover {
+  border-color: var(--color-brand);
+}
+
+.campaign-card__link {
+  display: flex;
   gap: 12px;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+}
+
+/* お気に入り一覧で、掲載が終わった案件 */
+.campaign-card--ended {
+  background: var(--color-logo-bg);
+}
+.campaign-card--ended .campaign-card__link {
+  opacity: 0.55;
+}
+.campaign-card--ended:hover {
+  border-color: var(--color-border);
+}
+.badge.campaign-card__ended {
+  align-self: flex-start;
+  margin: 2px 0 0;
+}
+
+/* お気に入りボタン（星）。登録済みはオレンジで塗りつぶす */
+.fav-btn {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.fav-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.fav-btn[aria-pressed='true'] {
+  color: var(--color-accent);
+}
+.fav-btn[aria-pressed='true'] svg {
+  fill: currentColor;
+}
+.fav-btn:hover {
+  background: var(--color-accent-bg);
+}
+.fav-btn:disabled {
+  opacity: 0.5;
+}
+
+/* 画面下に短く出すお知らせ（お気に入りの登録など） */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  z-index: 200;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--color-text);
+  color: #fff;
+  font-size: 0.9rem;
 }
 
 .campaign-card img,
@@ -290,6 +372,37 @@ a.card:hover {
 
 .badge--muted {
   background: var(--color-border);
+}
+
+/* お知らせの「重要」。オレンジの囲みで目立たせる */
+.badge--important {
+  background: var(--color-accent-bg);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent-strong);
+}
+
+/* トップ・マイページの上に出す重要なお知らせ（1件） */
+.important-news {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: #fff;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.important-news .badge {
+  margin-left: 0;
+  flex-shrink: 0;
+}
+.important-news span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty,
@@ -419,6 +532,45 @@ body[data-require-login='true']:not([data-auth='member']) main {
 .history__item .badge {
   justify-self: start;
   margin-left: 0;
+}
+
+/* お知らせ一覧（S22） */
+.news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+}
+.news-list > li {
+  border-bottom: 1px solid var(--color-border);
+}
+.news-row {
+  display: grid;
+  gap: 2px;
+  padding: 12px 28px 12px 4px;
+  position: relative;
+  text-decoration: none;
+}
+.news-row::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid var(--color-muted);
+  border-right: 2px solid var(--color-muted);
+  transform: translateY(-50%) rotate(45deg);
+}
+.news-row:hover {
+  background: var(--color-brand-bg);
+}
+.news-row__date {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.news-row__title {
+  overflow-wrap: anywhere;
 }
 
 /* 案件一覧のカテゴリ（横にスクロールできるタブ） */

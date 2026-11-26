@@ -60,6 +60,7 @@
             <a href="{{ route('admin.members.index') }}">会員</a>
             <a href="{{ route('admin.campaigns.index') }}">案件</a>
             <a href="{{ route('admin.events.index') }}">イベント</a>
+            <a href="{{ route('admin.news.index') }}">お知らせ</a>
             <a href="{{ route('admin.postbacks.index') }}">成果通知</a>
             <a href="{{ route('admin.api-docs.ui') }}" target="_blank" rel="noopener">API 仕様書</a>
         </nav>

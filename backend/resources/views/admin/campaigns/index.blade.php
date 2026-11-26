@@ -21,7 +21,7 @@
 @include('admin.partials.pager', ['paginator' => $campaigns])
 <div class="table-wrap">
     <table>
-        <thead><tr><th>ID</th><th>案件</th><th>サイト</th><th>ASP の状態</th><th>掲載期間</th><th>最大ポイント</th><th>表示設定</th></tr></thead>
+        <thead><tr><th>ID</th><th>案件</th><th>サイト</th><th>ASP の状態</th><th>掲載期間</th><th>最大ポイント</th><th>お気に入り</th><th>表示設定</th></tr></thead>
         <tbody>
         @forelse ($campaigns as $c)
             <tr>
@@ -31,6 +31,7 @@
                 <td>{{ $c->external_status ?? '-' }}<div class="muted">取込 {{ $c->synced_at?->format('n/j H:i') }}</div></td>
                 <td class="muted">{{ $c->starts_at?->format('Y/n/j') ?? '-' }} 〜 {{ $c->ends_at?->format('Y/n/j') ?? '' }}</td>
                 <td class="num">{{ $c->max_points !== null ? number_format($c->max_points) : '定率' }}</td>
+                <td class="num">{{ number_format($c->favorites_count) }}</td>
                 <td>
                     <form method="post" action="{{ route('admin.campaigns.update', $c) }}" class="inline">
                         @csrf @method('put')
@@ -42,7 +43,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="7" class="muted">案件がありません。</td></tr>
+            <tr><td colspan="8" class="muted">案件がありません。</td></tr>
         @endforelse
         </tbody>
     </table>

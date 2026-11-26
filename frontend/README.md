@@ -23,10 +23,14 @@
 | `/login/` | LINEでログイン（会員登録も兼ねる） |
 | `/auth/complete/` | ログイン後の戻り先（`?new=1` で登録完了＋公式LINEの案内） |
 | `/auth/error/?reason=` | ログイン失敗 |
-| `/mypage/` | ポイント（利用可能／判定中）・メニュー（要ログイン） |
-| `/mypage/points/` | ポイント履歴（要ログイン） |
+| `/mypage/` | マイページ＝ポイント通帳（ポイント・明細／交換履歴／案件の利用履歴のタブ。`?tab=`。要ログイン） |
+| `/mypage/points/` | マイページの明細タブへ移る（旧ポイント履歴のブックマーク用） |
+| `/mypage/account/` | 登録情報（会員ID・登録日・振込先口座・退会。要ログイン） |
 | `/mypage/bank/` | 振込先口座の登録・変更（要ログイン） |
-| `/mypage/withdraw/` | ポイント交換（銀行振込）の申請と申請履歴（要ログイン） |
+| `/mypage/withdraw/` | ポイント交換＝交換先の一覧（要ログイン） |
+| `/mypage/withdraw/detail/?method=` | 交換先の詳細・申請（要ログイン） |
+| `/mypage/favorites/` | お気に入りの案件（要ログイン） |
+| `/news/` `/news/detail/?id=` | お知らせ一覧・詳細 |
 | `/mypage/leave/` | 退会（要ログイン。手続き中の換金申請があるとできない） |
 | `/support/` `/guide/` | 担当サポート・はじめての方へ |
 | `/terms/` `/privacy/` `/company/` `/contact/` | 準備中ページ |

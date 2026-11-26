@@ -1,4 +1,5 @@
 ---
+// マイページ＝ポイント通帳（docs/specs/screen-spec.md S09）。明細・交換履歴・案件の利用履歴をタブで切り替える
 import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 
@@ -6,32 +7,152 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   <section class="section">
     <div class="container narrow">
       <h1 class="section__title">マイページ</h1>
-      <p id="greeting" class="lead"></p>
-      <div class="grid grid--2">
-        <div class="card"><div class="lead">利用可能ポイント</div><div class="big" id="available">—</div></div>
-        <div class="card"><div class="lead">判定中ポイント</div><div class="big" id="pending">—</div></div>
+      <a id="important-news" class="important-news" href="#" hidden></a>
+      <p id="greeting" class="mypage__hello"></p>
+      <div class="balance card">
+        <div class="balance__main">
+          <span class="balance__label">利用可能ポイント</span>
+          <span class="balance__value" id="available">—</span>
+        </div>
+        <div class="balance__sub">判定中 <span id="pending">—</span></div>
+        <p class="balance__note">判定中のポイントは、広告主の承認後に利用可能になります。</p>
+        <a class="btn btn--block" href="/mypage/withdraw/">ポイント交換へ</a>
       </div>
-      <p class="lead">判定中のポイントは、広告主の承認後に利用可能になります。</p>
-      <ul class="menu-list">
-        <li><a href="/mypage/points/">ポイント履歴</a></li>
-        <li><a href="/mypage/withdraw/">ポイント交換（銀行振込）</a></li>
-        <li><a href="/mypage/bank/">振込先口座の登録・変更</a></li>
+
+      <h2 class="section__title passbook__title">ポイント通帳</h2>
+      <div class="passbook-tabs" role="tablist" aria-label="ポイント通帳">
+        <button type="button" role="tab" id="tab-history" data-tab="history" aria-controls="panel" aria-selected="true">明細</button>
+        <button type="button" role="tab" id="tab-exchanges" data-tab="exchanges" aria-controls="panel" aria-selected="false">交換履歴</button>
+        <button type="button" role="tab" id="tab-clicks" data-tab="clicks" aria-controls="panel" aria-selected="false">案件の利用履歴</button>
+      </div>
+      <div id="panel" role="tabpanel" aria-labelledby="tab-history">
+        <p id="panel-note" class="lead" hidden></p>
+        <ul id="list" class="history" aria-live="polite"><li class="loading">読み込み中…</li></ul>
+        <p><button id="more" class="btn btn--outline" type="button" hidden>もっと見る</button></p>
+      </div>
+
+      <ul class="mypage-links">
         <li id="line-friend" hidden><a href="#" rel="noopener">公式LINEで担当スタッフに相談する</a></li>
+        <li><a href="/mypage/favorites/">お気に入り</a></li>
+        <li><a href="/mypage/account/">登録情報（振込先口座・退会）</a></li>
       </ul>
-      <button id="logout" class="btn btn--outline" type="button">ログアウト</button>
-      <p class="lead"><a href="/mypage/leave/">退会する</a></p>
+      <button id="logout" class="btn btn--outline btn--block" type="button">ログアウト</button>
     </div>
   </section>
 </BaseLayout>
 
 <script>
-  import { logout } from '../../lib/api';
-  import { formatPoints, safeUrl } from '../../lib/format';
+  import { fetchClicks, fetchNews, fetchPointHistory, fetchWithdrawals, logout, type ClickItem, type PointHistoryItem, type WithdrawalItem } from '../../lib/api';
+  import { escapeHtml, formatDate, formatDateTime, formatPoints, safeUrl } from '../../lib/format';
   import { whenMe } from '../../lib/session';
+
+  type Tab = 'history' | 'exchanges' | 'clicks';
+  const TABS: Tab[] = ['history', 'exchanges', 'clicks'];
+
+  // 状態は色だけでなく文字でも示す
+  const pointStatus = { pending: '判定中', confirmed: '確定', rejected: '否認' } as const;
+  // 会員には「却下」を「お振込みできませんでした（ポイント返却）」として見せる
+  const exchangeStatus: Record<WithdrawalItem['status'], string> = {
+    requested: '審査中',
+    approved: '振込準備中',
+    paid: '振込済み',
+    rejected: 'お振込みできませんでした（ポイント返却済み）',
+  };
+
+  const list = document.getElementById('list')!;
+  const more = document.getElementById('more') as HTMLButtonElement;
+  const note = document.getElementById('panel-note')!;
+  const panel = document.getElementById('panel')!;
+  const tabButtons = document.querySelectorAll<HTMLButtonElement>('[data-tab]');
+
+  const pointRow = (t: PointHistoryItem) => `
+    <li class="history__item history__item--${t.status}">
+      <span class="history__date">${escapeHtml(formatDate(t.created_at))}</span>
+      <span class="history__desc">${escapeHtml(t.description ?? t.type_label)}${t.description && t.type !== 'conversion' ? `<span class="lead">（${escapeHtml(t.type_label)}）</span>` : ''}</span>
+      <span class="history__points">${t.points > 0 ? '+' : ''}${escapeHtml(formatPoints(t.points))}</span>
+      <span class="badge">${pointStatus[t.status]}</span>
+    </li>`;
+
+  const exchangeRow = (w: WithdrawalItem) => `
+    <li class="history__item history__item--${w.status === 'rejected' ? 'rejected' : 'confirmed'}">
+      <span class="history__date">${escapeHtml(formatDate(w.created_at))} 申請</span>
+      <span class="history__desc">${escapeHtml(w.exchange_method_name ?? 'ポイント交換')}（${w.amount_yen.toLocaleString('ja-JP')}円）</span>
+      <span class="history__points">${escapeHtml(formatPoints(w.points))}</span>
+      <span class="badge">${escapeHtml(exchangeStatus[w.status])}</span>
+    </li>`;
+
+  const clickRow = (c: ClickItem) => {
+    const name = escapeHtml(c.campaign_name ?? '（削除された案件）');
+    return `
+    <li class="history__item history__item--click">
+      <span class="history__date">${escapeHtml(formatDateTime(c.clicked_at))}</span>
+      <span class="history__desc">${c.listed ? `<a href="/campaigns/detail/?id=${c.campaign_id}">${name}</a>` : `${name}<span class="badge badge--muted">掲載終了</span>`}</span>
+    </li>`;
+  };
+
+  let tab: Tab = 'history';
+  let page = 1;
+  // タブを素早く切り替えたとき、前のタブの結果で上書きしないための番号
+  let seq = 0;
+
+  async function load() {
+    const mine = ++seq;
+    try {
+      let html: string;
+      let hasMore = false;
+      let empty: string;
+      if (tab === 'history') {
+        const res = await fetchPointHistory(page);
+        html = res.data.map(pointRow).join('');
+        hasMore = res.meta.current_page < res.meta.last_page;
+        empty = res.data.length ? '' : 'まだポイントの明細はありません。';
+      } else if (tab === 'exchanges') {
+        const res = await fetchWithdrawals();
+        html = res.data.map(exchangeRow).join('');
+        empty = res.data.length ? '' : 'まだポイント交換の申請はありません。';
+      } else {
+        const res = await fetchClicks(page);
+        html = res.data.map(clickRow).join('');
+        hasMore = res.meta.current_page < res.meta.last_page;
+        empty = res.data.length ? '' : '直近90日に利用した案件はありません。';
+      }
+      if (mine !== seq) return;
+      if (page === 1) list.innerHTML = empty && page === 1 ? `<li class="empty">${empty}</li>` : '';
+      list.insertAdjacentHTML('beforeend', html);
+      more.hidden = !hasMore;
+    } catch {
+      if (mine !== seq) return;
+      list.innerHTML = '<li class="empty">読み込めませんでした。時間をおいて再度お試しください。</li>';
+      more.hidden = true;
+    }
+  }
+
+  function show(next: Tab, updateUrl: boolean) {
+    tab = next;
+    page = 1;
+    tabButtons.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === next)));
+    panel.setAttribute('aria-labelledby', `tab-${next}`);
+    note.hidden = next !== 'clicks';
+    note.textContent = '「この案件に進む」を押した記録です（直近90日）。成果がつかないときにお問い合わせの手がかりになります。';
+    list.innerHTML = '<li class="loading">読み込み中…</li>';
+    more.hidden = true;
+    if (updateUrl) {
+      const url = new URL(location.href);
+      url.searchParams.set('tab', next);
+      history.replaceState(null, '', url);
+    }
+    load();
+  }
+
+  tabButtons.forEach((b) => b.addEventListener('click', () => show(b.dataset.tab as Tab, true)));
+  more.addEventListener('click', () => {
+    page += 1;
+    load();
+  });
 
   whenMe().then((me) => {
     if (!me) return;
-    document.getElementById('greeting')!.textContent = me.display_name ? `${me.display_name} さん` : '';
+    document.getElementById('greeting')!.textContent = `${me.display_name ?? '会員'} さん`;
     document.getElementById('available')!.textContent = formatPoints(me.points.available);
     document.getElementById('pending')!.textContent = formatPoints(me.points.pending);
     const friend = safeUrl(me.line_friend_url);
@@ -40,6 +161,20 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       li.querySelector('a')!.href = friend;
       li.hidden = false;
     }
+    const requested = new URLSearchParams(location.search).get('tab') as Tab | null;
+    show(requested && TABS.includes(requested) ? requested : 'history', false);
+
+    // 重要なお知らせ（公開中の新しい1件）を上に出す
+    fetchNews({ important: true, perPage: 1 })
+      .then((res) => {
+        const n = res.data[0];
+        if (!n) return;
+        const el = document.getElementById('important-news') as HTMLAnchorElement;
+        el.href = `/news/detail/?id=${n.id}`;
+        el.innerHTML = `<span class="badge badge--important">重要</span><span>${escapeHtml(n.title)}</span>`;
+        el.hidden = false;
+      })
+      .catch(() => undefined);
   });
 
   document.getElementById('logout')!.addEventListener('click', async () => {
@@ -48,3 +183,97 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   });
 </script>
 
+<style>
+  .mypage__hello {
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  .balance {
+    display: grid;
+    gap: 4px;
+    background: var(--color-accent-bg);
+    border-color: var(--color-accent);
+  }
+  .balance__main {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .balance__label {
+    font-size: 0.9rem;
+  }
+  .balance__value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--color-accent-strong);
+  }
+  .balance__sub {
+    text-align: right;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+  .balance__note {
+    margin: 4px 0 8px;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .passbook__title {
+    margin-top: 32px;
+  }
+  .passbook-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 8px;
+  }
+  .passbook-tabs button {
+    padding: 10px 4px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: none;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+  .passbook-tabs button[aria-selected='true'] {
+    border-bottom-color: var(--color-brand);
+    color: var(--color-text);
+    font-weight: 600;
+  }
+  #panel-note {
+    font-size: 0.85rem;
+  }
+  /* 利用履歴にはポイントの列がないので1列にする */
+  #list :global(.history__item--click) {
+    grid-template-columns: 1fr;
+  }
+  #list :global(.history__item--click .badge) {
+    margin-left: 8px;
+  }
+  #list :global(.history__item--click .history__desc a) {
+    text-decoration: underline;
+    text-decoration-color: var(--color-brand);
+    text-underline-offset: 3px;
+  }
+  .mypage-links {
+    list-style: none;
+    margin: 32px 0 16px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .mypage-links li + li {
+    border-top: 1px solid var(--color-border);
+  }
+  .mypage-links a {
+    display: block;
+    padding: 12px 14px;
+    text-decoration: none;
+  }
+  .mypage-links a:hover {
+    background: var(--color-brand-bg);
+  }
+</style>

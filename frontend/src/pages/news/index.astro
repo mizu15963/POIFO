@@ -1,0 +1,48 @@
+---
+// お知らせ一覧（docs/specs/screen-spec.md S22）。ログインしなくても見られる
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="お知らせ">
+  <section class="section">
+    <div class="container">
+      <h1 class="section__title">お知らせ</h1>
+      <ul id="news" class="news-list" aria-live="polite"><li class="loading">読み込み中…</li></ul>
+      <p><button id="more" class="btn btn--outline" type="button" hidden>もっと見る</button></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { fetchNews, markNewsSeen } from '../../lib/api';
+  import { newsRow } from '../../lib/render';
+  import { whenMe } from '../../lib/session';
+
+  const list = document.getElementById('news')!;
+  const more = document.getElementById('more') as HTMLButtonElement;
+  let page = 1;
+
+  async function load() {
+    try {
+      const res = await fetchNews({ page });
+      if (page === 1) list.innerHTML = res.data.length ? '' : '<li class="empty">お知らせはありません。</li>';
+      list.insertAdjacentHTML('beforeend', res.data.map(newsRow).join(''));
+      more.hidden = res.meta.current_page >= res.meta.last_page;
+    } catch {
+      list.innerHTML = '<li class="empty">お知らせを読み込めませんでした。時間をおいて再度お試しください。</li>';
+    }
+  }
+  more.addEventListener('click', () => {
+    page += 1;
+    load();
+  });
+  load();
+
+  // ログイン中は、一覧を開いたら未読の数を0にする（ヘッダーのバッジも消す）
+  whenMe().then((me) => {
+    if (!me || me.unread_news_count === 0) return;
+    markNewsSeen()
+      .then(() => document.querySelectorAll<HTMLElement>('[data-news-badge]').forEach((b) => (b.hidden = true)))
+      .catch(() => undefined);
+  });
+</script>

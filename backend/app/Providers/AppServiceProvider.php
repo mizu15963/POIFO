@@ -88,6 +88,9 @@ class AppServiceProvider extends ServiceProvider
         // 案件への遷移（/go/{id}）: ログイン済みの会員単位（未ログインは IP）。計測リンクの連打を抑える
         RateLimiter::for('campaign-click', fn (Request $request) => Limit::perMinute(30)->by('campaign-click:'.$key($request)));
 
+        // お気に入りの登録・解除: 連打で DB を叩き続けるのを抑える（ふつうの使い方では届かない値）
+        RateLimiter::for('favorite-update', fn (Request $request) => Limit::perMinute(60)->by('favorite:'.$key($request)));
+
         // 振込先口座の登録・変更: 他人の口座を総当たりで試す・頻繁に付け替えるのを抑える
         RateLimiter::for('bank-account-update', fn (Request $request) => [
             Limit::perMinute(3)->by('bank-min:'.$key($request)),

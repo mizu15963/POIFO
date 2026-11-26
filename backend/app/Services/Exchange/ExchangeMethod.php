@@ -39,6 +39,8 @@ final class ExchangeMethod
         public readonly array $fee,
         public readonly int $reviewDays,
         public readonly ExchangeMethodHandler $handler,
+        public readonly string $category = '',
+        public readonly string $deliveryNote = '',
     ) {}
 
     public static function fromConfig(string $code, array $c): self
@@ -67,6 +69,8 @@ final class ExchangeMethod
             fee: ($c['fee'] ?? null) ?: ['type' => self::FEE_NONE],
             reviewDays: max(0, (int) ($c['review_days'] ?? 0)),
             handler: $handler,
+            category: (string) ($c['category'] ?? ''),
+            deliveryNote: (string) ($c['delivery_note'] ?? ''),
         );
     }
 
@@ -121,7 +125,7 @@ final class ExchangeMethod
     /**
      * 会員向け API で返す条件
      *
-     * @return array{code: string, name: string, description: string, icon: string|null, status: 'open'|'suspended'|'hidden', accepting: bool, min_points: int, step_points: int, max_points: int|null, yen_per_point: float, fee: array{type: 'none'|'fixed'|'percent', amount_yen: int, percent: float}, review_days: int, requires_recipient: bool}
+     * @return array{code: string, name: string, description: string, category: string, delivery_note: string, icon: string|null, status: 'open'|'suspended'|'hidden', accepting: bool, min_points: int, step_points: int, max_points: int|null, yen_per_point: float, fee: array{type: 'none'|'fixed'|'percent', amount_yen: int, percent: float}, review_days: int, requires_recipient: bool}
      */
     public function toArray(): array
     {
@@ -129,6 +133,10 @@ final class ExchangeMethod
             'code' => $this->code,
             'name' => $this->name,
             'description' => $this->description,
+            // 交換先一覧の分け方（現金・ギフト券・電子マネーなど）
+            'category' => $this->category,
+            // 受け取りまでの目安（例: 月1回まとめて振込）
+            'delivery_note' => $this->deliveryNote,
             'icon' => $this->icon,
             'status' => (string) $this->status,
             'accepting' => $this->isAccepting(),

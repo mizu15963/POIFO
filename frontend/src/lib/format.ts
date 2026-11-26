@@ -18,3 +18,19 @@ export const escapeHtml = (s: string | null | undefined) =>
 
 /** URL を属性に入れる前に http(s) だけ許可する */
 export const safeUrl = (u: string | null | undefined) => (u && /^https?:\/\//.test(u) ? u : '');
+
+/**
+ * プレーンテキストを HTML にする。http(s) の URL だけをリンクにし、それ以外と URL 自体もエスケープする（お知らせの本文用）。
+ * 改行は .prose（white-space: pre-wrap）でそのまま見せる
+ */
+export function linkify(text: string): string {
+  let html = '';
+  let last = 0;
+  for (const m of text.matchAll(/https?:\/\/[^\s<>"'）」、。]+/g)) {
+    // 文末の句読点・閉じ括弧は URL に含めない
+    const url = m[0].replace(/[.,!?)]+$/, '');
+    html += escapeHtml(text.slice(last, m.index)) + `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+    last = m.index! + url.length;
+  }
+  return html + escapeHtml(text.slice(last));
+}

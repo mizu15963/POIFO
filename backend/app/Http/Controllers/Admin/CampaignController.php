@@ -44,7 +44,8 @@ class CampaignController extends Controller
         $listedIds = Campaign::listed()->pluck('id')->flip();
 
         return view('admin.campaigns.index', [
-            'campaigns' => $query->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id')->paginate(50)->withQueryString(),
+            // お気に入り数はおすすめ設定の参考にする（機能仕様 4.5）
+            'campaigns' => $query->withCount('favorites')->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id')->paginate(50)->withQueryString(),
             'listedIds' => $listedIds,
             'filter' => $filter,
             'keyword' => $keyword,

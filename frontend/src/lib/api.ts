@@ -6,9 +6,14 @@ import { API_BASE_URL } from './config';
 export type Points = { available: number; pending: number };
 
 export type Me = {
+  /** 会員ID（問い合わせのときに伝えてもらう） */
+  uid: string;
   display_name: string | null;
   avatar_url: string | null;
+  registered_at: string | null;
   points: Points;
+  /** お知らせの未読の数（ヘッダーのバッジ） */
+  unread_news_count: number;
   line_friend_url: string | null;
 };
 
@@ -21,6 +26,46 @@ export type CampaignSummary = {
   points: number | null;
   is_featured: boolean;
   ends_at: string | null;
+  /** ログイン中ならお気に入り登録済みか（未ログインは常に false） */
+  is_favorite: boolean;
+};
+
+export type FavoriteItem = CampaignSummary & {
+  /** 掲載中か（掲載が終わった・非表示の案件は false。「掲載終了」と出して詳細へ進ませない） */
+  listed: boolean;
+  favorited_at: string | null;
+};
+
+export type NewsSummary = { id: number; title: string; is_important: boolean; published_at: string | null };
+export type NewsDetail = NewsSummary & { body: string };
+
+export type ClickItem = {
+  id: number;
+  campaign_id: number;
+  campaign_name: string | null;
+  icon_url: string | null;
+  listed: boolean;
+  clicked_at: string;
+};
+
+export type ExchangeMethod = {
+  code: string;
+  name: string;
+  description: string;
+  /** 交換先一覧の分け方（現金・ギフト券など） */
+  category: string;
+  /** 受け取りまでの目安 */
+  delivery_note: string;
+  icon: string | null;
+  status: 'open' | 'suspended' | 'hidden';
+  accepting: boolean;
+  min_points: number;
+  step_points: number;
+  max_points: number | null;
+  yen_per_point: number;
+  fee: { type: 'none' | 'fixed' | 'percent'; amount_yen: number; percent: number };
+  review_days: number;
+  requires_recipient: boolean;
 };
 
 export type CampaignDetail = CampaignSummary & {
@@ -97,6 +142,8 @@ export type BankAccountInput = {
 
 export type WithdrawalItem = {
   id: number;
+  exchange_method: string;
+  exchange_method_name: string | null;
   points: number;
   amount_yen: number;
   status: 'requested' | 'approved' | 'rejected' | 'paid';
@@ -203,8 +250,8 @@ export async function saveBankAccount(input: BankAccountInput): Promise<BankAcco
 
 export const fetchWithdrawals = () => request<WithdrawalList>('/v1/me/withdrawals');
 
-export async function requestWithdrawal(points: number): Promise<void> {
-  const init = await withCsrf({ method: 'POST', body: JSON.stringify({ points }), headers: { 'Content-Type': 'application/json' } });
+export async function requestWithdrawal(points: number, method = 'bank_transfer'): Promise<void> {
+  const init = await withCsrf({ method: 'POST', body: JSON.stringify({ points, method }), headers: { 'Content-Type': 'application/json' } });
   await request('/v1/me/withdrawals', init);
 }
 
@@ -216,4 +263,32 @@ export async function logout(): Promise<void> {
 export async function leave(): Promise<void> {
   const init = await withCsrf({ method: 'POST', body: JSON.stringify({ agree: true }), headers: { 'Content-Type': 'application/json' } });
   await request('/v1/me/leave', init);
+}
+
+export const fetchExchangeMethods = async () => (await request<{ data: ExchangeMethod[] }>('/v1/exchange-methods')).data;
+
+/** 案件の利用履歴（「この案件に進む」を押した記録。直近90日） */
+export const fetchClicks = (page = 1) => request<Paged<ClickItem>>(`/v1/me/clicks?page=${page}`);
+
+export const fetchFavorites = (page = 1) =>
+  request<{ data: FavoriteItem[]; meta: { current_page: number; last_page: number; total: number; limit: number } }>(`/v1/me/favorites?page=${page}`);
+
+/** お気に入りに登録・解除する（上限を超えると 422 で errors.favorite にメッセージ） */
+export async function setFavorite(campaignId: number, on: boolean): Promise<void> {
+  await request(`/v1/me/favorites/${campaignId}`, await withCsrf({ method: on ? 'PUT' : 'DELETE' }));
+}
+
+export const fetchNews = (params: { page?: number; important?: boolean; perPage?: number } = {}) => {
+  const q = new URLSearchParams();
+  if (params.page) q.set('page', String(params.page));
+  if (params.important) q.set('important', '1');
+  if (params.perPage) q.set('per_page', String(params.perPage));
+  return request<Paged<NewsSummary>>(`/v1/news?${q}`);
+};
+
+export const fetchNewsDetail = async (id: string) => (await request<{ data: NewsDetail }>(`/v1/news/${encodeURIComponent(id)}`)).data;
+
+/** お知らせ一覧を開いたことを記録する（未読の数を0にする） */
+export async function markNewsSeen(): Promise<void> {
+  await request('/v1/me/news/seen', await withCsrf({ method: 'POST' }));
 }

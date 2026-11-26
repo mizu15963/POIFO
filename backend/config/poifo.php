@@ -78,6 +78,9 @@ return [
             // ポイント履歴に「ポイント交換（銀行振込）」と出す名前
             'short_name' => '銀行振込',
             'description' => '登録した口座に、月に1回まとめてお振込みします。',
+            // 交換先一覧の分け方（現金・ギフト券・電子マネーなど）と、受け取りまでの目安
+            'category' => '現金',
+            'delivery_note' => '月1回まとめて振込',
             'icon' => null,
             'status' => env('POIFO_EXCHANGE_BANK_TRANSFER_STATUS', 'open'),
             'sort' => 1,
