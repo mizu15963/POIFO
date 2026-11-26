@@ -4,7 +4,7 @@ import { LINE_LOGIN_URL } from '../../lib/config';
 ---
 
 <BaseLayout title="ログイン・無料会員登録" noindex>
-  <section class="section">
+  <section class="section section--wave auth-page">
     <div class="container narrow">
       <h1 class="section__title">ログイン・無料会員登録</h1>
       <p>ポイフォはLINEアカウントでログインします。初めての方は、そのまま会員登録になります。</p>
@@ -17,5 +17,9 @@ import { LINE_LOGIN_URL } from '../../lib/config';
 <style is:global>
   .narrow {
     max-width: 520px;
+  }
+  /* ログイン・登録完了は中身が短いので、画面の高さいっぱいまで伸ばして下端に波（bg-aqua-wave）を見せる */
+  .auth-page {
+    min-height: 70vh;
   }
 </style>

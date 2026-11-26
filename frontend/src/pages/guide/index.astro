@@ -2,11 +2,18 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import HowToEarn from '../../components/HowToEarn.astro';
 import Mascot from '../../components/Mascot.astro';
+import Visual from '../../components/Visual.astro';
 ---
 
 <BaseLayout title="はじめての方へ・ヘルプ">
   <section class="section">
     <div class="container narrow">
+      <Visual
+        name="banner-wide-4-start"
+        alt="いつもの行動でポイントがたまる！ポイフォで、無理なくおトクなポイ活はじめよう！"
+        eager
+        class="page-banner"
+      />
       <div class="with-mascot">
         <div class="with-mascot__body">
           <h1 class="section__title">はじめての方へ</h1>
@@ -17,6 +24,11 @@ import Mascot from '../../components/Mascot.astro';
       <h2 id="earn">ポイントの貯め方</h2>
       <HowToEarn />
       <p>LINEでログインし、「案件を探す」から気になる案件の「この案件に進む」を押して、条件を達成するとポイントが貯まります。</p>
+      <Visual
+        name="how-points-work"
+        class="guide-visual"
+        alt="ポイフォの登録は無料なのに、なぜポイントが貯まるの？ポイフォに掲載されている広告を利用すると、企業からポイフォへ広告費が支払われます。その広告費の一部をポイントとして還元しています。1. ユーザー様がポイフォを経由して広告を利用 2. 企業がポイフォに広告費を支払い 3. ポイフォがユーザー様にポイントとして還元"
+      />
       <h2 id="status">ポイントの獲得条件・反映について</h2>
       <p>条件を達成すると、ポイントはまず「判定中」として表示されます。広告主の承認後に「確定」となり、交換に使えるようになります。条件を満たしていない場合は「否認」となります。</p>
       <h2 id="exchange">ポイントの交換方法</h2>
@@ -28,3 +40,11 @@ import Mascot from '../../components/Mascot.astro';
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  /* 説明画像は白地なので、本文と区別できるよう枠で囲む */
+  .section :global(.guide-visual) {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+</style>

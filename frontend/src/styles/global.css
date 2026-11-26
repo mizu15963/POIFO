@@ -77,6 +77,39 @@ h3 {
   background: var(--color-brand-bg);
 }
 
+/* 下に淡いアクアの波を敷く背景（納品素材 bg-aqua-wave。ログイン・登録完了・トップの最後の登録導線）。
+   画像の上側は白なので、中身が短くても長くても波が下端に来るよう下揃えで敷く */
+.section--wave {
+  background: #fff url('/images/visuals/bg-aqua-wave.webp') center bottom / 100% auto no-repeat;
+  padding-bottom: 96px;
+}
+
+/* 画面には出さず、検索・読み上げにだけ伝える（文字入りの画像の見出しなど） */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 納品のバナー・キービジュアル（Visual.astro）。幅いっぱいに縮める */
+.visual {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ページ上部のバナー（案件一覧・担当サポート・はじめての方へ）。見出しの上に角を丸めて置く */
+.page-banner {
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+}
+
 .section__title {
   font-size: 1.3rem;
   margin: 0 0 16px;

@@ -44,7 +44,7 @@
 | poifox-event.webp | 「イベント参加」 | イベント |
 | poifox-sorry.webp | 謝る（2026-11-21 追加納品、透過PNG） | エラーページ（404・500、サーバ側のエラー画面） |
 | poifox-maintenance.webp | 整備士（2026-11-21 追加納品、透過PNG。横長なので長辺640px） | メンテナンス画面（フロント `/maintenance/`、サーバ側の 503） |
-| poifox-welcome.webp | Pコインを持ってお出迎え（2026-11-26 納品、透過PNG。未実装） | S07 会員登録完了「ポイフォへようこそ！」 |
+| poifox-welcome.webp | Pコインを持ってお出迎え（2026-11-26 納品、透過PNG） | S07 会員登録完了「ポイフォへようこそ！」 |
 
 2026-11-26 にキャラクター素材16枚と原案2枚が届きました。うち9枚と原案2枚（「正式キャラクター原案」「正式マスコット原案_別名保存」）は上の表の原本とピクセル単位で同じなので、追加はありません。デザイン（帽子と「Poifox」のバンダナ）も今の画像と同じです。新しく増えたものは次のとおりです。
 
@@ -58,7 +58,16 @@
 
 ## キービジュアル・説明画像（2026-11-26 納品）
 
-納品原本（PNG）はプロジェクトの共有フォルダ `brand/visuals/original/` に保管（リポジトリには入れない）。サイトで使うときは WebP に縮小して `frontend/public/images/visuals/` に置く。
+納品原本（PNG）はプロジェクトの共有フォルダ `brand/visuals/original/` に保管（リポジトリには入れない）。サイトでは幅960px（480px表示の2倍）の WebP に縮小して [frontend/public/images/visuals/](../../frontend/public/images/visuals/) に置き、`src/components/Visual.astro` で表示する。変換スクリプトは共有フォルダの `brand/visuals/convert.py`（縮小・切り詰め・OGP）と `brand/visuals/feature-icons.py`（特徴アイコンの切り出し・にじみ消し）。
+
+| サイトのファイル | 元の画像 | 加工 |
+| --- | --- | --- |
+| `visuals/kv-aqua-mascot.webp` | kv-aqua-mascot | 縮小のみ |
+| `visuals/how-points-work.webp` | how-points-work | 下の余白を切り詰め（高さ1312→1010）て縮小 |
+| `visuals/feature-smartphone.webp`・`feature-chat.webp`・`feature-people.webp` | feature-icons-3 | 1つずつ切り出し、円の外のにじみ（左のアイコンの黄色い線の周りの光）を消して長辺240px |
+| `visuals/banner-wide-plain.webp`・`banner-wide-3-shopping.webp`・`banner-wide-4-start.webp`・`kv-tall-follow-b.webp` | 同じ名前 | 縮小のみ |
+| `visuals/bg-aqua-wave.webp` | bg-aqua-wave | 幅720px（背景なので軽くする） |
+| `ogp.jpg` | banner-wide-1-easy | 上下を31pxずつ切って 1200×630 の JPEG（WebP を読めない SNS があるため） |
 
 | 共有フォルダのファイル名 | 納品時の名前 | 内容 | 使う場所（画面仕様） | 注意 |
 | --- | --- | --- | --- | --- |

@@ -14,6 +14,7 @@ API は別ホスト（`https://api.<domain>`、[../backend/](../backend/)）に�
 - **案件のリンクは `campaignGoUrl()`（API の `/go/{id}`）を使う。** ASP の計測リンクをフロントで組み立てない（会員IDを付けるのはバックエンドの役目）。
 - **ロゴは `public/images/` の書き出し済み画像を使う。** 描き直したり、フォントで似せたりしない。
 - **キャラクター（ポイフォックス）は `src/components/Mascot.astro` で `public/images/mascot/` の書き出し済み WebP を使う。** 描き直し・色や形の加工・別ポーズの自作はしない。
+- **納品のキービジュアル・バナー・説明画像は `src/components/Visual.astro` で `public/images/visuals/` の書き出し済み WebP を使う。** どの画面にどれを使うかは [../docs/brand/README.md](../docs/brand/README.md) の割り当て表に従う。文字入りの画像は `alt` に画像内の文言を入れる。
 
 ## URL と画面
 

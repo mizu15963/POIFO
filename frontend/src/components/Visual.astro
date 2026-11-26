@@ -1,0 +1,42 @@
+---
+// 納品のキービジュアル・バナー・説明画像（docs/brand/README.md の割り当て表）。
+// 画像は public/images/visuals/ の書き出し済み WebP（原本は共有フォルダ brand/visuals/original/、幅960px＝480px表示の2倍）。
+// width/height を必ず付けて、読み込み中にレイアウトがずれないようにする。
+// 文字が入った画像は alt に画像内の文言を入れる（検索・読み上げ用）。
+const sizes = {
+  'kv-aqua-mascot': [960, 1066], // S01 ファーストビュー
+  'how-points-work': [960, 809], // S01 ポイントがもらえるしくみ（下の余白は切り詰め済み）
+  'banner-wide-plain': [960, 540], // S01 貯めたポイントの使い道（文字なし）
+  'banner-wide-3-shopping': [960, 480], // S02 案件一覧
+  'banner-wide-4-start': [960, 540], // S15 はじめての方へ・ヘルプ
+  'kv-tall-follow-b': [960, 1440], // S14 担当サポート
+  'feature-smartphone': [238, 240], // S01 特徴「自由にポイ活」（feature-icons-3 から切り出し）
+  'feature-chat': [237, 240], // S01 特徴「担当者に相談」
+  'feature-people': [238, 240], // S01 特徴「みんなで楽しむ」
+} as const;
+
+export type VisualName = keyof typeof sizes;
+
+interface Props {
+  name: VisualName;
+  /** 画像内の文言・説明。文章で意味が伝わる場所の装飾なら空文字 */
+  alt: string;
+  /** ファーストビュー・ページ上部の画像だけ true（それ以外は遅延読み込み） */
+  eager?: boolean;
+  class?: string;
+}
+
+const { name, alt, eager = false, class: className } = Astro.props;
+const [w, h] = sizes[name];
+---
+
+<img
+  src={`/images/visuals/${name}.webp`}
+  width={w}
+  height={h}
+  alt={alt}
+  loading={eager ? 'eager' : 'lazy'}
+  fetchpriority={eager ? 'high' : undefined}
+  decoding="async"
+  class:list={['visual', className]}
+/>
