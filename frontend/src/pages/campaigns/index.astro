@@ -1,10 +1,17 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Visual from '../../components/Visual.astro';
 ---
 
 <BaseLayout title="案件を探す">
   <section class="section">
     <div class="container">
+      <Visual
+        name="banner-wide-3-shopping"
+        alt="いつものポイ活でポイントがたまる！サービスの利用やお買い物でおトクにポイントをゲット！"
+        eager
+        class="page-banner"
+      />
       <h1 class="section__title">案件を探す</h1>
       <p class="lead">案件はログインしてから利用してください（ログインしていないとポイントが付きません）。</p>
       <nav id="categories" class="tabs" aria-label="カテゴリ" hidden></nav>

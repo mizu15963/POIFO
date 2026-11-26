@@ -3,16 +3,21 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import HowToEarn from '../components/HowToEarn.astro';
 import Mascot from '../components/Mascot.astro';
+import Visual from '../components/Visual.astro';
 import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 ---
 
 <BaseLayout>
   <!-- ② ファーストビュー -->
+  <!-- キービジュアル kv-aqua-mascot はコピーと説明文が画像に入っているので、見出しは画面に出さず HTML にも書く（検索・読み上げ用） -->
   <section class="hero">
+    <h1 class="sr-only">ひとりじゃない、あたらしいポイ活。</h1>
+    <Visual
+      name="kv-aqua-mascot"
+      alt="ひとりじゃない、あたらしいポイ活。ポイントを貯める楽しさに、相談できる安心と、みんなで取り組むワクワクを。"
+      eager
+    />
     <div class="container hero__inner">
-      <h1 class="hero__copy">ひとりじゃない、<br />あたらしいポイ活。</h1>
-      <Mascot pose="wave" width={260} alt="ポイフォのキャラクター「ポイフォックス」" eager class="hero__mascot" />
-      <p class="hero__lead">ポイントを貯める楽しさに、相談できる安心と、みんなで取り組むワクワクを。</p>
       <div class="hero__cta">
         <div data-show="guest">
           <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
@@ -88,9 +93,9 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     <div class="container">
       <h2 class="section__title section__title--center">ポイフォの特徴</h2>
       <div class="grid grid--3 features">
-        <div class="card feature"><Mascot pose="point" width={96} class="feature__img" /><h3>自由にポイ活</h3><p>興味のある案件を、自分のペースで利用できます。</p></div>
-        <div class="card feature"><Mascot pose="line" width={96} class="feature__img" /><h3>担当者に相談</h3><p>公式LINEで気軽にサポートを受けられます。</p></div>
-        <div class="card feature"><Mascot pose="event" width={96} class="feature__img" /><h3>みんなで楽しむ</h3><p>イベントやオープンチャットで一緒に取り組めます。</p></div>
+        <div class="card feature"><Visual name="feature-smartphone" alt="" class="feature__img" /><h3>自由にポイ活</h3><p>興味のある案件を、自分のペースで利用できます。</p></div>
+        <div class="card feature"><Visual name="feature-chat" alt="" class="feature__img" /><h3>担当者に相談</h3><p>公式LINEで気軽にサポートを受けられます。</p></div>
+        <div class="card feature"><Visual name="feature-people" alt="" class="feature__img" /><h3>みんなで楽しむ</h3><p>イベントやオープンチャットで一緒に取り組めます。</p></div>
       </div>
     </div>
   </section>
@@ -107,20 +112,20 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <section class="section section--warm">
     <div class="container">
       <h2 class="section__title section__title--center">ポイントがもらえるしくみ</h2>
-      <p class="lead center-text">広告主がポイフォに払う広告費の一部が、ポイントとしてあなたに届きます。</p>
-      <ol class="flow">
-        <li class="card flow__item"><span class="flow__step">1</span><span class="flow__who">あなた</span><span>ポイフォ経由で、広告主のサービスを利用・申し込み</span></li>
-        <li class="card flow__item"><span class="flow__step">2</span><span class="flow__who">広告主</span><span>利用のお礼として、ポイフォに広告費を支払う</span></li>
-        <li class="card flow__item flow__item--get"><span class="flow__step">3</span><span class="flow__who">ポイフォ</span><span>広告費の一部を、ポイントとしてあなたに還元</span><Mascot pose="get" width={84} class="flow__img" /></li>
-      </ol>
+      <!-- 説明画像 how-points-work（文言入り）。図の流れも alt に書いて読み上げで伝わるようにする -->
+      <Visual
+        name="how-points-work"
+        class="howitworks"
+        alt="ポイフォの登録は無料なのに、なぜポイントが貯まるの？ポイフォに掲載されている広告を利用すると、企業からポイフォへ広告費が支払われます。その広告費の一部をポイントとして還元しています。1. ユーザー様がポイフォを経由して広告を利用 2. 企業がポイフォに広告費を支払い 3. ポイフォがユーザー様にポイントとして還元"
+      />
     </div>
   </section>
 
   <section class="section">
     <div class="container">
       <h2 class="section__title section__title--center">貯めたポイントの使い道</h2>
+      <Visual name="banner-wide-plain" alt="" class="exchange__visual" />
       <div class="exchange card">
-        <Mascot pose="cheer" width={110} class="exchange__img" />
         <div class="exchange__body">
           <p class="exchange__name">現金（銀行振込）</p>
           <p class="exchange__text">確定したポイントを、登録した銀行口座への振込で受け取れます。交換先は今後追加予定です。</p>
@@ -160,7 +165,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   </section>
 
   <!-- 最後の登録導線（未ログインのときだけ） -->
-  <section class="section section--warm final-cta" data-show="guest">
+  <section class="section section--wave final-cta" data-show="guest">
     <div class="container">
       <Mascot pose="wave" width={120} class="final-cta__img" />
       <p class="final-cta__copy">ひとりじゃない、あたらしいポイ活をはじめよう。</p>
@@ -203,43 +208,21 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 </script>
 
 <style>
+  /* ファーストビューはキービジュアル（画像の下端が濃いアクアの波）の下に、主ボタンと特徴3つを置く */
   .hero {
     background: linear-gradient(180deg, var(--color-brand-bg), #fff);
-    padding: 48px 0 40px;
+    padding: 0 0 20px;
   }
-  /* スマホはコピーを全幅（2行で収める）にし、説明とボタンの右にキャラクター。PC はキャラクターを右列に大きく */
   .hero__inner {
-    display: grid;
-    grid-template-columns: 1fr 140px;
-    grid-template-areas:
-      'copy copy'
-      'lead mascot'
-      'cta mascot';
-    column-gap: 8px;
-    align-items: center;
+    padding-top: 16px;
+    text-align: center;
   }
-  .hero__copy {
-    grid-area: copy;
-    font-size: clamp(1.8rem, 6vw, 2.6rem);
-    margin: 0 0 12px;
-  }
-  .hero :global(.hero__mascot) {
-    grid-area: mascot;
-    width: 140px;
-    justify-self: end;
-    align-self: end;
-  }
-  .hero__lead {
-    grid-area: lead;
-    margin: 0 0 24px;
-    color: var(--color-muted);
-  }
-  .hero__cta {
-    grid-area: cta;
+  .hero__cta .btn {
+    width: 100%;
   }
   .hero__points {
-    grid-column: 1 / -1;
     display: flex;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 8px;
     margin: 20px 0 0;
@@ -290,52 +273,22 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     font-size: 0.8rem;
     white-space: nowrap;
   }
-  .flow {
-    display: grid;
-    gap: 12px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .flow__item {
-    display: grid;
-    gap: 4px;
-    position: relative;
-  }
-  .flow__step {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    color: var(--color-text);
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-  .flow__item--get {
-    padding-right: 96px;
-  }
-  .flow__item :global(.flow__img) {
-    position: absolute;
-    right: 8px;
-    bottom: 8px;
-    width: 84px;
-  }
-  .flow__who {
-    font-weight: 600;
-    color: var(--color-text);
-    border-bottom: 2px solid var(--color-accent);
-    justify-self: start;
+  /* 説明画像は白地なので、淡いオレンジの背景の上でカードのように角を丸める */
+  .section :global(.howitworks) {
+    border-radius: var(--radius);
   }
   .exchange {
     display: flex;
     align-items: center;
     gap: 16px;
   }
-  .exchange :global(.exchange__img) {
-    width: 96px;
-    flex-shrink: 0;
+  .section :global(.exchange__visual) {
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  /* バナーの下にカードをつなげて、絵と説明を1つのまとまりに見せる */
+  .section :global(.exchange__visual) + .exchange {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
   }
   .exchange__body {
     min-width: 0;
@@ -463,13 +416,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   }
   /* スマホ向けの上書きは PC 向けの指定より後に置く（同じ詳細度なので後勝ち） */
   /* ===== スマホ（主なターゲット）: 一般的なポイントサイトのスマホ表示に寄せて、詰めて横に流す ===== */
-  .hero {
-    padding: 24px 0 20px;
-  }
-  .hero__lead {
-    font-size: 0.9rem;
-    margin-bottom: 16px;
-  }
   .hero__points {
     margin-top: 14px;
     gap: 6px;
@@ -571,24 +517,11 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   .category-tiles :global(.category-tile__count) {
     font-size: 0.7rem;
   }
-  .flow {
-    gap: 8px;
-  }
-  .flow__item {
-    padding: 12px;
-    font-size: 0.9rem;
-  }
-  .flow__item--get {
-    padding-right: 92px;
-  }
   .faq details {
     font-size: 0.9rem;
   }
   .faq-intro :global(.mascot) {
     width: 80px;
-  }
-  .exchange :global(.exchange__img) {
-    width: 72px;
   }
 
 </style>

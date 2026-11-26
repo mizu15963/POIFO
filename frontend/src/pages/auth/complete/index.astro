@@ -1,15 +1,18 @@
 ---
 // LINE ログイン後に API から戻ってくるページ（?new=1 は初回登録）
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Mascot from '../../../components/Mascot.astro';
 import { LINE_OFFICIAL_URL } from '../../../lib/config';
 ---
 
 <BaseLayout title="ログインしました" noindex>
-  <section class="section">
+  <section class="section section--wave auth-page">
     <div class="container narrow">
       <h1 class="section__title" id="complete-title">ログインしました</h1>
       <div id="welcome" hidden>
-        <p>ポイフォへようこそ！会員登録が完了しました。</p>
+        <Mascot pose="welcome" width={180} eager class="welcome__img" />
+        <p class="welcome__copy">ポイフォへようこそ！</p>
+        <p class="welcome__text">会員登録が完了しました。</p>
         {
           LINE_OFFICIAL_URL && (
             <div class="card">
@@ -24,6 +27,24 @@ import { LINE_OFFICIAL_URL } from '../../../lib/config';
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  .welcome__copy {
+    margin: 0 0 4px;
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  .welcome__text {
+    margin-top: 0;
+    text-align: center;
+  }
+  #welcome :global(.welcome__img) {
+    display: block;
+    width: 180px;
+    margin: 0 auto 8px;
+  }
+</style>
 
 <script>
   if (new URLSearchParams(location.search).get('new') === '1') {
