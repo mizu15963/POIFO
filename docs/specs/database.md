@@ -23,6 +23,8 @@
 | 10 | `withdrawal_requests` | 換金（ポイント交換）の申請 | 7章 |
 | 11 | `events` | イベント | 8.1 |
 | 12 | `event_participants` | イベントの参加 | 8.2 |
+| 13 | `favorites`（未実装） | お気に入り | 4.5 |
+| 14 | `news`（未実装） | お知らせ | 11.1 |
 | — | `sessions` `cache` `cache_locks` `jobs` `job_batches` `failed_jobs` | Laravel の仕組み用（セッション・キャッシュ・ロック・キュー）。API サーバを増やせるよう、すべて DB に置く | — |
 
 ## 2. テーブルのつながり
@@ -309,7 +311,43 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 インデックス: `event_id` + `user_id`（一意）、`event_id` + `status`
 
-## 5. 気づいた点
+## 5. これから足すテーブル・カラム（未実装）
+
+2026-11-26 に作ることが決まった機能の分。実装でマイグレーションを作ったら、4章に移す。
+
+### `favorites`（お気に入り。機能仕様 4.5）
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `id` | BIGINT UNSIGNED | | | 主キー |
+| `user_id` | BIGINT UNSIGNED | | | 会員（→ `users`） |
+| `campaign_id` | BIGINT UNSIGNED | | | 案件（→ `campaigns`） |
+| `created_at` | TIMESTAMP | | 現在時刻 | 登録した日時（一覧の並びに使う） |
+
+インデックス: `user_id` + `campaign_id`（一意）、`campaign_id`（案件ごとのお気に入り数）
+
+### `news`（お知らせ。機能仕様 11.1）
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `id` | BIGINT UNSIGNED | | | 主キー |
+| `title` | VARCHAR(255) | | | タイトル（画面では100文字まで） |
+| `body` | TEXT | | | 本文（5,000文字まで） |
+| `is_important` | TINYINT(1) | | 0 | 重要 |
+| `status` | VARCHAR(16) | | `draft` | `draft`（下書き）／`published`（公開） |
+| `published_at` | TIMESTAMP | ○ | | 公開日時（公開にするときは必須） |
+| `expires_at` | TIMESTAMP | ○ | | 公開終了日時 |
+| `created_by` | BIGINT UNSIGNED | ○ | | 登録した管理者（→ `admins`） |
+
+インデックス: `status` + `published_at`
+
+### `users` に足すカラム
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `news_seen_at` | TIMESTAMP | ○ | | 最後にお知らせ一覧を開いた日時（未読の数に使う） |
+
+## 6. 気づいた点
 
 - `events` を作ったマイグレーションのコメントに「参加管理はしない」とあるが、2026-11-20 の方針変更で参加を管理するようになっている（`event_participants`）。動きには関係ない
 - `point_transactions.withdrawal_request_id` だけ外部キーを張っていない（ほかの参照列は張っている）。必要なら実装スレッドで追加する
