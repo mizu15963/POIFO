@@ -118,6 +118,18 @@ S01 のファーストビューは 2026-11-27 のデザイン更新で `kv-hitor
 - `section-point-usage.png`（貯めたポイントの使い道）は使わない（2026-11-27 yamada さん。トップから外した）
 - キービジュアルの「月末締め・翌月まとめ払い」と貯め方 STEP3 の「月末締め・翌月まとめ払いです。」は、今の申請制の仕様（機能仕様 7章）と食い違う。振込日程の運用は未定のため、今回は画像のまま使う（2026-11-27 yamada さん。食い違いの資料は共有フォルダ `brand/redesign/README.md`）
 
+## ログイン後のトップ（2026-11-28 納品）
+
+一枚絵と部品ごとの見本（共有フォルダ `brand/redesign/mockup/top-member-mobile.png`・`member-top/`）が届いた。数字・案件は見本の値なので、画面は HTML/CSS で寄せて作る（画面仕様 S01「ログイン中の並び」）。絵だけ見本から切り出した。
+
+| サイトのファイル | 元の画像 | 使う場所 |
+| --- | --- | --- |
+| `visuals/member-coins.webp` | `member-top/01-points.png` のコイン | ポイントの帯の左 |
+| `visuals/member-support.webp` | `member-top/05-support-faq.png` のスマホ・吹き出し・人々 | 担当スタッフに相談の右 |
+
+- 切り出しは共有フォルダ `brand/redesign/member_cut.py`（縁につながる白〜淡い水色を透明にする）。人々の後ろの淡い水色の丸も透明になる
+- カテゴリのアイコンは見本に寄せた線のアイコンを `src/lib/category-icon.ts` に SVG で持つ
+
 ## フォント（2026-11-27 お試し）
 
 先方の画像の文字に合わせて、サイトの文字を **M PLUS Rounded 1c**（Google Fonts と同じもの、SIL Open Font License）にした。画像は生成画像で実際のフォントはないが、見た目がいちばん近いのがこのフォントの ExtraBold〜Black（比較は共有フォルダ `brand/redesign/font-compare.png`）。

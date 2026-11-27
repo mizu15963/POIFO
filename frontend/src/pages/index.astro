@@ -24,7 +24,9 @@ const MENU_ROWS = [
        初めての人向けの説明（ファーストビュー・特徴・貯め方・しくみ・最後の登録導線）はログイン中は出さない -->
   <section class="member-top" data-show="member">
     <div class="container">
+      <!-- ポイントの帯（2026-11-28 ログイン後トップの見本）: 左にコインの絵、大きく利用可能ポイント、区切り線の右に判定中 -->
       <a class="member-points" href="/mypage/">
+        <Visual name="member-coins" alt="" class="member-points__coins" />
         <span class="member-points__main">
           <span class="member-points__label">利用可能ポイント</span>
           <span class="member-points__value" id="member-available">—</span>
@@ -56,8 +58,21 @@ const MENU_ROWS = [
     </div>
   </section>
 
-  <!-- ② 案件メニュー（5行）。絵は1枚の画像なので、行ごとに透明なリンクを重ねる。リンクの文字は読み上げ用に sr-only で持つ -->
-  <section class="section section--tight">
+  <!-- ② ログイン中: カテゴリから探す（ASP のカテゴリをアイコン付きのタイルで。件数の多い順に8件） -->
+  <section class="section section--tight" data-show="member">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="section__title">カテゴリから探す</h2>
+        <a class="section__more" href="/campaigns/">すべて見る</a>
+      </div>
+      <ul id="campaign-categories" class="category-tiles" aria-live="polite">
+        <li class="loading">読み込み中…</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ② 未ログイン: 案件メニュー（5行）。絵は1枚の画像なので、行ごとに透明なリンクを重ねる。リンクの文字は読み上げ用に sr-only で持つ -->
+  <section class="section section--tight" data-show="guest">
     <div class="container">
       <h2 class="sr-only">案件を探す</h2>
       <nav class="campaign-menu" aria-label="案件メニュー">
@@ -92,8 +107,8 @@ const MENU_ROWS = [
     </div>
   </section>
 
-  <!-- ④ みんなでポイ活（画像）＋開催予定のイベント -->
-  <section class="section section--tight">
+  <!-- ④ みんなでポイ活: 未ログインは画像＋淡いアクアの帯にイベント、ログイン中は水色の囲みに見出し・説明文・イベント -->
+  <section class="section section--tight" data-show="guest">
     <div class="container">
       <h2 class="sr-only">みんなでポイ活</h2>
       <Visual
@@ -105,15 +120,20 @@ const MENU_ROWS = [
   </section>
   <section class="section section--soft events-band">
     <div class="container">
+      <div class="section__head" data-show="member">
+        <h2 class="section__title">みんなでポイ活！</h2>
+        <a class="section__more" href="/events/">一覧を見る</a>
+      </div>
+      <p class="events-band__lead" data-show="member">ゲーム案件などに、みんなで楽しく挑戦。イベント情報をチェックしよう！</p>
       <div id="upcoming-events" class="grid grid--3 hscroll hscroll--events" aria-live="polite">
         <p class="loading">読み込み中…</p>
       </div>
-      <a class="more-link" href="/events/">イベント一覧を見る</a>
+      <a class="more-link" href="/events/" data-show="guest">イベント一覧を見る</a>
     </div>
   </section>
 
-  <!-- ⑤ 担当スタッフに相談（画像）＋公式LINE -->
-  <section class="section">
+  <!-- ⑤ 担当スタッフに相談: 未ログインは画像＋公式LINE -->
+  <section class="section" data-show="guest">
     <div class="container">
       <h2 class="sr-only">担当スタッフに相談</h2>
       <Visual
@@ -122,6 +142,20 @@ const MENU_ROWS = [
         alt="ポイ活を始めたいけど、条件も複雑でよくわからない…。1万円を貯めたいけど、何を進めたらいいかわからない…。担当スタッフに相談。そんな時はポイフォにお任せ！わからないことを相談。おすすめ案件を相談。どれくらい進めればいいか相談。困ったらLINEで気軽に相談。初回面談の日程もLINEで調整できます。"
       />
       {LINE_OFFICIAL_URL ? <a class="btn btn--line section-btn" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline section-btn" href="/support/">担当サポートについて</a>}
+    </div>
+  </section>
+
+  <!-- ⑤ ログイン中: 見出し・説明文・「担当サポートについて」と、右に絵 -->
+  <section class="section section--tight" data-show="member">
+    <div class="container">
+      <h2 class="section__title">困ったときは、担当スタッフに相談。</h2>
+      <div class="support-box">
+        <div class="support-box__body">
+          <p>ポイントの貯め方や案件の進め方を、LINEで気軽に相談できます。初回面談の日程もLINEで調整します。</p>
+          <a class="btn btn--outline support-box__btn" href="/support/">担当サポートについて</a>
+        </div>
+        <Visual name="member-support" alt="" class="support-box__img" />
+      </div>
     </div>
   </section>
 
@@ -201,7 +235,8 @@ const MENU_ROWS = [
 </BaseLayout>
 
 <script>
-  import { fetchCampaigns, fetchEvents, fetchNews } from '../lib/api';
+  import { fetchCampaignCategories, fetchCampaigns, fetchEvents, fetchNews } from '../lib/api';
+  import { categoryIcon } from '../lib/category-icon';
   import { bindFavoriteButtons } from '../lib/favorite';
   import { escapeHtml, formatPoints } from '../lib/format';
   import { campaignCard, emptyState, eventCard } from '../lib/render';
@@ -210,6 +245,7 @@ const MENU_ROWS = [
   // ログイン中: 保有ポイントの帯と、重要なお知らせ（公開中の新しい1件）
   whenMe().then((me) => {
     if (!me) return;
+    loadCategories();
     document.getElementById('member-available')!.textContent = formatPoints(me.points.available);
     document.getElementById('member-pending')!.textContent = formatPoints(me.points.pending);
     fetchNews({ important: true, perPage: 1 })
@@ -223,6 +259,24 @@ const MENU_ROWS = [
       })
       .catch(() => undefined);
   });
+
+  // カテゴリは ASP から取り込んだ案件の分類（件数の多い順）。ログイン中だけ出すので、ログインが分かってから読む
+  function loadCategories() {
+    const categories = document.getElementById('campaign-categories')!;
+    fetchCampaignCategories()
+      .then((items) => {
+        categories.innerHTML = items.length
+          ? items
+              .slice(0, 8)
+              .map(
+                (c) =>
+                  `<li><a class="category-tile" href="/campaigns/?category=${encodeURIComponent(c.name)}">${categoryIcon(c.name)}<span class="category-tile__name">${escapeHtml(c.name)}</span><span class="category-tile__count">${c.count}件</span></a></li>`,
+              )
+              .join('')
+          : emptyState('カテゴリは準備中です。', undefined, 'li');
+      })
+      .catch(() => (categories.innerHTML = emptyState('カテゴリを読み込めませんでした。', undefined, 'li')));
+  }
 
   const campaigns = document.getElementById('featured-campaigns')!;
   bindFavoriteButtons(campaigns);
@@ -247,31 +301,42 @@ const MENU_ROWS = [
   .member-points {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 12px;
-    padding: 12px 16px;
-    border: 1px solid var(--color-accent);
-    border-radius: var(--radius);
-    background: var(--color-accent-bg);
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f3fcfc, var(--color-brand-bg));
+    box-shadow: 0 2px 8px rgb(58 209 206 / 0.15);
     text-decoration: none;
+  }
+  .member-points :global(.member-points__coins) {
+    flex-shrink: 0;
+    width: 56px;
+    height: auto;
   }
   .member-points__main {
     display: grid;
-    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
   }
   .member-points__label {
     font-size: 0.8rem;
     color: var(--color-muted);
   }
   .member-points__value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--color-accent-strong);
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--color-brand-strong);
   }
+  /* 区切り線の右に判定中 */
   .member-points__pending {
+    flex-shrink: 0;
+    padding-left: 12px;
+    border-left: 1px solid var(--color-brand);
     font-size: 0.85rem;
-    color: var(--color-muted);
+    color: var(--color-text);
+    white-space: nowrap;
   }
   .member-points__pending::after {
     content: '';
@@ -365,6 +430,94 @@ const MENU_ROWS = [
   .events-band {
     padding-top: 16px;
   }
+  .events-band__lead {
+    margin: -4px 0 12px;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+  /* ログイン中は帯ではなく、コンテナの中の水色の囲みにする */
+  :global(body[data-auth='member']) .events-band {
+    padding-top: 0;
+    background: none;
+  }
+  :global(body[data-auth='member']) .events-band > .container {
+    width: auto;
+    margin: 0 12px;
+    overflow: hidden;
+    padding-top: 16px;
+    padding-bottom: 8px;
+    border-radius: 16px;
+    background: var(--color-brand-bg);
+  }
+  /* カテゴリのタイル: アイコン → 名前 → 件数。スマホ幅でも4列 */
+  .category-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .category-tiles > :global(li:only-child) {
+    grid-column: 1 / -1;
+  }
+  .category-tiles :global(.category-tile) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 100%;
+    min-height: 96px;
+    padding: 8px 4px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: #fff;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.04);
+    text-align: center;
+    text-decoration: none;
+  }
+  .category-tiles :global(.category-tile:hover) {
+    border-color: var(--color-brand);
+  }
+  .category-tiles :global(.category-tile__icon) {
+    color: var(--color-brand-strong);
+    margin-bottom: 2px;
+  }
+  .category-tiles :global(.category-tile__name) {
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .category-tiles :global(.category-tile__count) {
+    font-size: 0.7rem;
+    color: var(--color-muted);
+  }
+  /* 担当サポート（ログイン中）: 左に説明とボタン、右に絵 */
+  .support-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .support-box__body {
+    flex: 1;
+    min-width: 0;
+  }
+  .support-box__body p {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+  }
+  .support-box__btn {
+    min-height: 40px;
+    padding: 0 16px;
+    font-size: 0.85rem;
+  }
+  .support-box :global(.support-box__img) {
+    flex-shrink: 0;
+    width: 40%;
+    height: auto;
+  }
   .faq-intro {
     margin: 0 0 16px;
     text-align: center;
@@ -447,8 +600,19 @@ const MENU_ROWS = [
     text-align: center;
   }
   /* ログイン中は最後の登録導線がないので、よくある質問の下にポイフォックスの分の余白を取る */
+  /* ログイン中のよくある質問は、コンテナの中の水色の囲み。最後の登録導線がないので、下にポイフォックスの分の余白を取る */
   :global(body[data-auth='member']) .faq-section {
     padding-bottom: 88px;
+    background: none;
+  }
+  :global(body[data-auth='member']) .faq-section > .container {
+    width: auto;
+    margin: 0 12px;
+    overflow: hidden;
+    padding-top: 20px;
+    padding-bottom: 16px;
+    border-radius: 16px;
+    background: var(--color-brand-bg);
   }
   /* ページの一番下: 高さ0の箱の右下にポイフォックスを置き、手をフッターの上の縁に乗せる */
   .page-end {
