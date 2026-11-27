@@ -2,6 +2,7 @@
 // 交換先の詳細・申請（docs/specs/screen-spec.md S20）。/mypage/withdraw/detail/?method=<交換先コード>
 // 受け取り情報が要る交換先を足すときは、その交換先専用の登録画面を振込先口座（S11）と同じように作り、ここで出し分ける
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import Mascot from '../../../../components/Mascot.astro';
 ---
 
 <BaseLayout title="ポイント交換" requireLogin noindex>
@@ -10,6 +11,13 @@ import BaseLayout from '../../../../layouts/BaseLayout.astro';
       <h1 class="section__title" id="title">ポイント交換</h1>
       <p id="saved" class="notice" hidden>振込先口座を登録しました。</p>
       <div id="loading"><p class="loading">読み込み中…</p></div>
+      <!-- 申請が完了したときの表示（キャラクターは完了のときに置く。docs/brand/README.md） -->
+      <div id="done" class="done" hidden>
+        <Mascot pose="get" width={120} class="state-mascot" />
+        <p class="done__title">交換を申請しました</p>
+        <p id="done-text" class="lead"></p>
+        <a class="btn btn--block" href="/mypage/?tab=exchanges">交換履歴を見る</a>
+      </div>
       <div id="content" hidden>
         <p id="description"></p>
         <dl class="terms card" id="terms"></dl>
@@ -48,7 +56,7 @@ import BaseLayout from '../../../../layouts/BaseLayout.astro';
   import { ApiError, fetchBankAccount, fetchExchangeMethods, requestWithdrawal } from '../../../../lib/api';
   import { exchangeFeeText, exchangeYen } from '../../../../lib/exchange';
   import { escapeHtml, formatPoints } from '../../../../lib/format';
-  import { emptyState } from '../../../../lib/render';
+  import { emptyState, loadError } from '../../../../lib/render';
   import { whenMe } from '../../../../lib/session';
 
   const params = new URLSearchParams(location.search);
@@ -127,7 +135,11 @@ import BaseLayout from '../../../../layouts/BaseLayout.astro';
         button.disabled = true;
         try {
           await requestWithdrawal(points, method.code);
-          location.href = '/mypage/?tab=exchanges';
+          // 完了をこの画面で見せてから、交換履歴（S09）へ進んでもらう
+          document.getElementById('done-text')!.textContent = `${formatPoints(points)}を「${method.name}」に交換申請しました。審査のあと、振込まで日数がかかります。状況は交換履歴で確認できます。`;
+          content.hidden = true;
+          document.getElementById('done')!.hidden = false;
+          window.scrollTo(0, 0);
         } catch (err) {
           const messages = err instanceof ApiError && err.status === 422 ? Object.values(err.errors).flat() : ['申請できませんでした。時間をおいてもう一度お試しください。'];
           errors.innerHTML = `<ul>${messages.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;
@@ -139,12 +151,20 @@ import BaseLayout from '../../../../layouts/BaseLayout.astro';
       loading.hidden = true;
       content.hidden = false;
     } catch {
-      loading.innerHTML = emptyState('読み込めませんでした。時間をおいて再度お試しください。');
+      loading.innerHTML = loadError();
     }
   });
 </script>
 
 <style>
+  .done {
+    text-align: center;
+  }
+  .done__title {
+    margin: 0 0 8px;
+    font-weight: 600;
+    font-size: 1.15rem;
+  }
   #notes {
     margin-top: 20px;
   }

@@ -76,10 +76,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
         <h2 class="section__title">みんなでポイ活！</h2>
         <a class="section__more" href="/events/">一覧を見る</a>
       </div>
-      <div class="with-mascot">
-        <p class="lead with-mascot__body">ゲーム案件などに、みんなで楽しく挑戦。イベント情報をチェックしよう！</p>
-        <Mascot pose="event" width={150} />
-      </div>
+      <p class="lead">ゲーム案件などに、みんなで楽しく挑戦。イベント情報をチェックしよう！</p>
       <div id="upcoming-events" class="grid grid--3 hscroll hscroll--events" aria-live="polite">
         <p class="loading">読み込み中…</p>
       </div>
@@ -92,7 +89,8 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
       <h2 class="section__title">困ったときは、担当スタッフに相談。</h2>
       <div class="with-mascot">
         <p class="with-mascot__body">ポイントの貯め方や案件の進め方を、LINEで気軽に相談できます。初回面談の日程もLINEで調整します。</p>
-        <Mascot pose="line" width={150} />
+        <!-- キャラクターは1画面1体まで（docs/brand/README.md）。未ログインはファーストビューと貯め方に任せ、ログイン中のトップはここだけ -->
+        <span class="with-mascot__img" data-show="member"><Mascot pose="line" width={150} /></span>
       </div>
       {LINE_OFFICIAL_URL ? <a class="btn btn--line" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline" href="/support/">担当サポートについて</a>}
     </div>
@@ -134,7 +132,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <section class="section" data-show="guest">
     <div class="container">
       <h2 class="section__title section__title--center">貯めたポイントの使い道</h2>
-      <Visual name="banner-wide-plain" alt="" class="exchange__visual" />
       <div class="exchange card">
         <div class="exchange__body">
           <p class="exchange__name">現金（銀行振込）</p>
@@ -148,10 +145,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <section class="section section--soft">
     <div class="container">
       <h2 class="section__title section__title--center">よくある質問</h2>
-      <div class="faq-intro">
-        <Mascot pose="guide" width={110} />
-        <p class="faq-intro__bubble">はじめての方からよく聞かれることをまとめたよ。タップすると答えが開きます。</p>
-      </div>
+      <p class="faq-intro">はじめての方からよく聞かれることをまとめました。タップすると答えが開きます。</p>
       <div class="faq">
         <details>
           <summary><span class="faq__mark faq__mark--q" aria-hidden="true">Q</span><span>登録や利用にお金はかかりますか？</span></summary>
@@ -177,7 +171,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   <!-- 最後の登録導線（未ログインのときだけ） -->
   <section class="section section--wave final-cta" data-show="guest">
     <div class="container">
-      <Mascot pose="wave" width={120} class="final-cta__img" />
       <p class="final-cta__copy">ひとりじゃない、あたらしいポイ活をはじめよう。</p>
       <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
     </div>
@@ -357,14 +350,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     align-items: center;
     gap: 16px;
   }
-  .section :global(.exchange__visual) {
-    border-radius: var(--radius) var(--radius) 0 0;
-  }
-  /* バナーの下にカードをつなげて、絵と説明を1つのまとまりに見せる */
-  .section :global(.exchange__visual) + .exchange {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-  }
   .exchange__body {
     min-width: 0;
   }
@@ -377,36 +362,10 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     margin: 0;
   }
   .faq-intro {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .faq-intro :global(.mascot) {
-    width: 96px;
-    flex-shrink: 0;
-  }
-  /* キャラクターの吹き出し（左向きのしっぽ付き） */
-  .faq-intro__bubble {
-    position: relative;
-    margin: 0;
-    padding: 12px 14px;
-    background: #fff;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
+    margin: 0 0 16px;
+    text-align: center;
+    color: var(--color-muted);
     font-size: 0.9rem;
-  }
-  .faq-intro__bubble::before {
-    content: '';
-    position: absolute;
-    left: -7px;
-    top: 50%;
-    width: 12px;
-    height: 12px;
-    background: #fff;
-    border-left: 1px solid var(--color-border);
-    border-bottom: 1px solid var(--color-border);
-    transform: translateY(-50%) rotate(45deg);
   }
   .faq {
     display: grid;
@@ -470,11 +429,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   }
   .final-cta {
     text-align: center;
-  }
-  .final-cta :global(.final-cta__img) {
-    display: block;
-    margin: 0 auto 8px;
-    width: 120px;
   }
   .feature {
     text-align: center;
@@ -603,9 +557,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   }
   .faq details {
     font-size: 0.9rem;
-  }
-  .faq-intro :global(.mascot) {
-    width: 80px;
   }
 
 </style>

@@ -1,11 +1,15 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Mascot from '../../../components/Mascot.astro';
 ---
 
 <BaseLayout title="振込先口座の登録" requireLogin noindex>
   <section class="section">
     <div class="container narrow">
-      <h1 class="section__title">振込先口座の登録</h1>
+      <div class="title-with-mascot">
+        <h1 class="section__title">振込先口座の登録</h1>
+        <Mascot pose="guide" width={72} eager />
+      </div>
       <p id="current" class="lead" hidden></p>
       <p class="lead">ポイントの換金（銀行振込）に使います。ご本人名義の口座を登録してください。同じ口座を複数のアカウントで使うことはできません。</p>
       <div id="form-errors" class="form-errors" role="alert" hidden></div>

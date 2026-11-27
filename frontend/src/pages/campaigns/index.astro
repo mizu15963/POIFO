@@ -25,7 +25,7 @@ import Visual from '../../components/Visual.astro';
   import { fetchCampaignCategories, fetchCampaigns } from '../../lib/api';
   import { escapeHtml } from '../../lib/format';
   import { bindFavoriteButtons } from '../../lib/favorite';
-  import { campaignCard, emptyState } from '../../lib/render';
+  import { campaignCard, emptyState, loadError } from '../../lib/render';
 
   const list = document.getElementById('campaigns')!;
   const tabs = document.getElementById('categories')!;
@@ -38,11 +38,11 @@ import Visual from '../../components/Visual.astro';
   async function load() {
     try {
       const res = await fetchCampaigns({ page, perPage: 20, category: category || undefined });
-      if (page === 1) list.innerHTML = res.data.length ? '' : emptyState('現在掲載中の案件はありません。');
+      if (page === 1) list.innerHTML = res.data.length ? '' : emptyState('現在掲載中の案件はありません。', 'point');
       list.insertAdjacentHTML('beforeend', res.data.map((c) => campaignCard(c)).join(''));
       more.hidden = res.meta.current_page >= res.meta.last_page;
     } catch {
-      list.innerHTML = emptyState('案件を読み込めませんでした。時間をおいて再度お試しください。');
+      list.innerHTML = loadError('案件を読み込めませんでした。時間をおいて再度お試しください。');
     }
   }
 

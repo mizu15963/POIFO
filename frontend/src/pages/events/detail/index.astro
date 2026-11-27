@@ -67,7 +67,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 
   async function load() {
     if (!id) {
-      root.innerHTML = emptyState('イベントが見つかりません。');
+      root.innerHTML = emptyState('イベントが見つかりません。', 'sorry');
       return;
     }
     try {
@@ -80,7 +80,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
         await act(button.dataset.action as 'join' | 'cancel', button, await fetchEvent(id).catch(() => e));
       });
     } catch {
-      root.innerHTML = emptyState('イベントが見つかりません。');
+      root.innerHTML = emptyState('イベントが見つかりません。', 'sorry');
     }
   }
   load();

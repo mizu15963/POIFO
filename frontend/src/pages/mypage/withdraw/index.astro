@@ -21,7 +21,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
   import { fetchExchangeMethods, type ExchangeMethod } from '../../../lib/api';
   import { escapeHtml, formatPoints, safeUrl } from '../../../lib/format';
   import { exchangeFeeText } from '../../../lib/exchange';
-  import { emptyState } from '../../../lib/render';
+  import { emptyState, loadError } from '../../../lib/render';
   import { whenMe } from '../../../lib/session';
 
   const root = document.getElementById('methods')!;
@@ -49,7 +49,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
     try {
       const methods = await fetchExchangeMethods();
       if (!methods.length) {
-        root.innerHTML = emptyState('交換先は準備中です。');
+        root.innerHTML = emptyState('交換先は準備中です。', 'cheer');
         return;
       }
       // 交換先の種類が増えたら、カテゴリ（現金・ギフト券など）ごとに見出しを付けて分ける
@@ -60,7 +60,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
         .map(([category, items]) => `${grouped && category ? `<h2 class="method-group">${escapeHtml(category)}</h2>` : ''}<div class="grid">${items.map(card).join('')}</div>`)
         .join('');
     } catch {
-      root.innerHTML = emptyState('交換先を読み込めませんでした。時間をおいて再度お試しください。');
+      root.innerHTML = loadError('交換先を読み込めませんでした。時間をおいて再度お試しください。');
     }
   });
 </script>

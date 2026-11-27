@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Mascot from '../../../components/Mascot.astro';
 import { LINE_LOGIN_URL } from '../../../lib/config';
 ---
 
@@ -7,6 +8,7 @@ import { LINE_LOGIN_URL } from '../../../lib/config';
   <section class="section">
     <div class="container narrow">
       <h1 class="section__title">ログインできませんでした</h1>
+      <Mascot pose="sorry" width={120} eager class="state-mascot" />
       <p id="reason">時間をおいて、もう一度お試しください。</p>
       <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>もう一度LINEでログイン</a>
       <p><a class="more-link" href="/contact/">お問い合わせ</a></p>
