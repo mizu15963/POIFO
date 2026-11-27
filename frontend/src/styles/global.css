@@ -20,7 +20,8 @@
   --shell-width: 480px;
   --radius: 12px;
   --content-width: 960px;
-  --font-sans: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  /* M PLUS Rounded 1c は BaseLayout で読み込む。読み込むまでと、読み込めないときは端末のゴシック体 */
+  --font-sans: 'M PLUS Rounded 1c', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
 }
 
 *,
@@ -55,10 +56,11 @@ a {
   color: inherit;
 }
 
+/* 見出しとボタンは画像の文字（M PLUS Rounded 1c の ExtraBold 相当）に合わせて 800 */
 h1,
 h2,
 h3 {
-  font-weight: 600;
+  font-weight: 800;
   line-height: 1.4;
 }
 
@@ -173,7 +175,7 @@ h3 {
   border: 2px solid var(--color-text);
   background: var(--color-text);
   color: #fff;
-  font-weight: 600;
+  font-weight: 800;
   text-decoration: none;
   cursor: pointer;
   font-size: 1rem;
