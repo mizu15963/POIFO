@@ -3,6 +3,21 @@
 @section('content')
 <h1>案件の表示設定</h1>
 <div class="card">
+    <h2>動作確認用のダミー案件</h2>
+    <p class="muted">GF Rewards の案件が入るまで、サイトの一覧・詳細・お気に入りの動きを確かめるための案件です（10件、名前の先頭に「【ダミー】」、うち1件は掲載終了）。「この案件に進む」は example.com に飛びます。<strong>公開前に必ずすべて消してください。</strong></p>
+    <div class="inline">
+        <form method="post" action="{{ route('admin.campaigns.dummies.store') }}" onsubmit="return confirm('ダミー案件を10件入れます。会員サイトの案件一覧にすぐ出ます。よろしいですか？')">
+            @csrf
+            <button type="submit" @disabled($hasDummies)>ダミー案件を入れる</button>
+        </form>
+        <form method="post" action="{{ route('admin.campaigns.dummies.destroy') }}" onsubmit="return confirm('ダミー案件をすべて消します。ダミー案件に付いたお気に入りと案件への遷移記録も消えます。よろしいですか？')">
+            @csrf @method('delete')
+            <button type="submit" class="btn-danger" @disabled(! $hasDummies)>ダミー案件をすべて消す</button>
+        </form>
+    </div>
+    @if ($hasDummies)<p class="muted" style="margin-bottom:0">いまダミー案件が入っています。</p>@endif
+</div>
+<div class="card">
     <form method="get" action="{{ route('admin.campaigns.index') }}" class="inline">
         <div>
             <label for="filter">掲載状態</label>

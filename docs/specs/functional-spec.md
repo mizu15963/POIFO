@@ -135,7 +135,7 @@
 - 管理画面の案件一覧に、案件ごとのお気に入り数を出す（おすすめ設定の参考にする）
 - 会員 API: `GET /v1/me/favorites`（一覧）、`PUT /v1/me/favorites/{案件}`（登録）、`DELETE /v1/me/favorites/{案件}`（解除）。同じ案件を2回登録してもエラーにしない
 
-### 4.6 動作確認用のダミー案件（2026-11-27 yamada 決定、未実装）
+### 4.6 動作確認用のダミー案件（2026-11-27 yamada 決定）
 
 GF Rewards の取り込みが動くまで、実際の画面で一覧・詳細・お気に入りの動きを確かめるために使う。ステージングがないので本番の DB に入れる。サーバでコマンドを打てない場所からでも使えるよう、管理画面のボタンで入れる・消す。
 
@@ -146,6 +146,7 @@ GF Rewards の取り込みが動くまで、実際の画面で一覧・詳細・
 - 消すときは、ダミー案件に付いたお気に入りと「この案件に進む」の記録（`campaign_clicks`）も一緒に消す。ダミー案件に成果が付くことはない（GF Rewards からの通知は `provider` が違うので突き合わない）
 - 入れた・消したは操作ログに残す
 - 公開前に必ず消す（[14章](#14-まだ決まっていないこと) とは別に、公開前の確認項目）
+- 実装: `App\Services\Campaigns\DummyCampaigns`。管理画面のルートは `POST /campaigns/dummies`（入れる）と `DELETE /campaigns/dummies`（すべて消す）。操作ログの種類は `campaign.dummy_insert` / `campaign.dummy_delete`。アイコンは会員サイトのキャラ画像（`POIFO_FRONT_URL` の `/images/mascot/`）
 
 ## 5. ポイント
 

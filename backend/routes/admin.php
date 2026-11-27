@@ -37,6 +37,9 @@ Route::name('admin.')->group(function () {
         // 案件の表示設定（中身は ASP から取り込むので変えない）
         Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
         Route::put('/campaigns/{campaign}', [CampaignController::class, 'update'])->name('campaigns.update');
+        // 動作確認用のダミー案件（機能仕様 4.6、公開前に消す）
+        Route::post('/campaigns/dummies', [CampaignController::class, 'storeDummies'])->name('campaigns.dummies.store');
+        Route::delete('/campaigns/dummies', [CampaignController::class, 'destroyDummies'])->name('campaigns.dummies.destroy');
 
         // イベントと参加者
         Route::resource('events', EventController::class);

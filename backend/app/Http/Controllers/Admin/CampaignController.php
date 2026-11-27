@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Services\Admin\AuditLogger;
+use App\Services\Campaigns\DummyCampaigns;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,7 +23,7 @@ class CampaignController extends Controller
         'hidden' => '非表示',
     ];
 
-    public function __construct(private AuditLogger $audit) {}
+    public function __construct(private AuditLogger $audit, private DummyCampaigns $dummies) {}
 
     public function index(Request $request): View
     {
@@ -50,6 +51,7 @@ class CampaignController extends Controller
             'filter' => $filter,
             'keyword' => $keyword,
             'filters' => self::FILTERS,
+            'hasDummies' => $this->dummies->exists(),
         ]);
     }
 
@@ -68,5 +70,27 @@ class CampaignController extends Controller
         $this->audit->log(Auth::guard('admin')->user(), 'campaign.update_display', 'campaign', $campaign->id, ['before' => $before, 'after' => $data]);
 
         return back()->with('status', "「{$campaign->name}」の表示設定を保存しました。");
+    }
+
+    /** 動作確認用のダミー案件を入れる（機能仕様 4.6）。ダミーがまだないときだけ入る */
+    public function storeDummies(): RedirectResponse
+    {
+        $count = $this->dummies->insert();
+        if ($count === 0) {
+            return back()->withErrors(['dummy' => 'ダミー案件はすでに入っています。入れ直すときは先にすべて消してください。']);
+        }
+
+        $this->audit->log(Auth::guard('admin')->user(), 'campaign.dummy_insert', 'campaign', null, ['count' => $count]);
+
+        return back()->with('status', "ダミー案件を{$count}件入れました。公開前に必ず消してください。");
+    }
+
+    /** ダミー案件をすべて消す。付いているお気に入りと「この案件に進む」の記録も消す */
+    public function destroyDummies(): RedirectResponse
+    {
+        $deleted = $this->dummies->deleteAll();
+        $this->audit->log(Auth::guard('admin')->user(), 'campaign.dummy_delete', 'campaign', null, $deleted);
+
+        return back()->with('status', "ダミー案件を{$deleted['campaigns']}件消しました（お気に入り {$deleted['favorites']}件、案件への遷移記録 {$deleted['clicks']}件も削除）。");
     }
 }
