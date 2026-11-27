@@ -10,7 +10,10 @@ const date = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', year: 'n
 
 export const formatDateTime = (iso: string) => dateTime.format(new Date(iso));
 export const formatDate = (iso: string) => date.format(new Date(iso));
-export const formatPoints = (n: number) => `${n.toLocaleString('ja-JP')}pt`;
+// ポイントの単位はサイト全体で「P」（2026-11-28 yamada）
+export const formatPoints = (n: number) => `${n.toLocaleString('ja-JP')}P`;
+/** 単位なしの数字（ポイントカードで単位を小さく別に出すとき） */
+export const formatPointsNumber = (n: number) => n.toLocaleString('ja-JP');
 
 /** API から来た文字列を HTML に入れるときは必ず通す */
 export const escapeHtml = (s: string | null | undefined) =>

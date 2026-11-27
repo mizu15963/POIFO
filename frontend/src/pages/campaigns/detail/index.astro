@@ -16,7 +16,8 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
   import { fetchCampaign } from '../../../lib/api';
   import { campaignGoUrl, LINE_LOGIN_URL } from '../../../lib/config';
   import { bindFavoriteButtons, favoriteButton } from '../../../lib/favorite';
-  import { escapeHtml, formatDate, formatPoints, safeUrl } from '../../../lib/format';
+  import { escapeHtml, formatDate, formatPoints, formatPointsNumber, safeUrl } from '../../../lib/format';
+  import { pointCardHtml } from '../../../lib/point-card';
   import { emptyState } from '../../../lib/render';
   import { whenMe } from '../../../lib/session';
 
@@ -67,10 +68,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
           </div>
           ${favoriteButton(c.id, c.is_favorite)}
         </div>
-        <div class="detail-points">
-          <img class="detail-points__coins" src="/images/visuals/member-coins.webp" width="157" height="160" alt="">
-          <p class="detail-points__value">${c.points != null ? `最大 <span>${escapeHtml(formatPoints(c.points))}</span>` : 'ポイントは獲得条件をご覧ください'}</p>
-        </div>
+        ${c.points != null ? pointCardHtml({ label: '最大獲得ポイント', value: formatPointsNumber(c.points) }) : '<p class="detail-points-none">ポイントは獲得条件をご覧ください</p>'}
         ${
           me
             ? `<a class="btn btn--block detail-go" href="${campaignGoUrl(c.id)}" rel="noopener">この案件に進む${arrow}</a>`
@@ -135,31 +133,14 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
     height: 44px;
     background: var(--color-brand-bg);
   }
-  /* ポイントの帯（ログイン後トップの帯と同じ形）: コインの絵、区切り線、最大ポイント */
-  .detail-points {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 14px;
+  /* 最大ポイントは共通のポイントカード（global.css の .point-card）。ポイント未設定の案件だけ文字で案内 */
+  .detail-points-none {
+    margin: 0 0 14px;
     padding: 12px 16px;
     border-radius: 16px;
-    background: linear-gradient(135deg, #f3fcfc, var(--color-brand-bg));
-  }
-  .detail-points__coins {
-    width: 56px;
-    height: auto;
-  }
-  .detail-points__value {
-    margin: 0;
-    padding-left: 16px;
-    border-left: 1px solid var(--color-brand);
-    font-size: 1.1rem;
-    font-weight: 800;
-  }
-  .detail-points__value span {
-    font-size: 2rem;
-    color: var(--color-brand-strong);
+    background: var(--color-brand-bg);
+    text-align: center;
+    font-weight: 700;
   }
   /* 「この案件に進む」は帯のすぐ下。濃い色の丸いボタンで、右に矢印 */
   .detail-go {

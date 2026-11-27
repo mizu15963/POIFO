@@ -5,6 +5,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Mascot from '../components/Mascot.astro';
 import Visual from '../components/Visual.astro';
+import PointCard from '../components/PointCard.astro';
 import { CAMPAIGN_MENU, campaignMenuHref } from '../lib/campaign-menu';
 import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 
@@ -24,15 +25,8 @@ const MENU_ROWS = [
        初めての人向けの説明（ファーストビュー・特徴・貯め方・しくみ・最後の登録導線）はログイン中は出さない -->
   <section class="member-top" data-show="member">
     <div class="container">
-      <!-- ポイントの帯（2026-11-28 ログイン後トップの見本）: 左にコインの絵、大きく利用可能ポイント、区切り線の右に判定中 -->
-      <a class="member-points" href="/mypage/">
-        <Visual name="member-coins" alt="" class="member-points__coins" />
-        <span class="member-points__main">
-          <span class="member-points__label">利用可能ポイント</span>
-          <span class="member-points__value" id="member-available">—</span>
-        </span>
-        <span class="member-points__pending">判定中 <span id="member-pending">—</span></span>
-      </a>
+      <!-- ポイントの帯: サイト共通のポイントカード（docs/brand/README.md「ポイント表示の共通カード」） -->
+      <PointCard label="利用可能ポイント" valueId="member-available" sideId="member-pending" href="/mypage/" />
       <a id="important-news" class="important-news" href="#" hidden></a>
     </div>
   </section>
@@ -238,7 +232,7 @@ const MENU_ROWS = [
   import { fetchCampaignCategories, fetchCampaigns, fetchEvents, fetchNews } from '../lib/api';
   import { categoryIcon } from '../lib/category-icon';
   import { bindFavoriteButtons } from '../lib/favorite';
-  import { escapeHtml, formatPoints } from '../lib/format';
+  import { escapeHtml, formatPoints, formatPointsNumber } from '../lib/format';
   import { campaignCard, emptyState, eventCard } from '../lib/render';
   import { whenMe } from '../lib/session';
 
@@ -246,7 +240,7 @@ const MENU_ROWS = [
   whenMe().then((me) => {
     if (!me) return;
     loadCategories();
-    document.getElementById('member-available')!.textContent = formatPoints(me.points.available);
+    document.getElementById('member-available')!.textContent = formatPointsNumber(me.points.available);
     document.getElementById('member-pending')!.textContent = formatPoints(me.points.pending);
     fetchNews({ important: true, perPage: 1 })
       .then((res) => {
@@ -297,56 +291,6 @@ const MENU_ROWS = [
 <style>
   .member-top {
     padding: 16px 0 0;
-  }
-  .member-points {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #f3fcfc, var(--color-brand-bg));
-    box-shadow: 0 2px 8px rgb(58 209 206 / 0.15);
-    text-decoration: none;
-  }
-  .member-points :global(.member-points__coins) {
-    flex-shrink: 0;
-    width: 56px;
-    height: auto;
-  }
-  .member-points__main {
-    display: grid;
-    flex: 1;
-    min-width: 0;
-    line-height: 1.25;
-  }
-  .member-points__label {
-    font-size: 0.8rem;
-    color: var(--color-muted);
-  }
-  .member-points__value {
-    font-size: 1.7rem;
-    font-weight: 800;
-    color: var(--color-brand-strong);
-  }
-  /* 区切り線の右に判定中 */
-  .member-points__pending {
-    flex-shrink: 0;
-    padding-left: 12px;
-    border-left: 1px solid var(--color-brand);
-    font-size: 0.85rem;
-    color: var(--color-text);
-    white-space: nowrap;
-  }
-  .member-points__pending::after {
-    content: '';
-    display: inline-block;
-    margin-left: 8px;
-    width: 7px;
-    height: 7px;
-    border-top: 2px solid var(--color-muted);
-    border-right: 2px solid var(--color-muted);
-    transform: rotate(45deg);
   }
   .member-top .important-news {
     margin-bottom: 0;

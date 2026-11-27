@@ -785,3 +785,122 @@ body[data-auth='guest'][data-sticky-cta='true'] {
 .center-text {
   text-align: center;
 }
+
+/* ===== ポイント表示の共通カード（src/components/PointCard.astro・src/lib/point-card.ts） =====
+   2026-11-28 yamada: ポイントを表示する所はこの形で統一。見本 brand/redesign/components/point-summary-card.png */
+.point-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px 12px 12px 0;
+  border: 1px solid #dff3f3;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #fff 40%, #effbfb);
+  box-shadow: 0 3px 10px rgb(58 209 206 / 0.14);
+  color: var(--color-text);
+  text-decoration: none;
+  overflow: hidden;
+}
+/* 左端の斜めに切った水色の帯と、白い丸の P */
+.point-card__badge {
+  position: relative;
+  align-self: stretch;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  margin: -12px 0;
+}
+.point-card__badge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, #47dcd6, #8ee8e4);
+  clip-path: polygon(0 0, 100% 0, 72% 100%, 0 100%);
+}
+.point-card__badge span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--color-brand-strong);
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+.point-card__main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  line-height: 1.2;
+}
+.point-card__label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #3d4448;
+}
+.point-card__value {
+  display: flex;
+  align-items: baseline;
+  color: var(--color-brand-strong);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.point-card__num {
+  font-size: 1.9rem;
+  letter-spacing: 0.01em;
+}
+.point-card__unit {
+  margin-left: 2px;
+  font-size: 1.1rem;
+}
+.point-card__sparkle {
+  align-self: flex-start;
+  flex-shrink: 0;
+  margin: -4px 0 0 2px;
+}
+/* 区切り線の右: 薄い水色の囲みで判定中ポイントと ＞ */
+.point-card__side {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  gap: 2px;
+  margin-left: 2px;
+  padding: 8px 22px 8px 10px;
+  border-radius: 12px;
+  background: var(--color-brand-bg);
+  line-height: 1.2;
+}
+.point-card__side::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 6px;
+  bottom: 6px;
+  border-left: 2px solid #bfeeed;
+}
+a.point-card .point-card__side::after {
+  content: '';
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid var(--color-brand-strong);
+  border-right: 2px solid var(--color-brand-strong);
+  transform: translateY(-50%) rotate(45deg);
+}
+.point-card__side-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #3d4448;
+}
+.point-card__side-value {
+  font-size: 1rem;
+  font-weight: 800;
+}
