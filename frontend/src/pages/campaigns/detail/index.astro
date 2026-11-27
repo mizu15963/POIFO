@@ -1,5 +1,6 @@
 ---
 // 静的サイトなので詳細は /campaigns/detail/?id=123 の形で、ブラウザから API で取得する
+// 見た目は 2026-11-28 納品の見本（共有フォルダ brand/redesign/campaign-detail/）に寄せる。見本は値が仮なので HTML/CSS で作り、波模様は作らない
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 ---
 
@@ -15,9 +16,27 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
   import { fetchCampaign } from '../../../lib/api';
   import { campaignGoUrl, LINE_LOGIN_URL } from '../../../lib/config';
   import { bindFavoriteButtons, favoriteButton } from '../../../lib/favorite';
-  import { escapeHtml, formatPoints, safeUrl } from '../../../lib/format';
+  import { escapeHtml, formatDate, formatPoints, safeUrl } from '../../../lib/format';
   import { emptyState } from '../../../lib/render';
   import { whenMe } from '../../../lib/session';
+
+  // カードの見出しの左に置く線のアイコン（装飾なので aria-hidden）
+  const svg = (body: string, cls = 'detail-card__icon') =>
+    `<svg class="${cls}" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  const ICON = {
+    clipboard: svg('<rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3.5h6v1"/><path d="m8.5 11 1.5 1.5 3-3M8.5 16.5l1.5 1.5 3-3"/>'),
+    warning: svg('<path d="M12 3.5 2.5 20h19Z"/><path d="M12 10v4.5M12 17.5h.01"/>'),
+    game: svg('<rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.5" r="1"/><circle cx="17.5" cy="13.8" r="1"/>'),
+    info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>', 'detail-note__icon'),
+    headset: svg('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-2 2.5-5 2.5"/>', 'detail-support__icon'),
+  };
+  const arrow = '<span class="btn__arrow" aria-hidden="true">→</span>';
+
+  const card = (icon: string, title: string, body: string) => `
+    <section class="detail-card">
+      <h2 class="detail-card__head">${icon}<span>${title}</span></h2>
+      <div class="detail-card__body">${body}</div>
+    </section>`;
 
   const root = document.getElementById('campaign')!;
   const id = new URLSearchParams(location.search).get('id');
@@ -33,20 +52,45 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
       document.title = `${c.name}｜ポイフォ`;
       const icon = safeUrl(c.icon_url);
       const actions = c.actions
-        .map((a) => `<li><strong>${escapeHtml(a.name)}</strong>${a.points != null ? `：${formatPoints(a.points)}` : ''}${a.approve_days != null ? `（判定まで約${a.approve_days}日）` : ''}${a.description ? `<br><span class="prose">${escapeHtml(a.description)}</span>` : ''}</li>`)
+        .map(
+          (a) =>
+            `<li><span class="detail-actions__main"><strong>${escapeHtml(a.name ?? '')}</strong>${a.points != null ? `：${formatPoints(a.points)}` : ''}${a.approve_days != null ? `（判定まで約${a.approve_days}日）` : ''}</span>${a.description ? `<span class="detail-actions__desc prose">${escapeHtml(a.description)}</span>` : ''}</li>`,
+        )
         .join('');
       root.innerHTML = `
         <div class="detail-head">
-          ${icon ? `<img src="${escapeHtml(icon)}" alt="" width="96" height="96">` : ''}
-          <div class="detail-head__text"><h1>${escapeHtml(c.name)}</h1><p class="lead">${escapeHtml(c.category)}</p></div>
+          ${icon ? `<img src="${escapeHtml(icon)}" alt="" width="88" height="88">` : '<span class="detail-head__noicon" aria-hidden="true"></span>'}
+          <div class="detail-head__text">
+            <h1>${escapeHtml(c.name)}</h1>
+            ${c.category ? `<p class="detail-head__meta">${escapeHtml(c.category)}</p>` : ''}
+            ${c.ends_at ? `<p class="detail-head__meta">掲載終了 ${escapeHtml(formatDate(c.ends_at))}</p>` : ''}
+          </div>
           ${favoriteButton(c.id, c.is_favorite)}
         </div>
-        ${c.points != null ? `<p class="detail-points">最大 ${formatPoints(c.points)}</p>` : ''}
-        ${me ? `<a class="btn btn--block" href="${campaignGoUrl(c.id)}" rel="noopener">この案件に進む</a>` : `<a class="btn btn--line btn--block" href="${LINE_LOGIN_URL}">LINEでログインして進む</a><p class="lead">ログインしないとポイントが付きません。</p>`}
-        ${actions ? `<h2>獲得条件とポイント</h2><ul>${actions}</ul>` : ''}
-        ${c.conversion_condition ? `<h2>成果の条件・注意事項</h2><p class="prose">${escapeHtml(c.conversion_condition)}</p>` : ''}
-        ${c.description ? `<h2>案件の説明</h2><p class="prose">${escapeHtml(c.description)}</p>` : ''}
-        <p class="lead">ポイントは成果の発生後に「判定中」として表示され、広告主の承認後に利用できるようになります。</p>`;
+        <div class="detail-points">
+          <img class="detail-points__coins" src="/images/visuals/member-coins.webp" width="157" height="160" alt="">
+          <p class="detail-points__value">${c.points != null ? `最大 <span>${escapeHtml(formatPoints(c.points))}</span>` : 'ポイントは獲得条件をご覧ください'}</p>
+        </div>
+        ${
+          me
+            ? `<a class="btn btn--block detail-go" href="${campaignGoUrl(c.id)}" rel="noopener">この案件に進む${arrow}</a>`
+            : `<a class="btn btn--line btn--block detail-go" href="${LINE_LOGIN_URL}">LINEでログインして進む</a><p class="detail-go__note">ログインしないとポイントが付きません。</p>`
+        }
+        ${actions ? card(ICON.clipboard, '獲得条件とポイント', `<ul class="detail-actions">${actions}</ul>`) : ''}
+        ${c.conversion_condition ? card(ICON.warning, '成果の条件・注意事項', `<p class="prose">${escapeHtml(c.conversion_condition)}</p>`) : ''}
+        ${card(
+          ICON.game,
+          '案件の説明',
+          `${c.description ? `<p class="prose">${escapeHtml(c.description)}</p>` : ''}<p class="detail-note">${ICON.info}<span>ポイントは成果の発生後に「判定中」として表示され、広告主の承認後に利用できるようになります。</span></p>`,
+        )}
+        <div class="detail-support">
+          ${ICON.headset}
+          <div class="detail-support__text">
+            <p class="detail-support__title">困ったときは、担当スタッフに相談</p>
+            <p class="detail-support__body">ポイントの貯め方や案件の進め方など、気軽にご相談ください。</p>
+          </div>
+          <a class="btn btn--outline detail-support__btn" href="/support/">担当サポートについて${arrow}</a>
+        </div>`;
     } catch {
       root.innerHTML = emptyState('この案件は現在掲載されていません。', 'sorry');
     }
@@ -55,24 +99,201 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 </script>
 
 <style is:global>
+  /* 案件の頭: 角丸のアイコン・案件名・カテゴリ、右に薄い水色の丸の中の☆ */
   .detail-head {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     align-items: center;
+    margin-bottom: 16px;
+  }
+  .detail-head img,
+  .detail-head__noicon {
+    flex-shrink: 0;
+    width: 88px;
+    height: 88px;
+    border-radius: 20px;
+  }
+  .detail-head__noicon {
+    background: var(--color-brand-bg);
   }
   .detail-head__text {
     flex: 1;
     min-width: 0;
   }
-  .detail-head img {
-    border-radius: 16px;
-  }
   .detail-head h1 {
-    margin: 0;
-    font-size: 1.3rem;
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+    line-height: 1.45;
   }
+  .detail-head__meta {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+  .detail-head .fav-btn {
+    width: 44px;
+    height: 44px;
+    background: var(--color-brand-bg);
+  }
+  /* ポイントの帯（ログイン後トップの帯と同じ形）: コインの絵、区切り線、最大ポイント */
   .detail-points {
-    font-size: 1.4rem;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f3fcfc, var(--color-brand-bg));
+  }
+  .detail-points__coins {
+    width: 56px;
+    height: auto;
+  }
+  .detail-points__value {
+    margin: 0;
+    padding-left: 16px;
+    border-left: 1px solid var(--color-brand);
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+  .detail-points__value span {
+    font-size: 2rem;
+    color: var(--color-brand-strong);
+  }
+  /* 「この案件に進む」は帯のすぐ下。濃い色の丸いボタンで、右に矢印 */
+  .detail-go {
+    position: relative;
+    min-height: 54px;
+    font-size: 1.05rem;
+  }
+  .btn__arrow {
+    position: absolute;
+    right: 22px;
+    font-size: 1.2rem;
+  }
+  .detail-go__note {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    text-align: center;
+  }
+  /* 白いカード。見出しは淡い水色の帯で、左に線のアイコン */
+  .detail-card {
+    margin-top: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.04);
+    overflow: hidden;
+  }
+  .detail-card__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 16px;
+    background: var(--color-brand-bg);
+    font-size: 1.05rem;
+  }
+  .detail-card__icon {
+    flex-shrink: 0;
+    color: var(--color-brand-strong);
+  }
+  .detail-card__body {
+    padding: 12px 16px 14px;
+  }
+  .detail-card__body > p {
+    margin: 0;
+  }
+  .detail-actions {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .detail-actions li {
+    position: relative;
+    padding-left: 18px;
+  }
+  .detail-actions li + li {
+    margin-top: 10px;
+  }
+  /* ● の印 */
+  .detail-actions li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.6em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-brand-strong);
+  }
+  .detail-actions__desc {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+  /* 判定中の案内: i マーク付きの灰色の囲み */
+  .detail-note {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 0 !important;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f3f5f6;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+  .detail-note__icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--color-brand-strong);
+  }
+  /* 一番下: 担当スタッフに相談の横長の小さいカード */
+  .detail-support {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--color-brand-bg);
+  }
+  .detail-support__icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    color: var(--color-brand-strong);
+  }
+  .detail-support__text {
+    flex: 1;
+    min-width: 0;
+  }
+  .detail-support__title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 800;
+  }
+  .detail-support__body {
+    margin: 2px 0 0;
+    font-size: 0.72rem;
+    color: var(--color-muted);
+    line-height: 1.5;
+  }
+  .detail-support__btn {
+    flex-shrink: 0;
+    position: relative;
+    width: 108px;
+    min-height: 48px;
+    padding: 4px 22px 4px 10px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    white-space: normal;
+  }
+  .detail-support__btn .btn__arrow {
+    right: 8px;
+    font-size: 0.9rem;
   }
 </style>
