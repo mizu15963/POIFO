@@ -11,6 +11,7 @@ use App\Support\ClientIp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CampaignController extends Controller
 {
@@ -18,13 +19,30 @@ class CampaignController extends Controller
      * 掲載中の案件の一覧（20件ずつ、最大50件）。
      *
      * ログイン中なら各案件の is_favorite（お気に入り登録済みか）を返す。未ログインでは常に false。
+     *
+     * トップの案件メニュー（機能仕様 4.2）から: featured=1 でおすすめだけ、tag= で特集の印が付いた案件だけ、
+     * sort=points でポイントの多い順（高還元。ポイントが決まっていない定率の案件は最後）。
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Campaign::listed()->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id');
+        $request->validate([
+            'tag' => ['nullable', 'string', Rule::in(array_keys(Campaign::TAGS))],
+            'sort' => ['nullable', 'string', Rule::in(['points'])],
+        ]);
+
+        $query = Campaign::listed();
+        if ($request->query('sort') === 'points') {
+            // MySQL・SQLite とも NULL は昇順で先に来るので、NULL かどうかで先に並べて定率を最後にする
+            $query->orderByRaw('max_points IS NULL')->orderByDesc('max_points');
+        }
+        $query->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id');
 
         if ($request->boolean('featured')) {
             $query->where('is_featured', true);
+        }
+
+        if ($tag = $request->query('tag')) {
+            $query->tagged($tag);
         }
 
         if ($category = $request->query('category')) {

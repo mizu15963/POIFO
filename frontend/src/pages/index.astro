@@ -1,15 +1,27 @@
 ---
 // トップページ（docs/specs/screen-spec.md S01）
+// 2026-11-27 先方のデザイン更新（完成イメージは共有フォルダ brand/redesign/mockup/top-mobile.png）に合わせた並び。
+// 説明のセクションは文字入りの納品画像なので、見出しは画面に出さない形（sr-only）で HTML にも書き、画像の alt に文言を入れる。
 import BaseLayout from '../layouts/BaseLayout.astro';
-import HowToEarn from '../components/HowToEarn.astro';
 import Mascot from '../components/Mascot.astro';
 import Visual from '../components/Visual.astro';
+import { CAMPAIGN_MENU, campaignMenuHref } from '../lib/campaign-menu';
 import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
+
+// 案件メニューの画像（section-category-menu）の中で、5行それぞれのカードがある位置（画像の高さに対する %）。
+// 画像を差し替えたら測り直す（brand/redesign/README.md）
+const MENU_ROWS = [
+  [3.0, 16.6],
+  [23.1, 16.2],
+  [42.7, 16.5],
+  [62.2, 16.3],
+  [81.8, 15.4],
+];
 ---
 
 <BaseLayout>
-  <!-- ログイン中の並び（docs/specs/screen-spec.md S01）: 保有ポイント → 重要なお知らせ → カテゴリ → おすすめ → イベント → 担当サポート → よくある質問。
-       初めての人向けの説明（ファーストビュー・特徴・貯め方・しくみ・使い道・最後の登録導線）はログイン中は出さない -->
+  <!-- ログイン中の並び（docs/specs/screen-spec.md S01）: 保有ポイント → 重要なお知らせ → 案件メニュー → おすすめ → みんなでポイ活 → 担当スタッフ → よくある質問。
+       初めての人向けの説明（ファーストビュー・特徴・貯め方・しくみ・最後の登録導線）はログイン中は出さない -->
   <section class="member-top" data-show="member">
     <div class="container">
       <a class="member-points" href="/mypage/">
@@ -23,20 +35,20 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     </div>
   </section>
 
-  <!-- ② ファーストビュー -->
-  <!-- キービジュアル kv-aqua-features はコピー・説明文・特徴3つが画像に入っているので、見出しは画面に出さず HTML にも書く（検索・読み上げ用） -->
+  <!-- ① ファーストビュー: キービジュアル → 主ボタン → チップ3つ。のぞき込むポイフォックスをキービジュアルの下の縁に乗せる -->
   <section class="hero" data-show="guest">
     <h1 class="sr-only">ひとりじゃない、あたらしいポイ活。</h1>
-    <Visual
-      name="kv-aqua-features"
-      alt="ひとりじゃない、あたらしいポイ活。ポイントを貯める楽しさに、相談できる安心と、みんなで取り組むワクワクを。LINEで相談できる。みんなでポイ活。月末締め・翌月まとめ払い。"
-      eager
-    />
+    <div class="hero__kv">
+      <Visual
+        name="kv-hitori-janai"
+        alt="ひとりじゃない、あたらしいポイ活。ポイントを貯める楽しさに、相談できる安心と、みんなで取り組むワクワクを。LINEで相談できる。みんなでポイ活。月末締め・翌月まとめ払い。"
+        eager
+      />
+      <Mascot pose="peek" width={132} eager class="peek peek--kv" />
+    </div>
     <div class="container hero__inner">
-      <div class="hero__cta">
-        <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
-      </div>
-      <ul class="hero__points">
+      <a class="btn btn--line hero__btn" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
+      <ul class="hero__chips">
         <li>登録・利用は無料</li>
         <li>LINEでかんたん登録</li>
         <li>担当スタッフに相談できる</li>
@@ -44,24 +56,35 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     </div>
   </section>
 
-  <!-- ③ 案件を探す：カテゴリ → おすすめ案件 -->
-  <section class="section">
+  <!-- ② 案件メニュー（5行）。絵は1枚の画像なので、行ごとに透明なリンクを重ねる。リンクの文字は読み上げ用に sr-only で持つ -->
+  <section class="section section--tight">
     <div class="container">
-      <div class="section__head">
-        <h2 class="section__title">カテゴリから探す</h2>
-        <a class="section__more" href="/campaigns/">すべて見る</a>
-      </div>
-      <ul id="campaign-categories" class="category-tiles" aria-live="polite">
-        <li class="loading">読み込み中…</li>
-      </ul>
+      <h2 class="sr-only">案件を探す</h2>
+      <nav class="campaign-menu" aria-label="案件メニュー">
+        <Visual name="section-category-menu" alt="" />
+        <ul>
+          {
+            CAMPAIGN_MENU.map((m, i) => (
+              <li style={`top:${MENU_ROWS[i][0]}%;height:${MENU_ROWS[i][1]}%`}>
+                <a href={campaignMenuHref(m)}>
+                  <span class="sr-only">
+                    {m.label}（{m.description}）
+                  </span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
     </div>
   </section>
 
+  <!-- ③ おすすめ案件 -->
   <section class="section section--tight">
     <div class="container">
       <div class="section__head">
         <h2 class="section__title">おすすめ案件</h2>
-        <a class="section__more" href="/campaigns/">すべて見る</a>
+        <a class="section__more" href="/campaigns/?featured=1">すべて見る</a>
       </div>
       <div id="featured-campaigns" class="grid grid--2 hscroll hscroll--campaigns" aria-live="polite">
         <p class="loading">読み込み中…</p>
@@ -69,80 +92,75 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     </div>
   </section>
 
-  <!-- ⑤ みんなでポイ活（イベント） -->
-  <section class="section section--soft">
+  <!-- ④ みんなでポイ活（画像）＋開催予定のイベント -->
+  <section class="section section--tight">
     <div class="container">
-      <div class="section__head">
-        <h2 class="section__title">みんなでポイ活！</h2>
-        <a class="section__more" href="/events/">一覧を見る</a>
-      </div>
-      <p class="lead">ゲーム案件などに、みんなで楽しく挑戦。イベント情報をチェックしよう！</p>
+      <h2 class="sr-only">みんなでポイ活</h2>
+      <Visual
+        name="section-minna-de-poikatsu"
+        class="section-visual"
+        alt="みんなでポイ活。1人では続かない…。そんな人も、みんなでフォローしながらポイ活！イベントで一緒に挑戦。オープンチャットで相談。みんなで楽しく継続。イベントやオープンチャットで取り組める、新しいポイ活スタイルです。"
+      />
+    </div>
+  </section>
+  <section class="section section--soft events-band">
+    <div class="container">
       <div id="upcoming-events" class="grid grid--3 hscroll hscroll--events" aria-live="polite">
         <p class="loading">読み込み中…</p>
       </div>
+      <a class="more-link" href="/events/">イベント一覧を見る</a>
     </div>
   </section>
 
-  <!-- ④ 担当サポート -->
+  <!-- ⑤ 担当スタッフに相談（画像）＋公式LINE -->
   <section class="section">
     <div class="container">
-      <h2 class="section__title">困ったときは、担当スタッフに相談。</h2>
-      <div class="with-mascot">
-        <p class="with-mascot__body">ポイントの貯め方や案件の進め方を、LINEで気軽に相談できます。初回面談の日程もLINEで調整します。</p>
-        <!-- キャラクターは1画面1体まで（docs/brand/README.md）。未ログインはファーストビューと貯め方に任せ、ログイン中のトップはここだけ -->
-        <span class="with-mascot__img" data-show="member"><Mascot pose="line" width={150} /></span>
-      </div>
-      {LINE_OFFICIAL_URL ? <a class="btn btn--line" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline" href="/support/">担当サポートについて</a>}
-    </div>
-  </section>
-
-  <!-- ⑥ ポイフォの特徴 -->
-  <section class="section section--soft" data-show="guest">
-    <div class="container">
-      <h2 class="section__title section__title--center">ポイフォの特徴</h2>
-      <div class="grid grid--3 features">
-        <div class="card feature"><Visual name="feature-smartphone" alt="" class="feature__img" /><h3>自由にポイ活</h3><p>興味のある案件を、自分のペースで利用できます。</p></div>
-        <div class="card feature"><Visual name="feature-chat" alt="" class="feature__img" /><h3>担当者に相談</h3><p>公式LINEで気軽にサポートを受けられます。</p></div>
-        <div class="card feature"><Visual name="feature-people" alt="" class="feature__img" /><h3>みんなで楽しむ</h3><p>イベントやオープンチャットで一緒に取り組めます。</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ⑦ 初めての方へ：貯め方 → しくみ → 交換先 → よくある質問 → 登録 -->
-  <section class="section" data-show="guest">
-    <div class="container">
-      <h2 class="section__title section__title--center">ポイントの貯め方</h2>
-      <HowToEarn />
-      <a class="more-link" href="/guide/#earn">くわしい貯め方を見る</a>
-    </div>
-  </section>
-
-  <section class="section section--warm" data-show="guest">
-    <div class="container">
-      <h2 class="section__title section__title--center">ポイントがもらえるしくみ</h2>
-      <!-- 説明画像 how-points-work（文言入り）。図の流れも alt に書いて読み上げで伝わるようにする -->
+      <h2 class="sr-only">担当スタッフに相談</h2>
       <Visual
-        name="how-points-work"
-        class="howitworks"
-        alt="ポイフォの登録は無料なのに、なぜポイントが貯まるの？ポイフォに掲載されている広告を利用すると、企業からポイフォへ広告費が支払われます。その広告費の一部をポイントとして還元しています。1. ユーザー様がポイフォを経由して広告を利用 2. 企業がポイフォに広告費を支払い 3. ポイフォがユーザー様にポイントとして還元"
+        name="section-staff-consult"
+        class="section-visual"
+        alt="ポイ活を始めたいけど、条件も複雑でよくわからない…。1万円を貯めたいけど、何を進めたらいいかわからない…。担当スタッフに相談。そんな時はポイフォにお任せ！わからないことを相談。おすすめ案件を相談。どれくらい進めればいいか相談。困ったらLINEで気軽に相談。初回面談の日程もLINEで調整できます。"
+      />
+      {LINE_OFFICIAL_URL ? <a class="btn btn--line section-btn" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline section-btn" href="/support/">担当サポートについて</a>}
+    </div>
+  </section>
+
+  <!-- ⑥ ポイフォの特徴 → ⑦ 貯め方 → ⑧ しくみ（初めての人向け。画像） -->
+  <section class="section section--tight" data-show="guest">
+    <div class="container">
+      <h2 class="sr-only">ポイフォの特徴</h2>
+      <Visual
+        name="section-features"
+        class="section-visual"
+        alt="ポイフォの特徴。自由にポイ活：興味のある案件を、自分のペースで利用できます。担当者に相談：公式LINEで気軽にサポートを受けられます。みんなで楽しむ：イベントやオープンチャットで一緒に取り組めます。"
       />
     </div>
   </section>
 
-  <section class="section" data-show="guest">
+  <section class="section section--tight" data-show="guest">
     <div class="container">
-      <h2 class="section__title section__title--center">貯めたポイントの使い道</h2>
-      <div class="exchange card">
-        <div class="exchange__body">
-          <p class="exchange__name">現金（銀行振込）</p>
-          <p class="exchange__text">確定したポイントを、登録した銀行口座への振込で受け取れます。交換先は今後追加予定です。</p>
-          <a class="more-link" href="/guide/#exchange">交換方法を見る</a>
-        </div>
-      </div>
+      <h2 class="sr-only">ポイントの貯め方</h2>
+      <Visual
+        name="section-how-to-earn"
+        class="section-visual"
+        alt="ポイントの貯め方。STEP1 LINEでかんたん登録：LINEでログインするだけ。面倒な入力はありません。STEP2 案件を選んで進む：自分に合う案件を選び、『この広告に進む』をタップします。STEP3 条件達成でポイントGET：条件を達成するとポイントが反映。月末締め・翌月まとめ払いです。"
+      />
+      <a class="more-link" href="/guide/#earn">くわしい貯め方を見る</a>
     </div>
   </section>
 
-  <section class="section section--soft">
+  <section class="section section--tight" data-show="guest">
+    <div class="container">
+      <h2 class="sr-only">ポイントがもらえるしくみ</h2>
+      <Visual
+        name="section-how-points-work"
+        class="section-visual"
+        alt="ポイントがもらえるしくみ。ポイフォの登録は無料なのに、なぜポイントが貯まるの？ポイフォに掲載されている広告を利用すると、企業からポイフォへ広告費が支払われます。その広告費の一部をポイントとして還元しています。1. ユーザー様がポイフォを経由して広告を利用 2. 企業がポイフォに広告費を支払い 3. ポイフォがユーザー様にポイントとして還元"
+      />
+    </div>
+  </section>
+
+  <section class="section section--soft faq-section">
     <div class="container">
       <h2 class="section__title section__title--center">よくある質問</h2>
       <p class="faq-intro">はじめての方からよく聞かれることをまとめました。タップすると答えが開きます。</p>
@@ -168,17 +186,22 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     </div>
   </section>
 
-  <!-- 最後の登録導線（未ログインのときだけ） -->
+  <!-- ⑩ 最後の登録導線（未ログインのときだけ） -->
   <section class="section section--wave final-cta" data-show="guest">
     <div class="container">
       <p class="final-cta__copy">ひとりじゃない、あたらしいポイ活をはじめよう。</p>
       <a class="btn btn--line" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
     </div>
   </section>
+
+  <!-- ページの一番下: フッターの上の縁から、のぞき込むポイフォックス（ログイン中のトップはこの1体だけ） -->
+  <div class="page-end" aria-hidden="true">
+    <Mascot pose="peek" width={120} class="peek peek--end" />
+  </div>
 </BaseLayout>
 
 <script>
-  import { fetchCampaignCategories, fetchCampaigns, fetchEvents, fetchNews } from '../lib/api';
+  import { fetchCampaigns, fetchEvents, fetchNews } from '../lib/api';
   import { bindFavoriteButtons } from '../lib/favorite';
   import { escapeHtml, formatPoints } from '../lib/format';
   import { campaignCard, emptyState, eventCard } from '../lib/render';
@@ -200,19 +223,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
       })
       .catch(() => undefined);
   });
-
-  // カテゴリは ASP から取り込んだ案件の分類（件数の多い順）。上位だけを出し、残りは案件一覧で絞り込む
-  const categories = document.getElementById('campaign-categories')!;
-  fetchCampaignCategories()
-    .then((items) => {
-      categories.innerHTML = items.length
-        ? items
-            .slice(0, matchMedia('(max-width: 639px)').matches ? 9 : 8)
-            .map((c) => `<li><a class="category-tile" href="/campaigns/?category=${encodeURIComponent(c.name)}"><span class="category-tile__name">${escapeHtml(c.name)}</span><span class="category-tile__count">${c.count}件</span></a></li>`)
-            .join('')
-        : `<li>${emptyState('カテゴリは準備中です。')}</li>`;
-    })
-    .catch(() => (categories.innerHTML = `<li>${emptyState('カテゴリを読み込めませんでした。')}</li>`));
 
   const campaigns = document.getElementById('featured-campaigns')!;
   bindFavoriteButtons(campaigns);
@@ -276,90 +286,84 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   .member-top .important-news {
     margin-bottom: 0;
   }
-  /* ファーストビューはキービジュアル（画像の下端が濃いアクアの波）の下に、主ボタンと特徴3つを置く */
-  .hero {
-    background: linear-gradient(180deg, var(--color-brand-bg), #fff);
-    padding: 0 0 20px;
+  /* ファーストビュー: キービジュアル（白地）の下に、淡いアクアの帯で主ボタンとチップを置く。
+     帯の上の縁に、のぞき込むポイフォックス（下端が手で切れた絵）の手を乗せる */
+  .hero__kv {
+    position: relative;
+  }
+  .hero__kv :global(.peek--kv) {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 28%;
+    height: auto;
+    transform: translateX(-50%);
   }
   .hero__inner {
-    padding-top: 16px;
+    padding-top: 20px;
+    padding-bottom: 24px;
     text-align: center;
+    background: linear-gradient(180deg, var(--color-brand-bg), #fff);
   }
-  .hero__cta .btn {
+  .hero__btn {
     width: 100%;
   }
-  .hero__points {
+  .hero__chips {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 20px 0 0;
+    gap: 6px 8px;
+    margin: 14px 0 0;
     padding: 0;
     list-style: none;
   }
-  .hero__points li {
-    padding: 4px 12px;
+  .hero__chips li {
+    padding: 3px 12px;
     border: 1px solid var(--color-brand);
     border-radius: 999px;
     background: #fff;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
-  /* カテゴリはスマホ2列・PC4列のタイル。件数を添えて、どこに案件が多いか分かるようにする */
-  .category-tiles {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+  /* 案件メニュー: 画像の上の行ごとに透明なリンク。押せる場所が分かるよう、触れた行をうっすら暗くし、キーボードの枠も出す */
+  .campaign-menu {
+    position: relative;
+  }
+  .campaign-menu ul {
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  /* タイルはスクリプトで差し込むので :global で当てる（Astro のスコープ付きスタイルが効かないため） */
-  .category-tiles > :global(li:only-child) {
-    grid-column: 1 / -1;
+  .campaign-menu li {
+    position: absolute;
+    left: 3.7%;
+    width: 92.5%;
   }
-  .category-tiles :global(.category-tile) {
+  .campaign-menu a {
+    display: block;
+    height: 100%;
+    border-radius: 14px;
+  }
+  .campaign-menu a:hover,
+  .campaign-menu a:active {
+    background: rgb(0 0 0 / 0.04);
+  }
+  .campaign-menu a:focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  /* 説明の画像はコンテナいっぱいに出す（画像の中に左右の余白がある） */
+  .section-visual,
+  .section :global(.section-visual) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .section-btn {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    min-height: 52px;
-    padding: 8px 14px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    text-decoration: none;
+    margin-top: 8px;
   }
-  .category-tiles :global(.category-tile:hover) {
-    border-color: var(--color-brand);
-    background: var(--color-brand-bg);
-  }
-  .category-tiles :global(.category-tile__name) {
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-  .category-tiles :global(.category-tile__count) {
-    color: var(--color-muted);
-    font-size: 0.8rem;
-    white-space: nowrap;
-  }
-  /* 説明画像は白地なので、淡いオレンジの背景の上でカードのように角を丸める */
-  .section :global(.howitworks) {
-    border-radius: var(--radius);
-  }
-  .exchange {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .exchange__body {
-    min-width: 0;
-  }
-  .exchange__name {
-    font-weight: 600;
-    font-size: 1.1rem;
-    margin: 0 0 4px;
-  }
-  .exchange__text {
-    margin: 0;
+  .events-band {
+    padding-top: 16px;
   }
   .faq-intro {
     margin: 0 0 16px;
@@ -427,31 +431,34 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     background: var(--color-accent);
     color: var(--color-text);
   }
+  /* 下の余白は、右下からのぞき込むポイフォックス（高さ約73px）がボタンに重ならない分を取る */
   .final-cta {
+    padding-bottom: 96px;
     text-align: center;
-  }
-  .feature {
-    text-align: center;
-  }
-  .feature :global(.feature__img) {
-    display: block;
-    width: 96px;
-    margin: 0 auto 8px;
   }
   .final-cta__copy {
     font-weight: 600;
     font-size: 1.15rem;
     margin: 0 0 16px;
   }
-  /* スマホ向けの上書きは PC 向けの指定より後に置く（同じ詳細度なので後勝ち） */
-  /* ===== スマホ（主なターゲット）: 一般的なポイントサイトのスマホ表示に寄せて、詰めて横に流す ===== */
-  .hero__points {
-    margin-top: 14px;
-    gap: 6px;
+  /* 下の余白は、右下からのぞき込むポイフォックス（高さ約73px）がボタンに重ならない分を取る */
+  .final-cta {
+    padding-bottom: 96px;
+    text-align: center;
   }
-  .hero__points li {
-    font-size: 0.75rem;
-    padding: 2px 10px;
+  /* ログイン中は最後の登録導線がないので、よくある質問の下にポイフォックスの分の余白を取る */
+  :global(body[data-auth='member']) .faq-section {
+    padding-bottom: 88px;
+  }
+  /* ページの一番下: 高さ0の箱の右下にポイフォックスを置き、手をフッターの上の縁に乗せる */
+  .page-end {
+    position: relative;
+    height: 0;
+  }
+  .page-end :global(.peek--end) {
+    position: absolute;
+    right: 16px;
+    bottom: -2px;
   }
   /* 案件とイベントは横スクロールのカード列にし、画面の端まで流して「続きがある」ことを見せる */
   .hscroll:has(.card) {
@@ -515,48 +522,7 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
   .hscroll--events :global(.event-card) {
     padding: 12px;
   }
-  /* 特徴は3つ横並びの小さなカードにして縦に長くしない */
-  .features {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-  .features :global(.card) {
-    padding: 10px;
-  }
-  .features :global(.feature__img) {
-    width: 64px;
-    margin-bottom: 4px;
-  }
-  .features h3 {
-    font-size: 0.85rem;
-    margin: 0 0 4px;
-  }
-  .features p {
-    font-size: 0.75rem;
-    line-height: 1.5;
-    margin: 0;
-  }
-  .category-tiles {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .category-tiles :global(.category-tile) {
-    flex-direction: column;
-    justify-content: center;
-    gap: 0;
-    min-height: 56px;
-    padding: 6px;
-    text-align: center;
-  }
-  .category-tiles :global(.category-tile__name) {
-    font-size: 0.8rem;
-    line-height: 1.3;
-  }
-  .category-tiles :global(.category-tile__count) {
-    font-size: 0.7rem;
-  }
   .faq details {
     font-size: 0.9rem;
   }
-
 </style>

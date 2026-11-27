@@ -207,10 +207,15 @@ export async function fetchMe(): Promise<Me | null> {
   }
 }
 
-export const fetchCampaigns = (params: { featured?: boolean; perPage?: number; page?: number; category?: string } = {}) => {
+/** tag: 特集の印（はじめて向け・ゲーム案件特集・みんなで挑戦中）、sort: 'points' でポイントの多い順（高還元） */
+export const fetchCampaigns = (
+  params: { featured?: boolean; perPage?: number; page?: number; category?: string; tag?: string; sort?: 'points' } = {},
+) => {
   const q = new URLSearchParams();
   if (params.featured) q.set('featured', '1');
   if (params.category) q.set('category', params.category);
+  if (params.tag) q.set('tag', params.tag);
+  if (params.sort) q.set('sort', params.sort);
   if (params.perPage) q.set('per_page', String(params.perPage));
   if (params.page) q.set('page', String(params.page));
   return request<Paged<CampaignSummary>>(`/v1/campaigns?${q}`);

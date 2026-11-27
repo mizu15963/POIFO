@@ -4,15 +4,18 @@
 // width/height を必ず付けて、読み込み中にレイアウトがずれないようにする。
 // 文字が入った画像は alt に画像内の文言を入れる（検索・読み上げ用）。
 const sizes = {
-  'kv-aqua-features': [960, 1066], // S01 ファーストビュー（2026-11-27 kv-aqua-mascot から差し替え）
-  'how-points-work': [960, 809], // S01 ポイントがもらえるしくみ（下の余白は切り詰め済み）
-  'banner-wide-plain': [960, 540], // S01 貯めたポイントの使い道（文字なし）
+  // S01 トップ（2026-11-27 納品のデザイン更新。セクション画像は角の波を消して上下の余白を詰めたもの）
+  'kv-hitori-janai': [960, 1200], // ファーストビュー
+  'section-category-menu': [960, 1022], // 案件メニュー5行（上に透明なリンクを重ねる）
+  'section-minna-de-poikatsu': [960, 993], // みんなでポイ活
+  'section-staff-consult': [960, 1034], // 担当スタッフに相談
+  'section-features': [960, 1091], // ポイフォの特徴
+  'section-how-to-earn': [960, 1109], // ポイントの貯め方
+  'section-how-points-work': [960, 976], // ポイントがもらえるしくみ
+  'how-points-work': [960, 809], // S15 ヘルプのポイントがもらえるしくみ（下の余白は切り詰め済み）
   'banner-wide-3-shopping': [960, 480], // S02 案件一覧
   'banner-wide-4-start': [960, 540], // S15 はじめての方へ・ヘルプ
   'kv-tall-follow-b': [960, 1440], // S14 担当サポート
-  'feature-smartphone': [238, 240], // S01 特徴「自由にポイ活」（feature-icons-3 から切り出し）
-  'feature-chat': [237, 240], // S01 特徴「担当者に相談」
-  'feature-people': [238, 240], // S01 特徴「みんなで楽しむ」
 } as const;
 
 export type VisualName = keyof typeof sizes;

@@ -25,6 +25,7 @@
 | 12 | `event_participants` | イベントの参加 | 8.2 |
 | 13 | `favorites` | お気に入り | 4.5 |
 | 14 | `news` | お知らせ | 11.1 |
+| 15 | `campaign_tags` | 案件の特集の印 | 4.3 |
 | — | `sessions` `cache` `cache_locks` `jobs` `job_batches` `failed_jobs` | Laravel の仕組み用（セッション・キャッシュ・ロック・キュー）。API サーバを増やせるよう、すべて DB に置く | — |
 
 ## 2. テーブルのつながり
@@ -47,6 +48,7 @@ erDiagram
     admins ||--o{ event_participants : "参加確認"
     users ||--o{ favorites : "お気に入り"
     campaigns ||--o{ favorites : ""
+    campaigns ||--o{ campaign_tags : "特集の印"
     admins ||--o{ news : "登録"
     admins ||--o{ point_transactions : "手動調整"
 ```
@@ -347,6 +349,19 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `created_at` / `updated_at` | TIMESTAMP | ○ | | |
 
 インデックス: `status` + `published_at`
+
+### 4.15 `campaign_tags`（案件の特集の印）
+
+機能仕様 4.3。トップの案件メニューの「はじめて向け」「ゲーム案件特集」「みんなで挑戦中」を、管理画面で案件に付ける（2026-11-27）。ASP の取り込みでは触らない。特集を増やしても列を足さずに済むよう、案件と印の組を1行にする。案件を消すと一緒に消える。`updated_at` はない。
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `id` | BIGINT UNSIGNED | | | 主キー |
+| `campaign_id` | BIGINT UNSIGNED | | | 案件（→ `campaigns`。消したら一緒に消す） |
+| `tag` | VARCHAR(32) | | | `beginner`（はじめて向け）／`game`（ゲーム案件特集）／`together`（みんなで挑戦中）。値の一覧はコードの `Campaign::TAGS` |
+| `created_at` | TIMESTAMP | | 現在時刻 | 付けた日時 |
+
+インデックス: `campaign_id` + `tag`（一意）、`tag`（特集ごとの一覧）
 
 ## 5. 気づいた点
 
