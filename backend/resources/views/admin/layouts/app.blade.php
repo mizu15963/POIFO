@@ -25,6 +25,7 @@
         button, .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; border: 1px solid var(--text); background: var(--text); color: #fff; font-size: .95rem; cursor: pointer; text-decoration: none; }
         .btn-outline { background: #fff; color: var(--text); }
         .btn-danger { background: var(--danger); border-color: var(--danger); }
+        button:disabled { opacity: .45; cursor: not-allowed; }
         .flash { background: var(--brand-bg); border: 1px solid var(--brand); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
         .errors { background: #FDECEC; border: 1px solid var(--danger); color: var(--danger); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
         .errors ul { margin: 0; padding-left: 1.2em; }
