@@ -12,6 +12,7 @@ export const MASCOT_SIZES = {
   sorry: [447, 480], // 謝る（エラー用）
   maintenance: [640, 472], // 整備士（メンテナンス画面用、横長で長辺640px）
   welcome: [457, 480], // Pコインを持ってお出迎え（S07 会員登録完了）
+  peek: [480, 292], // 縁につかまってのぞき込む（2026-11-27 納品。下端が手で切れた絵。S01 のキービジュアルとページの一番下）
 } as const;
 
 export type MascotPose = keyof typeof MASCOT_SIZES;

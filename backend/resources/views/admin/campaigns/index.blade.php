@@ -31,7 +31,7 @@
         <div><label for="q">案件名・案件ID</label><input id="q" type="text" name="q" value="{{ $keyword }}"></div>
         <div><button type="submit" class="btn-outline">表示</button></div>
     </form>
-    <p class="muted">案件の中身（名前・ポイント・期間）は GF Rewards から15分ごとに取り込むので、ここでは表示の仕方だけ変えられます。並びは「おすすめ → 並び順（小さいほど前）→ 新しい順」です。</p>
+    <p class="muted">案件の中身（名前・ポイント・期間）は GF Rewards から15分ごとに取り込むので、ここでは表示の仕方だけ変えられます。並びは「おすすめ → 並び順（小さいほど前）→ 新しい順」です。「はじめて向け」「ゲーム案件特集」「みんなで挑戦中」に印を付けると、会員サイトのトップの案件メニューからその一覧に出ます（高還元はポイントの多い順で自動）。</p>
 </div>
 @include('admin.partials.pager', ['paginator' => $campaigns])
 <div class="table-wrap">
@@ -51,6 +51,10 @@
                     <form method="post" action="{{ route('admin.campaigns.update', $c) }}" class="inline">
                         @csrf @method('put')
                         <label style="margin:0;font-weight:400"><input type="checkbox" name="is_featured" value="1" @checked($c->is_featured)> おすすめ</label>
+                        @php($cTags = $c->tagKeys())
+                        @foreach ($tags as $key => $label)
+                            <label style="margin:0;font-weight:400"><input type="checkbox" name="tags[]" value="{{ $key }}" @checked(in_array($key, $cTags, true))> {{ $label }}</label>
+                        @endforeach
                         <label style="margin:0;font-weight:400"><input type="checkbox" name="is_hidden" value="1" @checked($c->is_hidden)> 非表示</label>
                         <div style="min-width:80px"><input type="number" name="sort_order" value="{{ $c->sort_order }}" aria-label="並び順" style="width:80px"></div>
                         <button type="submit" class="btn-outline">保存</button>

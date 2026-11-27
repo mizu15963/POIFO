@@ -4,6 +4,7 @@ namespace App\Services\Campaigns;
 
 use App\Models\Campaign;
 use App\Models\CampaignClick;
+use App\Models\CampaignTag;
 use App\Models\Favorite;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -52,7 +53,7 @@ class DummyCampaigns
                 ], $d['actions']);
                 $amounts = array_filter(array_column(array_column($actions, 'incentive'), 'amount'), fn ($v) => $v !== null);
 
-                Campaign::create([
+                $campaign = Campaign::create([
                     'provider' => self::PROVIDER,
                     'external_id' => sprintf('dummy-%02d', $i + 1),
                     'name' => '【ダミー】'.$d['name'],
@@ -72,6 +73,8 @@ class DummyCampaigns
                     'synced_at' => $now,
                     'is_featured' => $d['featured'] ?? false,
                 ]);
+                // トップの案件メニュー（特集）の確認用に、いくつかに印を付ける
+                $campaign->syncTags($d['tags'] ?? []);
             }
 
             return count(self::definitions($now));
@@ -91,6 +94,9 @@ class DummyCampaigns
                 return ['campaigns' => 0, 'favorites' => 0, 'clicks' => 0];
             }
 
+            // 特集の印は外部キー（cascade）でも消えるが、DB の設定に頼らず先に消す
+            CampaignTag::whereIn('campaign_id', $ids)->delete();
+
             return [
                 'favorites' => Favorite::whereIn('campaign_id', $ids)->delete(),
                 'clicks' => CampaignClick::whereIn('campaign_id', $ids)->delete(),
@@ -100,7 +106,7 @@ class DummyCampaigns
     }
 
     /**
-     * 10件分の中身。カテゴリ・端末・定額／定率・ポイント・成果地点の数・掲載期間をばらばらにする。
+     * 10件分の中身。カテゴリ・端末・定額／定率・ポイント・成果地点の数・掲載期間・特集の印をばらばらにする。
      * actions は [成果地点名, 説明, 定額ならポイント／定率なら率, 判定日数]。
      *
      * @return list<array<string, mixed>>
@@ -109,7 +115,7 @@ class DummyCampaigns
     {
         return [
             [
-                'name' => 'パズルゲーム「ポイポイパズル」インストール', 'category' => 'アプリインストール', 'platform' => 'ios', 'user_platforms' => ['ios'],
+                'tags' => ['beginner', 'game'], 'name' => 'パズルゲーム「ポイポイパズル」インストール', 'category' => 'アプリインストール', 'platform' => 'ios', 'user_platforms' => ['ios'],
                 'revenue_type' => 'fixed_amount', 'icon' => 'poifox-get', 'featured' => true,
                 'description' => 'かわいいキツネとブロックを消していくパズルゲームです（動作確認用のダミーです）。',
                 'condition' => 'アプリをインストールして初回起動すること。',
@@ -117,7 +123,7 @@ class DummyCampaigns
                 'starts_at' => $now->subDays(10), 'ends_at' => null,
             ],
             [
-                'name' => 'RPG「フォックスクエスト」レベル20到達', 'category' => 'アプリ複数条件達成', 'platform' => 'android', 'user_platforms' => ['android'],
+                'tags' => ['game', 'together'], 'name' => 'RPG「フォックスクエスト」レベル20到達', 'category' => 'アプリ複数条件達成', 'platform' => 'android', 'user_platforms' => ['android'],
                 'revenue_type' => 'fixed_amount', 'icon' => 'poifox-cheer', 'featured' => true,
                 'description' => '冒険しながら仲間を集めるRPGです（動作確認用のダミーです）。',
                 'condition' => 'インストールから30日以内に各条件を達成すること。',
@@ -129,7 +135,7 @@ class DummyCampaigns
                 'starts_at' => $now->subDays(5), 'ends_at' => $now->addDays(40),
             ],
             [
-                'name' => '動画見放題サービス 無料会員登録', 'category' => '無料会員登録', 'platform' => 'web', 'user_platforms' => ['ios', 'android', 'pc'],
+                'tags' => ['beginner'], 'name' => '動画見放題サービス 無料会員登録', 'category' => '無料会員登録', 'platform' => 'web', 'user_platforms' => ['ios', 'android', 'pc'],
                 'revenue_type' => 'fixed_amount', 'icon' => 'poifox-wave',
                 'description' => '映画やドラマが見放題の動画サービスです（動作確認用のダミーです）。',
                 'condition' => '新規で無料会員登録を完了すること。過去に登録したことがある方は対象外。',
@@ -145,7 +151,7 @@ class DummyCampaigns
                 'starts_at' => $now->subDays(3), 'ends_at' => $now->addDays(25),
             ],
             [
-                'name' => '総合通販モール お買い物', 'category' => '商品購入（定率）', 'platform' => 'web', 'user_platforms' => ['ios', 'android', 'pc'],
+                'tags' => ['together'], 'name' => '総合通販モール お買い物', 'category' => '商品購入（定率）', 'platform' => 'web', 'user_platforms' => ['ios', 'android', 'pc'],
                 'revenue_type' => 'fixed_rate', 'icon' => 'poifox-guide',
                 'description' => '日用品から家電までそろう通販モールです。購入金額に応じてポイントが付きます（動作確認用のダミーです）。',
                 'condition' => '商品を購入すること。キャンセル・返品した場合は対象外。',
@@ -172,7 +178,7 @@ class DummyCampaigns
                 'starts_at' => $now->subDays(7), 'ends_at' => $now->addDays(3),
             ],
             [
-                'name' => '保険の無料資料請求', 'category' => '資料請求', 'platform' => 'web', 'user_platforms' => ['ios', 'android', 'pc'],
+                'tags' => ['beginner'], 'name' => '保険の無料資料請求', 'category' => '資料請求', 'platform' => 'web', 'user_platforms' => ['ios', 'android', 'pc'],
                 'revenue_type' => 'fixed_amount', 'icon' => 'poifox-guide',
                 'description' => '複数の保険会社の資料をまとめて取り寄せられます（動作確認用のダミーです）。',
                 'condition' => '必要事項を入力して資料請求を完了すること。',

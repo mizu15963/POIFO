@@ -9,10 +9,12 @@ use App\Services\Campaigns\DummyCampaigns;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * 案件の表示設定（非表示・おすすめ・並び順）。案件の中身は ASP から取り込むので変えない（仕様書 2章）。
+ * 案件の表示設定（非表示・おすすめ・特集の印・並び順）。案件の中身は ASP から取り込むので変えない（仕様書 2章）。
  */
 class CampaignController extends Controller
 {
@@ -46,11 +48,12 @@ class CampaignController extends Controller
 
         return view('admin.campaigns.index', [
             // お気に入り数はおすすめ設定の参考にする（機能仕様 4.5）
-            'campaigns' => $query->withCount('favorites')->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id')->paginate(50)->withQueryString(),
+            'campaigns' => $query->with('tags')->withCount('favorites')->orderByDesc('is_featured')->orderBy('sort_order')->orderByDesc('id')->paginate(50)->withQueryString(),
             'listedIds' => $listedIds,
             'filter' => $filter,
             'keyword' => $keyword,
             'filters' => self::FILTERS,
+            'tags' => Campaign::TAGS,
             'hasDummies' => $this->dummies->exists(),
         ]);
     }
@@ -61,13 +64,21 @@ class CampaignController extends Controller
             'is_hidden' => ['boolean'],
             'is_featured' => ['boolean'],
             'sort_order' => ['required', 'integer', 'between:-9999,9999'],
+            'tags' => ['array'],
+            'tags.*' => ['string', Rule::in(array_keys(Campaign::TAGS))],
         ]);
         $data['is_hidden'] = $request->boolean('is_hidden');
         $data['is_featured'] = $request->boolean('is_featured');
+        $tags = $data['tags'] ?? [];
+        unset($data['tags']);
 
-        $before = $campaign->only(['is_hidden', 'is_featured', 'sort_order']);
-        $campaign->update($data);
-        $this->audit->log(Auth::guard('admin')->user(), 'campaign.update_display', 'campaign', $campaign->id, ['before' => $before, 'after' => $data]);
+        $before = $campaign->only(['is_hidden', 'is_featured', 'sort_order']) + ['tags' => $campaign->tagKeys()];
+        DB::transaction(function () use ($campaign, $data, $tags) {
+            $campaign->update($data);
+            $campaign->syncTags($tags);
+        });
+        $after = $data + ['tags' => $campaign->tagKeys()];
+        $this->audit->log(Auth::guard('admin')->user(), 'campaign.update_display', 'campaign', $campaign->id, ['before' => $before, 'after' => $after]);
 
         return back()->with('status', "「{$campaign->name}」の表示設定を保存しました。");
     }

@@ -12,8 +12,10 @@ import Visual from '../../components/Visual.astro';
         eager
         class="page-banner"
       />
-      <h1 class="section__title">案件を探す</h1>
+      <h1 class="section__title" id="list-title">案件を探す</h1>
       <p class="lead">案件はログインしてから利用してください（ログインしていないとポイントが付きません）。</p>
+      <!-- トップの案件メニュー（おすすめ・はじめて向け など）から来たときは、その説明と「すべての案件を見る」を出し、カテゴリのタブは出さない -->
+      <p id="menu-note" class="menu-note" hidden><span id="menu-description"></span><a href="/campaigns/">すべての案件を見る</a></p>
       <nav id="categories" class="tabs" aria-label="カテゴリ" hidden></nav>
       <div id="campaigns" class="grid grid--2" aria-live="polite"><p class="loading">読み込み中…</p></div>
       <p><button id="more" class="btn btn--outline" type="button" hidden>もっと見る</button></p>
@@ -26,19 +28,32 @@ import Visual from '../../components/Visual.astro';
   import { escapeHtml } from '../../lib/format';
   import { bindFavoriteButtons } from '../../lib/favorite';
   import { campaignCard, emptyState, loadError } from '../../lib/render';
+  import { campaignMenuFromSearch } from '../../lib/campaign-menu';
 
   const list = document.getElementById('campaigns')!;
   const tabs = document.getElementById('categories')!;
   const more = document.getElementById('more') as HTMLButtonElement;
+  const search = new URLSearchParams(location.search);
   // ?category= で絞り込んだ状態を共有できるようにする
-  let category = new URLSearchParams(location.search).get('category') ?? '';
+  let category = search.get('category') ?? '';
+  // トップの案件メニュー（?featured=1・?tag=・?sort=points）で開いたとき
+  const menu = campaignMenuFromSearch(search);
   let page = 1;
   bindFavoriteButtons(list);
 
+  if (menu) {
+    category = '';
+    document.getElementById('list-title')!.textContent = menu.label;
+    document.title = document.title.replace('案件を探す', menu.label);
+    document.getElementById('menu-description')!.textContent = menu.description;
+    document.getElementById('menu-note')!.hidden = false;
+  }
+
   async function load() {
     try {
-      const res = await fetchCampaigns({ page, perPage: 20, category: category || undefined });
-      if (page === 1) list.innerHTML = res.data.length ? '' : emptyState('現在掲載中の案件はありません。', 'point');
+      const res = await fetchCampaigns({ page, perPage: 20, category: category || undefined, ...menu?.query });
+      const emptyText = menu ? `${menu.label}は準備中です。` : '現在掲載中の案件はありません。';
+      if (page === 1) list.innerHTML = res.data.length ? '' : emptyState(emptyText, 'point');
       list.insertAdjacentHTML('beforeend', res.data.map((c) => campaignCard(c)).join(''));
       more.hidden = res.meta.current_page >= res.meta.last_page;
     } catch {
@@ -72,8 +87,24 @@ import Visual from '../../components/Visual.astro';
     load();
   });
 
-  fetchCampaignCategories()
-    .then((cats) => renderTabs(cats.map((c) => c.name)))
-    .catch(() => renderTabs([]));
+  if (!menu) {
+    fetchCampaignCategories()
+      .then((cats) => renderTabs(cats.map((c) => c.name)))
+      .catch(() => renderTabs([]));
+  }
   load();
 </script>
+
+<style>
+  .menu-note {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+  }
+  .menu-note a {
+    font-weight: 600;
+  }
+</style>
