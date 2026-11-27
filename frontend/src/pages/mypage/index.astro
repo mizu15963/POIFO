@@ -1,6 +1,7 @@
 ---
 // マイページ＝ポイント通帳（docs/specs/screen-spec.md S09）。明細・交換履歴・案件の利用履歴をタブで切り替える
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Mascot from '../../components/Mascot.astro';
 ---
 
 <BaseLayout title="マイページ" requireLogin noindex>
@@ -10,9 +11,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <a id="important-news" class="important-news" href="#" hidden></a>
       <p id="greeting" class="mypage__hello"></p>
       <div class="balance card">
-        <div class="balance__main">
-          <span class="balance__label">利用可能ポイント</span>
-          <span class="balance__value" id="available">—</span>
+        <div class="balance__top">
+          <div class="balance__main">
+            <span class="balance__label">利用可能ポイント</span>
+            <span class="balance__value" id="available">—</span>
+          </div>
+          <Mascot pose="get" width={72} eager class="balance__mascot" />
         </div>
         <div class="balance__sub">判定中 <span id="pending">—</span></div>
         <p class="balance__note">判定中のポイントは、広告主の承認後に利用可能になります。</p>
@@ -44,6 +48,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 <script>
   import { fetchClicks, fetchNews, fetchPointHistory, fetchWithdrawals, logout, type ClickItem, type PointHistoryItem, type WithdrawalItem } from '../../lib/api';
   import { escapeHtml, formatDate, formatDateTime, formatPoints, safeUrl } from '../../lib/format';
+  import { emptyState, loadError } from '../../lib/render';
   import { whenMe } from '../../lib/session';
 
   type Tab = 'history' | 'exchanges' | 'clicks';
@@ -117,12 +122,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         empty = res.data.length ? '' : '直近90日に利用した案件はありません。';
       }
       if (mine !== seq) return;
-      if (page === 1) list.innerHTML = empty && page === 1 ? `<li class="empty">${empty}</li>` : '';
+      if (page === 1) list.innerHTML = empty ? emptyState(empty, 'point', 'li') : '';
       list.insertAdjacentHTML('beforeend', html);
       more.hidden = !hasMore;
     } catch {
       if (mine !== seq) return;
-      list.innerHTML = '<li class="empty">読み込めませんでした。時間をおいて再度お試しください。</li>';
+      list.innerHTML = loadError(undefined, 'li');
       more.hidden = true;
     }
   }
@@ -199,6 +204,21 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     align-items: baseline;
     justify-content: space-between;
     gap: 8px;
+  }
+  /* 保有ポイントの横に小さくキャラクター（docs/brand/README.md「キャラクターの置き方」、目安 72px） */
+  .balance__top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .balance__top .balance__main {
+    flex: 1;
+    min-width: 0;
+  }
+  .balance__top :global(.balance__mascot) {
+    width: 64px;
+    height: auto;
+    flex-shrink: 0;
   }
   .balance__label {
     font-size: 0.9rem;

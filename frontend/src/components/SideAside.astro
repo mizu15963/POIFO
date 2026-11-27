@@ -1,5 +1,6 @@
 ---
 // PC（1024px 以上）で中央のスマホ幅の画面の右に出す案内（登録・相談・はじめての方へ）
+// キャラクターは一番上のカードだけ（中央の画面と合わせて多くなりすぎないように。docs/brand/README.md）
 import Mascot from './Mascot.astro';
 import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 ---
@@ -16,12 +17,10 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     <a class="btn btn--block" href="/campaigns/">案件を探す</a>
   </div>
   <div class="side-card">
-    <Mascot pose="line" width={96} class="side-card__img" />
     <p class="side-card__title">困ったら担当スタッフに相談</p>
     {LINE_OFFICIAL_URL ? <a class="btn btn--line btn--block" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <a class="btn btn--outline btn--block" href="/support/">担当サポートについて</a>}
   </div>
   <a class="side-card side-card--link" href="/guide/">
-    <Mascot pose="guide" width={72} class="side-card__img side-card__img--inline" />
     <span>はじめての方へ<br /><small>貯め方・交換方法を見る</small></span>
   </a>
 </div>
@@ -52,7 +51,6 @@ import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
     line-height: 1.5;
   }
   .side-card--link {
-    grid-template-columns: auto 1fr;
     justify-items: start;
     text-align: left;
     align-items: center;

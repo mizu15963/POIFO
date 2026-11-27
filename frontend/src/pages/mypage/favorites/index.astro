@@ -19,7 +19,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 <script>
   import { fetchFavorites } from '../../../lib/api';
   import { bindFavoriteButtons } from '../../../lib/favorite';
-  import { campaignCard, emptyState } from '../../../lib/render';
+  import { campaignCard, emptyState, loadError } from '../../../lib/render';
   import { whenMe } from '../../../lib/session';
 
   const list = document.getElementById('favorites')!;
@@ -30,7 +30,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
   let limit = 200;
 
   const showEmpty = () =>
-    (list.innerHTML = `${emptyState('お気に入りはまだありません。気になる案件の☆を押すと、ここにまとまります。')}<a class="btn" href="/campaigns/">案件を探す</a>`);
+    (list.innerHTML = `${emptyState('お気に入りはまだありません。気になる案件の☆を押すと、ここにまとまります。', 'point')}<a class="btn" href="/campaigns/">案件を探す</a>`);
   const showCount = () => (count.textContent = `${total.toLocaleString('ja-JP')}件／${limit.toLocaleString('ja-JP')}件`);
 
   async function load() {
@@ -47,7 +47,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
       list.insertAdjacentHTML('beforeend', res.data.map((c) => campaignCard(c, { ended: !c.listed })).join(''));
       more.hidden = res.meta.current_page >= res.meta.last_page;
     } catch {
-      list.innerHTML = emptyState('お気に入りを読み込めませんでした。時間をおいて再度お試しください。');
+      list.innerHTML = loadError('お気に入りを読み込めませんでした。時間をおいて再度お試しください。');
     }
   }
 

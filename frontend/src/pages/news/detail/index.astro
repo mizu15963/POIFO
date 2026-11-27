@@ -17,14 +17,14 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 <script>
   import { ApiError, fetchNewsDetail } from '../../../lib/api';
   import { escapeHtml, formatDate, linkify } from '../../../lib/format';
-  import { emptyState } from '../../../lib/render';
+  import { emptyState, loadError } from '../../../lib/render';
 
   const root = document.getElementById('news')!;
   const id = new URLSearchParams(location.search).get('id');
 
   async function render() {
     if (!id) {
-      root.innerHTML = emptyState('お知らせが見つかりません。');
+      root.innerHTML = emptyState('お知らせが見つかりません。', 'sorry');
       return;
     }
     try {
@@ -37,7 +37,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
           <div class="prose news-article__body">${linkify(n.body)}</div>
         </article>`;
     } catch (e) {
-      root.innerHTML = emptyState(e instanceof ApiError && e.status === 404 ? 'お知らせが見つかりません。' : 'お知らせを読み込めませんでした。時間をおいて再度お試しください。');
+      root.innerHTML = e instanceof ApiError && e.status === 404 ? emptyState('お知らせが見つかりません。', 'sorry') : loadError('お知らせを読み込めませんでした。時間をおいて再度お試しください。');
     }
   }
   render();

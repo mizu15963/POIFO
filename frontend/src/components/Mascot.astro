@@ -1,21 +1,10 @@
 ---
 // キャラクター「ポイフォックス」の画像。
-// 画像は public/images/mascot/ の書き出し済み WebP（透過・長辺480px。横長のメンテナンス用だけ640px）を使う。
+// 大きさの一覧は src/lib/mascot.ts（ブラウザ側で空・エラー表示を作るときと共通）。
 // width/height を必ず付けて、読み込み中にレイアウトがずれないようにする。
-const sizes = {
-  wave: [426, 480], // 手を振る（あいさつ）
-  cheer: [480, 470], // 座って応援
-  point: [454, 480], // 指さし
-  line: [480, 463], // 「LINEで相談」
-  get: [437, 480], // 「ポイントGET!」
-  event: [480, 459], // 「イベント参加」
-  guide: [480, 418], // チェックリストで説明
-  sorry: [447, 480], // 謝る（エラーページ用）
-  maintenance: [640, 472], // 整備士（メンテナンス画面用、横長で長辺640px）
-  welcome: [457, 480], // Pコインを持ってお出迎え（S07 会員登録完了）
-} as const;
+import { mascotHeight, type MascotPose } from '../lib/mascot';
 
-export type MascotPose = keyof typeof sizes;
+export type { MascotPose };
 
 interface Props {
   pose: MascotPose;
@@ -29,13 +18,12 @@ interface Props {
 }
 
 const { pose, width, alt = '', eager = false, class: className } = Astro.props;
-const [w, h] = sizes[pose];
 ---
 
 <img
   src={`/images/mascot/poifox-${pose}.webp`}
   width={width}
-  height={Math.round((width * h) / w)}
+  height={mascotHeight(pose, width)}
   alt={alt}
   loading={eager ? 'eager' : 'lazy'}
   decoding="async"

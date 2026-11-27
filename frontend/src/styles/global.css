@@ -411,6 +411,53 @@ a.card:hover {
   padding: 16px 0;
 }
 
+/* キャラクターを添えた空・エラー表示（src/lib/render.ts の emptyState）。一覧の幅いっぱいに中央寄せ */
+.empty--mascot {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+  list-style: none;
+  text-align: center;
+}
+.empty--mascot .mascot {
+  width: 120px;
+  height: auto;
+}
+.empty--mascot + .btn {
+  display: flex;
+  width: fit-content;
+  grid-column: 1 / -1;
+  margin: 0 auto;
+}
+
+/* 見出しの横に小さく添えるキャラクター（マイページの保有ポイント・振込先口座・退会など）。目安 72px */
+.title-with-mascot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.title-with-mascot .mascot {
+  width: 72px;
+  height: auto;
+  flex-shrink: 0;
+}
+.title-with-mascot {
+  margin-bottom: 12px;
+}
+.title-with-mascot > .section__title {
+  margin: 0;
+}
+
+/* 中身が短い画面（ログイン・エラー・完了）で文言の上に置くキャラクター */
+.state-mascot {
+  display: block;
+  width: 120px;
+  height: auto;
+  margin: 0 auto 8px;
+}
+
 .more-link {
   display: inline-block;
   margin-top: 16px;
@@ -614,6 +661,12 @@ body[data-require-login='true']:not([data-auth='member']) main {
 
 .with-mascot .mascot {
   width: 88px;
+  flex-shrink: 0;
+}
+
+/* ログイン状態で出し分けるときなど、画像を span で包んだ場合も縮ませない */
+.with-mascot__img {
+  display: block;
   flex-shrink: 0;
 }
 

@@ -2,6 +2,7 @@
 import type { CampaignSummary, EventSummary, NewsSummary } from './api';
 import { favoriteButton } from './favorite';
 import { escapeHtml, formatDate, formatDateTime, formatPoints, safeUrl } from './format';
+import { mascotImg, type MascotPose } from './mascot';
 
 /**
  * 案件カード。リンクの中にボタンを入れられないので、カードの中でリンクとお気に入りボタンを横に並べる。
@@ -34,7 +35,21 @@ export function eventCard(e: EventSummary): string {
     </a>`;
 }
 
-export const emptyState = (text: string) => `<p class="empty">${escapeHtml(text)}</p>`;
+/**
+ * 空・見つからない・読み込めないときの表示。pose を渡すとキャラクターを上に添える。
+ * キャラクターは1画面1体まで（docs/brand/README.md「キャラクターの置き方」）なので、
+ * すでにキャラクターがいる画面（トップ・イベント一覧など）では pose を渡さない。
+ * tag は入れる先に合わせる（<ul> の中なら 'li'）。
+ */
+export function emptyState(text: string, pose?: MascotPose, tag: 'p' | 'li' | 'div' = 'p'): string {
+  if (!pose) return `<${tag} class="empty">${escapeHtml(text)}</${tag}>`;
+  const box = tag === 'p' ? 'div' : tag;
+  return `<${box} class="empty empty--mascot">${mascotImg(pose)}<span class="empty__text">${escapeHtml(text)}</span></${box}>`;
+}
+
+/** 「読み込めませんでした」の共通表示（謝るポイフォックス付き） */
+export const loadError = (text = '読み込めませんでした。時間をおいて再度お試しください。', tag: 'p' | 'li' | 'div' = 'p') =>
+  emptyState(text, 'sorry', tag);
 
 /** お知らせ一覧の1行（日付・タイトル・重要の印） */
 export const newsRow = (n: NewsSummary) => `

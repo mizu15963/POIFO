@@ -1,12 +1,16 @@
 ---
 // 退会（docs/specs/functional-spec.md 3.4）
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Mascot from '../../../components/Mascot.astro';
 ---
 
 <BaseLayout title="退会" requireLogin noindex>
   <section class="section">
     <div class="container narrow">
-      <h1 class="section__title">退会</h1>
+      <div class="title-with-mascot">
+        <h1 class="section__title">退会</h1>
+        <Mascot pose="sorry" width={72} eager />
+      </div>
       <div class="card">
         <p><strong>退会する前に必ずご確認ください。</strong></p>
         <ul>
