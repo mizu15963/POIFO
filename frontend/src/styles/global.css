@@ -4,6 +4,8 @@
   --color-brand: #3ad1ce;
   --color-brand-soft: #86e4e4;
   --color-brand-bg: #e9f9f9;
+  /* ブランドの濃い色: 淡いアクアの上の大きな数字・線のアイコンに使う（2026-11-28 ログイン後トップの見本） */
+  --color-brand-strong: #0e8a78;
   --color-text: #1a1e21;
   --color-muted: #5f6b70;
   --color-border: #e3e9ea;
