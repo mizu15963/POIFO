@@ -82,7 +82,7 @@ import Mascot from '../../../../components/Mascot.astro';
       document.getElementById('description')!.textContent = method.description;
       document.getElementById('terms')!.innerHTML = [
         ['最低交換ポイント', formatPoints(method.min_points)],
-        ['交換レート', `1pt＝${method.yen_per_point}円`],
+        ['交換レート', `1P＝${method.yen_per_point}円`],
         ['手数料', exchangeFeeText(method)],
         ...(method.delivery_note ? [['受け取りまでの目安', method.delivery_note]] : []),
       ]
