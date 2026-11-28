@@ -137,7 +137,8 @@ const links: { href: string; label: string; show?: 'member' }[] = [
 
 <script>
   import { fetchCampaignCategories } from '../lib/api';
-  import { escapeHtml, formatPoints, formatPointsNumber } from '../lib/format';
+  import { escapeHtml, formatPoints } from '../lib/format';
+  import { setPointCardSide, setPointCardValue } from '../lib/point-card';
   import { whenMe } from '../lib/session';
 
   const drawer = document.getElementById('site-menu')!;
@@ -207,8 +208,8 @@ const links: { href: string; label: string; show?: 'member' }[] = [
       badge.hidden = false;
       badge.parentElement!.setAttribute('aria-label', `お知らせ（未読 ${me.unread_news_count}件）`);
     }
-    document.getElementById('menu-points')!.textContent = formatPointsNumber(me.points.available);
-    document.getElementById('menu-pending')!.textContent = formatPoints(me.points.pending);
+    setPointCardValue(document.getElementById('menu-points')!, me.points.available);
+    setPointCardSide(document.getElementById('menu-pending')!, me.points.pending);
   });
 </script>
 
@@ -424,7 +425,7 @@ const links: { href: string; label: string; show?: 'member' }[] = [
   }
   /* ドロワーはページより幅が狭いので、数字と判定中の囲みを少し小さくして1行に収める */
   .drawer__member :global(.point-card__num) {
-    font-size: 1.5rem;
+    --point-card-num: 1.5rem;
   }
   .drawer__member :global(.point-card__unit) {
     font-size: 0.95rem;

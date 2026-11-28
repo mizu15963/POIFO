@@ -235,7 +235,8 @@ const MENU_ROWS = [
   import { fetchCampaignCategories, fetchCampaigns, fetchEvents, fetchNews } from '../lib/api';
   import { categoryIcon } from '../lib/category-icon';
   import { bindFavoriteButtons } from '../lib/favorite';
-  import { escapeHtml, formatPoints, formatPointsNumber } from '../lib/format';
+  import { escapeHtml } from '../lib/format';
+  import { setPointCardSide, setPointCardValue } from '../lib/point-card';
   import { campaignCard, emptyState, eventCard } from '../lib/render';
   import { whenMe } from '../lib/session';
 
@@ -243,8 +244,8 @@ const MENU_ROWS = [
   whenMe().then((me) => {
     if (!me) return;
     loadCategories();
-    document.getElementById('member-available')!.textContent = formatPointsNumber(me.points.available);
-    document.getElementById('member-pending')!.textContent = formatPoints(me.points.pending);
+    setPointCardValue(document.getElementById('member-available')!, me.points.available);
+    setPointCardSide(document.getElementById('member-pending')!, me.points.pending);
     fetchNews({ important: true, perPage: 1 })
       .then((res) => {
         const n = res.data[0];

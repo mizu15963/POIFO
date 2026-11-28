@@ -852,17 +852,26 @@ body[data-auth='guest'][data-sticky-cta='true'] {
   white-space: nowrap;
 }
 .point-card__num {
-  font-size: 1.9rem;
+  /* 基本の大きさ。ドロワーのように幅が狭い場所では --point-card-num を小さくする */
+  font-size: calc(var(--point-card-num, 1.9rem) * var(--point-card-scale, 1));
   letter-spacing: 0.01em;
+}
+/* 桁が増えたら文字を小さくして1行に収める（data-len はカンマを含む文字数。setPointCardValue / pointCardHtml が付ける）。
+   7文字（999,999）までそのまま、9文字（1,000,000）から段階的に小さくする */
+.point-card__num[data-len='9'] {
+  --point-card-scale: 0.8;
+}
+.point-card__num[data-len='10'] {
+  --point-card-scale: 0.72;
+}
+.point-card__num[data-len='11'],
+.point-card__num[data-len='12'],
+.point-card__num[data-len='13'] {
+  --point-card-scale: 0.62;
 }
 .point-card__unit {
   margin-left: 2px;
   font-size: 1.1rem;
-}
-.point-card__sparkle {
-  align-self: flex-start;
-  flex-shrink: 0;
-  margin: -4px 0 0 2px;
 }
 /* 区切り線の右: 薄い水色の囲みで判定中ポイントと ＞ */
 .point-card__side {
@@ -903,4 +912,12 @@ a.point-card .point-card__side::after {
 .point-card__side-value {
   font-size: 1rem;
   font-weight: 800;
+}
+/* 判定中も「1,000,000P」（10文字）以上は小さくする */
+.point-card__side-value[data-len='10'],
+.point-card__side-value[data-len='11'],
+.point-card__side-value[data-len='12'],
+.point-card__side-value[data-len='13'],
+.point-card__side-value[data-len='14'] {
+  font-size: 0.82rem;
 }
