@@ -22,6 +22,11 @@ class PointTransaction extends Model
 
     public const TYPE_EVENT_REWARD = 'event_reward';
 
+    /** 紹介した友達の案件の成果から付く紹介報酬（機能仕様 15.3） */
+    public const TYPE_REFERRAL = 'referral';
+
+    public const TYPE_REFERRAL_INITIAL = 'referral_initial';
+
     /** 会員・管理画面に出す種類の名前 */
     public const TYPE_LABELS = [
         self::TYPE_CONVERSION => '案件の成果',
@@ -30,6 +35,8 @@ class PointTransaction extends Model
         self::TYPE_WITHDRAWAL_REFUND => '換金の取り消し（返却）',
         self::TYPE_EXPIRY => '失効',
         self::TYPE_EVENT_REWARD => 'イベント参加',
+        self::TYPE_REFERRAL => '紹介報酬',
+        self::TYPE_REFERRAL_INITIAL => '紹介の初回特典',
     ];
 
     public const STATUS_LABELS = [

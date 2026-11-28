@@ -9,6 +9,7 @@ use App\Services\Admin\AuditLogger;
 use App\Services\Members\MemberException;
 use App\Services\Members\MemberService;
 use App\Services\Points\PointBalance;
+use App\Services\Referrals\ReferralService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,9 +37,15 @@ class MemberController extends Controller
         return view('admin.members.index', ['users' => $users, 'keyword' => $keyword, 'status' => $status]);
     }
 
-    public function show(User $member, PointBalance $balance): View
+    public function show(User $member, PointBalance $balance, ReferralService $referrals): View
     {
         return view('admin.members.show', [
+            'referral' => [
+                'rank' => $referrals->rankFor($member),
+                'total' => $member->referees()->count(),
+                'referees' => $member->referees()->latest('id')->limit(20)->get(),
+                'partner_cap' => $referrals->partnerRank()?->rateBps(),
+            ],
             'member' => $member,
             'balance' => $balance->for($member),
             'transactions' => $member->pointTransactions()->latest('id')->limit(50)->get(),

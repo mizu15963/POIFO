@@ -6,6 +6,7 @@ use App\Models\Campaign;
 use App\Models\Conversion;
 use App\Models\PointTransaction;
 use App\Models\User;
+use App\Services\Referrals\ReferralService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -22,6 +23,8 @@ use Illuminate\Support\Facades\DB;
  */
 class PostbackHandler
 {
+    public function __construct(private ReferralService $referrals) {}
+
     public const RESPONSE_NOT_GRANTED = 0;
 
     public const RESPONSE_GRANTED = 1;
@@ -131,6 +134,8 @@ class PostbackHandler
             }
 
             $this->syncPointTransaction($conversion, $user);
+            // 紹介した人への紹介報酬も、成果の台帳と同じ状態にそろえる（機能仕様 15.3）
+            $this->referrals->syncForConversion($conversion);
 
             if ($conversion->isHeld()) {
                 return ['result' => 'held', 'response' => self::RESPONSE_NOT_GRANTED, 'hold_reason' => $conversion->hold_reason];
@@ -177,6 +182,7 @@ class PostbackHandler
 
             $conversion->forceFill(['hold_reason' => null])->save();
             $this->syncPointTransaction($conversion, $user);
+            $this->referrals->syncForConversion($conversion);
 
             return [
                 'conversion' => $conversion,

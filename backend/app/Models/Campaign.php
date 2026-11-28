@@ -34,6 +34,7 @@ class Campaign extends Model
             'synced_at' => 'datetime',
             'is_hidden' => 'boolean',
             'is_featured' => 'boolean',
+            'referral_excluded' => 'boolean',
         ];
     }
 

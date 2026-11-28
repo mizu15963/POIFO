@@ -23,6 +23,7 @@ const icons = {
   bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   star: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  gift: '<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8c-1.5-3-5-3.5-5-1.2C7 8 9.5 8 12 8zM12 8c1.5-3 5-3.5 5-1.2C17 8 14.5 8 12 8z"/>',
 } as const;
 type Icon = keyof typeof icons;
 
@@ -46,6 +47,7 @@ const myLinks: { href: string; label: string; icon: Icon }[] = [
   { href: '/mypage/', label: 'マイページ（ポイント通帳）', icon: 'home' },
   { href: '/mypage/favorites/', label: 'お気に入り', icon: 'star' },
   { href: '/mypage/withdraw/', label: 'ポイント交換', icon: 'coin' },
+  { href: '/mypage/referral/', label: '友達紹介', icon: 'gift' },
   { href: '/mypage/account/', label: '登録情報', icon: 'user' },
 ];
 

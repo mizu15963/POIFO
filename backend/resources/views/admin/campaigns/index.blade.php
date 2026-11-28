@@ -31,7 +31,7 @@
         <div><label for="q">案件名・案件ID</label><input id="q" type="text" name="q" value="{{ $keyword }}"></div>
         <div><button type="submit" class="btn-outline">表示</button></div>
     </form>
-    <p class="muted">案件の中身（名前・ポイント・期間）は GF Rewards から15分ごとに取り込むので、ここでは表示の仕方だけ変えられます。並びは「おすすめ → 並び順（小さいほど前）→ 新しい順」です。「はじめて向け」「ゲーム案件特集」「みんなで挑戦中」に印を付けると、会員サイトのトップの案件メニューからその一覧に出ます（高還元はポイントの多い順で自動）。</p>
+    <p class="muted">案件の中身（名前・ポイント・期間）は GF Rewards から15分ごとに取り込むので、ここでは表示の仕方だけ変えられます。並びは「おすすめ → 並び順（小さいほど前）→ 新しい順」です。「はじめて向け」「ゲーム案件特集」「みんなで挑戦中」に印を付けると、会員サイトのトップの案件メニューからその一覧に出ます（高還元はポイントの多い順で自動）。「紹介報酬の対象外」にした案件・率の上限（%）を入れた案件は、紹介した人への紹介報酬が付かない・その率までになります（確定済みの報酬は変わりません）。</p>
 </div>
 @include('admin.partials.pager', ['paginator' => $campaigns])
 <div class="table-wrap">
@@ -57,6 +57,8 @@
                         @endforeach
                         <label style="margin:0;font-weight:400"><input type="checkbox" name="is_hidden" value="1" @checked($c->is_hidden)> 非表示</label>
                         <div style="min-width:80px"><input type="number" name="sort_order" value="{{ $c->sort_order }}" aria-label="並び順" style="width:80px"></div>
+                        <label style="margin:0;font-weight:400"><input type="checkbox" name="referral_excluded" value="1" @checked($c->referral_excluded)> 紹介報酬の対象外</label>
+                        <div style="min-width:120px"><input type="number" name="referral_rate_cap" value="{{ $c->referral_rate_cap !== null ? rtrim(rtrim((string) $c->referral_rate_cap, '0'), '.') : '' }}" min="0" max="100" step="0.01" aria-label="紹介報酬の率の上限（%）" placeholder="紹介率上限%" style="width:120px"></div>
                         <button type="submit" class="btn-outline">保存</button>
                     </form>
                 </td>

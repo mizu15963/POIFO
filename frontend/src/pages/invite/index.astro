@@ -1,0 +1,132 @@
+---
+// 紹介ページ（docs/specs/screen-spec.md S26）。紹介URL（/invite/?code=）の行き先。
+// 有効なコードはブラウザに30日保存し、どの「LINEでログイン」から登録しても紹介元として記録されるようにする（src/lib/referral.ts）。
+// 紹介した人の名前は出さない（API も返さない）。
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Mascot from '../../components/Mascot.astro';
+import { LINE_LOGIN_URL } from '../../lib/config';
+
+const features = [
+  { title: '登録・利用は無料', text: 'LINEでログインするだけ。面倒な入力はありません。' },
+  { title: '担当スタッフに相談できる', text: '案件の選び方や進め方を、公式LINEで気軽に聞けます。' },
+  { title: 'みんなでポイ活', text: 'イベントやオープンチャットで、一緒に取り組めます。' },
+];
+---
+
+<BaseLayout title="友達からの紹介" noindex>
+  <section class="section invite">
+    <div class="container narrow">
+      <Mascot pose="welcome" width={150} eager class="invite__mascot" />
+      <h1 class="invite__title" id="invite-title">ポイフォへようこそ</h1>
+      <p class="invite__lead" id="invite-lead">ポイフォは、ひとりじゃない、あたらしいポイ活サイトです。</p>
+
+      <div id="invite-member" hidden>
+        <p class="notice">すでに会員です。紹介は新しく登録する人だけが対象です。</p>
+        <a class="btn btn--block" href="/">トップへ</a>
+      </div>
+
+      <div id="invite-guest">
+        <ul class="invite__features">
+          {
+            features.map((f, i) => (
+              <li>
+                <span class="invite__num">{i + 1}</span>
+                <span>
+                  <b>{f.title}</b>
+                  <br />
+                  {f.text}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+        <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
+        <p class="invite__note">初めての方は、LINEでログインするとそのまま会員登録になります。</p>
+        <p class="center-text"><a class="more-link" href="/guide/">はじめての方へ（ポイントの貯め方）</a></p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { checkReferralCode } from '../../lib/api';
+  import { isReferralCodeFormat, normalizeReferralCode, saveReferralCode } from '../../lib/referral';
+  import { whenMe } from '../../lib/session';
+
+  const code = normalizeReferralCode(new URLSearchParams(location.search).get('code'));
+
+  async function valid(): Promise<boolean> {
+    if (!isReferralCodeFormat(code)) return false;
+    try {
+      return await checkReferralCode(code);
+    } catch {
+      // 確かめられないときも保存しておく（登録のときにサーバーで確かめる）。文言は普通の案内のまま
+      saveReferralCode(code);
+      return false;
+    }
+  }
+
+  Promise.all([whenMe(), valid()]).then(([me, ok]) => {
+    if (me) {
+      document.getElementById('invite-guest')!.hidden = true;
+      document.getElementById('invite-member')!.hidden = false;
+      return;
+    }
+    // 無効なコードはエラーにせず、紹介の文言を出さない普通の登録案内にする
+    if (!ok) return;
+    saveReferralCode(code);
+    document.getElementById('invite-title')!.innerHTML = '友達からの紹介で、<br>ポイフォへようこそ';
+    document.getElementById('invite-lead')!.textContent = 'お友達からの紹介です。下のボタンからLINEで登録すると、紹介が記録されます。';
+  });
+</script>
+
+<style>
+  .invite {
+    text-align: center;
+    background: linear-gradient(180deg, var(--color-brand-bg), #fff 320px);
+  }
+  .invite__mascot {
+    display: block;
+    margin: 0 auto 8px;
+  }
+  .invite__title {
+    margin: 0 0 8px;
+    font-size: 1.4rem;
+  }
+  .invite__lead {
+    color: var(--color-muted);
+  }
+  .invite__features {
+    display: grid;
+    gap: 10px;
+    margin: 20px 0;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+  }
+  .invite__features li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: #fff;
+    font-size: 0.9rem;
+  }
+  .invite__num {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-accent-bg);
+    color: var(--color-accent-strong);
+    font-weight: 800;
+  }
+  .invite__note {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+</style>

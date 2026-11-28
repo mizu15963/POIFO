@@ -297,3 +297,36 @@ export const fetchNewsDetail = async (id: string) => (await request<{ data: News
 export async function markNewsSeen(): Promise<void> {
   await request('/v1/me/news/seen', await withCsrf({ method: 'POST' }));
 }
+
+export type ReferralInfo = {
+  code: string;
+  url: string;
+  /** 運営が紹介を無効にしている（紹介報酬は付かない） */
+  disabled: boolean;
+  rank: { code: string; name: string; rate: number; is_partner: boolean };
+  next_rank: { name: string; rate: number; min_valid_referrals: number; remaining: number } | null;
+  summary: { total: number; valid: number; this_month: number; confirmed_this_month: number; pending: number };
+  /** 一般のランク（必要な人数の少ない順）のあとに特別パートナー（min_valid_referrals は null、rate は上限） */
+  ranks: { code: string; name: string; rate: number; min_valid_referrals: number | null }[];
+  rate_range: { min: number; max: number };
+  initial_bonus: { points: number; threshold_points: number; days: number };
+};
+
+export type ReferralRewardItem = {
+  id: number;
+  type: 'referral' | 'referral_initial';
+  type_label: string;
+  status: 'pending' | 'confirmed' | 'rejected';
+  points: number;
+  created_at: string;
+  confirmed_at: string | null;
+};
+
+/** 友達紹介（紹介コードがなければこのとき発行される） */
+export const fetchReferral = async () => (await request<{ data: ReferralInfo }>('/v1/me/referral')).data;
+
+export const fetchReferralRewards = (page = 1) => request<Paged<ReferralRewardItem>>(`/v1/me/referral/rewards?page=${page}`);
+
+/** 紹介URLのコードが使えるか（紹介した人の名前などは返らない） */
+export const checkReferralCode = async (code: string) =>
+  (await request<{ data: { valid: boolean } }>(`/v1/referral/codes/${encodeURIComponent(code)}`)).data.valid;

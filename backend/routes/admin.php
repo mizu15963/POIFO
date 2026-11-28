@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\NewsController;
 use App\Http\Controllers\Admin\PostbackController;
+use App\Http\Controllers\Admin\ReferralController;
 use App\Http\Controllers\Admin\WithdrawalController;
 use App\Models\PostbackLog;
 use App\Models\User;
@@ -55,6 +56,15 @@ Route::name('admin.')->group(function () {
         Route::post('/members/{member}/suspend', [MemberController::class, 'suspend'])->name('members.suspend');
         Route::post('/members/{member}/resume', [MemberController::class, 'resume'])->name('members.resume');
         Route::post('/members/{member}/points', [MemberController::class, 'adjustPoints'])->name('members.points');
+
+        // 友達紹介（機能仕様 15.7）
+        Route::get('/referral-rewards', [ReferralController::class, 'rewards'])->name('referrals.rewards');
+        Route::get('/referral-rewards/export', [ReferralController::class, 'export'])->name('referrals.export');
+        Route::get('/referral-settings', [ReferralController::class, 'settings'])->name('referrals.settings');
+        Route::put('/referral-settings', [ReferralController::class, 'updateSettings'])->name('referrals.settings.update');
+        Route::post('/members/{member}/referral/partner', [ReferralController::class, 'partner'])->name('members.referral.partner');
+        Route::post('/members/{member}/referral/disable', [ReferralController::class, 'disable'])->name('members.referral.disable');
+        Route::post('/members/{member}/referral/enable', [ReferralController::class, 'enable'])->name('members.referral.enable');
 
         // 成果通知の受信ログと保留
         Route::get('/postbacks', [PostbackController::class, 'index'])->name('postbacks.index');

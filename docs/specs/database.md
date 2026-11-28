@@ -223,7 +223,7 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 |---|---|---|---|---|
 | `id` | BIGINT UNSIGNED | | | 主キー |
 | `user_id` | BIGINT UNSIGNED | | | 会員（→ `users`） |
-| `type` | VARCHAR(32) | | | 種類: `conversion`（案件の成果）／`adjustment`（運営による調整）／`withdrawal`（換金）／`withdrawal_refund`（換金の取り消し・返却）／`event_reward`（イベント参加）／`expiry`（失効） |
+| `type` | VARCHAR(32) | | | 種類: `conversion`（案件の成果）／`adjustment`（運営による調整）／`withdrawal`（換金）／`withdrawal_refund`（換金の取り消し・返却）／`event_reward`（イベント参加）／`referral`（紹介報酬）／`referral_initial`（紹介の初回特典）／`expiry`（失効） |
 | `status` | VARCHAR(16) | | | `pending`（判定中）／`confirmed`（確定）／`rejected`（否認） |
 | `points` | INT | | | ポイント。付与は正、換金・失効は負 |
 | `description` | VARCHAR(255) | ○ | | 履歴に出す説明（案件名、調整の理由、「ポイント交換（銀行振込）」など） |
@@ -363,9 +363,9 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 インデックス: `campaign_id` + `tag`（一意）、`tag`（特集ごとの一覧）
 
-### 4.16 友達紹介のためのテーブル・カラム（未実装・案）
+### 4.16 友達紹介のためのテーブル・カラム
 
-機能仕様 15章。条件が決まってからマイグレーションを作る。
+機能仕様 15章。マイグレーション `2026_11_28_000100_create_referral_tables`（ランクと初回特典の仮の値もここで入れる）。
 
 `users` に足すカラム:
 
@@ -380,7 +380,7 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 `referral_ranks`（ランク。管理画面 A17 で変える）: `id`、`code`（VARCHAR(16)、一意。`partner` は特別パートナー用で消せない）、`name`（表示名）、`rate`（DECIMAL(5,2)、%。特別パートナーは上限）、`min_valid_referrals`（INT UNSIGNED、必要な有効紹介人数。特別パートナーは使わない）、`sort_order`、`created_at` / `updated_at`。
 
-`referral_settings`（初回特典など1つだけの設定。1行のテーブルか、キーと値の表）: 初回特典のポイント（100）、条件のポイント（1,000）、期限の日数（180）。
+`referral_settings`（1行だけ）: `initial_bonus_points`（初回特典のポイント、仮100）、`initial_threshold_points`（条件のポイント、仮1,000）、`initial_days`（期限の日数、仮180）、`created_at` / `updated_at`。
 
 `referral_rewards`（紹介報酬。ポイントの増減そのものは `point_transactions` に入れ、ここは計算の根拠を残す）:
 
@@ -393,7 +393,8 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `conversion_id` | BIGINT UNSIGNED | ○ | | 元の成果（→ `conversions`。初回特典は空） |
 | `base_points` | INT UNSIGNED | | 0 | 元にしたポイント |
 | `rate` | DECIMAL(5,2) | ○ | | 使った率（%。初回特典は空） |
-| `rank` | VARCHAR(16) | | | そのときのランク（`regular`／`gold`／`platinum`／`partner`） |
+| `rank` | VARCHAR(16) | ○ | | そのときのランクの `referral_ranks.code` |
+| `rank_name` | VARCHAR(32) | ○ | | そのときのランクの表示名（ランクは消せるので残す） |
 | `points` | INT UNSIGNED | | | 付けたポイント |
 | `point_transaction_id` | BIGINT UNSIGNED | ○ | | 台帳の行（→ `point_transactions`） |
 | `created_at` / `updated_at` | TIMESTAMP | ○ | | |

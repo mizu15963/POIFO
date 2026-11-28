@@ -83,6 +83,13 @@ const ogImage = new URL('/images/ogp.jpg', Astro.site).href;
     <script>
       import { fetchMe } from '../lib/api';
       import { setMe } from '../lib/session';
+      import { withReferral } from '../lib/referral';
+
+      // 紹介URLから来た人は、どの「LINEでログイン」から登録しても紹介コードが付くようにする（スクリプトで後から出すボタンも含めて押したときに付ける）
+      document.addEventListener('click', (e) => {
+        const a = (e.target as Element | null)?.closest?.('a[href*="/auth/line/redirect"]') as HTMLAnchorElement | null;
+        if (a) a.href = withReferral(a.href);
+      });
 
       // 追従ボタンと同じ登録ボタンがページ内で見えている間は、追従ボタンを引っ込めて二重に見せない
       const sticky = document.getElementById('sticky-cta');
