@@ -47,6 +47,6 @@ class MemberLeaveTest extends TestCase
         }
 
         $this->asApiHost()->getJson('/v1/campaign-categories')->assertOk()
-            ->assertExactJson(['data' => [['name' => 'アプリ', 'count' => 2], ['name' => '買い物', 'count' => 1]]]);
+            ->assertExactJson(['data' => [['name' => 'アプリ', 'label' => 'アプリ', 'count' => 2, 'in_menu' => true], ['name' => '買い物', 'label' => '買い物', 'count' => 1, 'in_menu' => true]]]);
     }
 }

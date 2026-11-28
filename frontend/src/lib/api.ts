@@ -102,7 +102,8 @@ export type EventDetail = EventSummary & {
   openchat_url: string | null;
 };
 
-export type CampaignCategory = { name: string; count: number };
+/** name は ASP のカテゴリ名（絞り込みに使う）、label はメニューのボタンに出す表示名、in_menu はメニューに出すか（管理画面 A18） */
+export type CampaignCategory = { name: string; label: string; count: number; in_menu: boolean };
 
 export type PointHistoryItem = {
   id: number;
