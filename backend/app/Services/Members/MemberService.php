@@ -6,6 +6,7 @@ use App\Models\Admin;
 use App\Models\PointTransaction;
 use App\Models\User;
 use App\Models\WithdrawalRequest;
+use App\Services\Email\EmailVerificationService;
 use App\Services\Points\PointBalance;
 use Illuminate\Support\Facades\DB;
 
@@ -97,6 +98,8 @@ class MemberService
                 throw new MemberException('手続き中の換金申請があるため退会できません。振込が終わってからもう一度お試しください。');
             }
 
+            // メールアドレスも消す（機能仕様 3.5）
+            app(EmailVerificationService::class)->forget($user);
             $user->forceFill([
                 'status' => User::STATUS_WITHDRAWN,
                 'withdrawn_at' => now(),

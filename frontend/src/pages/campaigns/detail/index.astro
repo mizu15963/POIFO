@@ -2,10 +2,15 @@
 // 静的サイトなので詳細は /campaigns/detail/?id=123 の形で、ブラウザから API で取得する
 // 見た目は 2026-11-28 納品の見本（共有フォルダ brand/redesign/campaign-detail/）に寄せる。見本は値が仮なので HTML/CSS で作り、波模様は作らない
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import EmailWarning from '../../../components/EmailWarning.astro';
 ---
 
 <BaseLayout title="案件詳細">
   <section class="section">
+    <div class="container">
+      <!-- メールアドレス未登録のときだけ警告の帯（ログイン後トップと同じ。機能仕様 3.5） -->
+      <EmailWarning />
+    </div>
     <div class="container" id="campaign" aria-live="polite">
       <p class="loading">読み込み中…</p>
     </div>
@@ -17,6 +22,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
   import { campaignGoUrl, LINE_LOGIN_URL } from '../../../lib/config';
   import { bindFavoriteButtons, favoriteButton } from '../../../lib/favorite';
   import { escapeHtml, formatDate, formatPoints, formatPointsNumber, safeUrl } from '../../../lib/format';
+  import { needsEmail, welcomeUrl } from '../../../lib/email';
   import { pointCardHtml } from '../../../lib/point-card';
   import { emptyState } from '../../../lib/render';
   import { whenMe } from '../../../lib/session';
@@ -70,7 +76,11 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
         </div>
         ${c.points != null ? pointCardHtml({ label: '最大獲得ポイント', value: formatPointsNumber(c.points) }) : '<p class="detail-points-none">ポイントは獲得条件をご覧ください</p>'}
         ${
-          me
+          needsEmail(me)
+            ? // メールアドレスを入れるまで案件に進めない。押せない灰色のボタンと、初回登録への案内（登録後はこの案件に戻る）
+              `<button class="btn btn--block detail-go detail-go--disabled" type="button" disabled>この案件に進む${arrow}</button>
+               <div class="detail-go__email"><p>案件を利用するにはメールアドレスの登録が必要です</p><a class="btn btn--outline" href="${escapeHtml(welcomeUrl())}">登録する</a></div>`
+            : me
             ? `<a class="btn btn--block detail-go" href="${campaignGoUrl(c.id)}" rel="noopener">この案件に進む${arrow}</a>`
             : `<a class="btn btn--line btn--block detail-go" href="${LINE_LOGIN_URL}">LINEでログインして進む</a><p class="detail-go__note">ログインしないとポイントが付きません。</p>`
         }
@@ -152,6 +162,32 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
     position: absolute;
     right: 22px;
     font-size: 1.2rem;
+  }
+  /* メールアドレス未登録: 押せない灰色のボタン＋登録の案内 */
+  .detail-go--disabled {
+    background: var(--color-border);
+    border-color: var(--color-border);
+    color: var(--color-muted);
+    cursor: not-allowed;
+  }
+  .detail-go__email {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-accent-strong);
+  }
+  .detail-go__email p {
+    flex: 1;
+    margin: 0;
+  }
+  .detail-go__email .btn {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 18px;
+    font-size: 0.9rem;
   }
   .detail-go__note {
     margin: 6px 0 0;

@@ -32,7 +32,7 @@ class User extends Authenticatable
 
     protected $fillable = ['line_user_id', 'display_name', 'avatar_url', 'status', 'last_login_at'];
 
-    protected $hidden = ['line_user_id', 'remember_token'];
+    protected $hidden = ['line_user_id', 'remember_token', 'email'];
 
     /** HasUlids で自動採番する列（主キーは通常の連番のまま） */
     public function uniqueIds(): array
@@ -48,12 +48,40 @@ class User extends Authenticatable
             'suspended_at' => 'datetime',
             'withdrawn_at' => 'datetime',
             'referral_disabled_at' => 'datetime',
+            'email_verified_at' => 'datetime',
+            'email_marketing_opt_in' => 'boolean',
         ];
     }
 
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * メールアドレスを入れたか（確認待ちを含む。機能仕様 3.5）。
+     * 入れていない会員は案件に進めず、初回登録（S27）へ案内する。確認待ちなら案件には進める。
+     */
+    public function hasRegisteredEmail(): bool
+    {
+        return $this->email !== null || $this->emailVerifications()->exists();
+    }
+
+    /** メールアドレスを確認済みか（換金の申請に必要） */
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email !== null && $this->email_verified_at !== null;
+    }
+
+    public function emailVerifications(): HasMany
+    {
+        return $this->hasMany(EmailVerification::class);
+    }
+
+    /** 確認中のアドレス（なければ null） */
+    public function pendingEmailVerification(): ?EmailVerification
+    {
+        return $this->emailVerifications()->latest('id')->first();
     }
 
     public function pointTransactions(): HasMany

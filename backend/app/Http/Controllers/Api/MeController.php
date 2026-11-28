@@ -20,6 +20,7 @@ class MeController extends Controller
      * ログイン中の会員の情報。
      *
      * uid は会員ID（問い合わせのときに伝えてもらう）。unread_news_count はお知らせの未読の数（ヘッダーのバッジ）。
+     * email_registered が false の会員はメールアドレスが未登録（初回登録 S27 へ案内し、案件に進ませない。機能仕様 3.5）。
      */
     public function show(Request $request, PointBalance $balance): JsonResponse
     {
@@ -34,7 +35,7 @@ class MeController extends Controller
                 'points' => $balance->for($user),
                 'unread_news_count' => $user->unreadNewsCount(),
                 'line_friend_url' => config('poifo.line.official_friend_url'),
-            ],
+            ] + EmailController::present($user),
         ]);
     }
 

@@ -192,7 +192,7 @@ LINE を通さずに会員としてログインする。`POIFO_DEBUG_LOGIN_ENABL
 | `POIFO_ALERT_EMAILS` | 異常を知らせる管理者のメールアドレス（カンマ区切り） |
 | `MAIL_MAILER` / `MAIL_HOST` / `MAIL_PORT` | `smtp` / `email-smtp.ap-northeast-1.amazonaws.com` / `587`（Amazon SES 東京。Lightsail は 25番が塞がっているので使わない） |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | SES 送信用 IAM ユーザー（`poifo-ses-sender`）のアクセスキー ID / そのシークレットキーから [`../deploy/backend/server/ses-smtp-password.py`](../deploy/backend/server/ses-smtp-password.py) で作った SMTP パスワード |
-| `MAIL_FROM_ADDRESS` | SES で DKIM 認証したドメインのアドレス（例: `noreply@<domain>`）。当面は SES サンドボックスなので、`POIFO_ALERT_EMAILS` の宛先も SES で確認済みにしておく |
+| `MAIL_FROM_ADDRESS` | SES で DKIM 認証したドメインのアドレス（例: `noreply@<domain>`）。当面は SES サンドボックスなので、`POIFO_ALERT_EMAILS` の宛先も SES で確認済みにしておく。会員への確認メール（機能仕様 3.5）はサンドボックス解除（本番利用の申請）まで届かない |
 
 ### メンテナンス
 

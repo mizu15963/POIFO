@@ -15,6 +15,18 @@ export type Me = {
   /** お知らせの未読の数（ヘッダーのバッジ） */
   unread_news_count: number;
   line_friend_url: string | null;
+} & EmailState;
+
+/** メールアドレスの状態（機能仕様 3.5。連絡用で、ログインには使わない） */
+export type EmailState = {
+  /** 確認済みのアドレス */
+  email: string | null;
+  email_verified: boolean;
+  /** 確認待ちのアドレス（確認済みから変えている途中もここ） */
+  pending_email: string | null;
+  /** false なら未登録。初回登録（/welcome/）へ案内し、案件に進ませない */
+  email_registered: boolean;
+  email_marketing_opt_in: boolean;
 };
 
 export type CampaignSummary = {
@@ -258,6 +270,30 @@ export const fetchWithdrawals = () => request<WithdrawalList>('/v1/me/withdrawal
 export async function requestWithdrawal(points: number, method = 'bank_transfer'): Promise<void> {
   const init = await withCsrf({ method: 'POST', body: JSON.stringify({ points, method }), headers: { 'Content-Type': 'application/json' } });
   await request('/v1/me/withdrawals', init);
+}
+
+/** メールアドレスを登録・変更して確認メールを送る（422 なら errors.email にメッセージ） */
+export async function registerEmail(email: string, marketingOptIn?: boolean): Promise<EmailState> {
+  const body: Record<string, unknown> = { email };
+  if (marketingOptIn !== undefined) body.marketing_opt_in = marketingOptIn;
+  const init = await withCsrf({ method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+  return (await request<{ data: EmailState }>('/v1/me/email', init)).data;
+}
+
+/** 確認メールを送り直す（1時間3回まで） */
+export async function resendEmailVerification(): Promise<EmailState> {
+  return (await request<{ data: EmailState }>('/v1/me/email/resend', await withCsrf({ method: 'POST' }))).data;
+}
+
+export async function saveEmailSettings(marketingOptIn: boolean): Promise<EmailState> {
+  const init = await withCsrf({ method: 'PUT', body: JSON.stringify({ marketing_opt_in: marketingOptIn }), headers: { 'Content-Type': 'application/json' } });
+  return (await request<{ data: EmailState }>('/v1/me/email/settings', init)).data;
+}
+
+/** 確認メールのリンクのトークンで確認する（ログインしていなくてよい。422 なら errors.token にメッセージ） */
+export async function verifyEmail(token: string): Promise<void> {
+  const init = await withCsrf({ method: 'POST', body: JSON.stringify({ token }), headers: { 'Content-Type': 'application/json' } });
+  await request('/v1/email/verify', init);
 }
 
 export async function logout(): Promise<void> {

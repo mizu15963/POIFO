@@ -38,6 +38,7 @@ import Mascot from '../../../components/Mascot.astro';
 
 <script>
   import { ApiError, fetchBankAccount, saveBankAccount, type BankAccountInput } from '../../../lib/api';
+  import { safeBackPath } from '../../../lib/email';
   import { escapeHtml } from '../../../lib/format';
   import { whenMe } from '../../../lib/session';
 
@@ -72,7 +73,8 @@ import Mascot from '../../../components/Mascot.astro';
     button.disabled = true;
     try {
       await saveBankAccount(input);
-      location.href = '/mypage/withdraw/detail/?method=bank_transfer&bank=saved';
+      // 初回登録（S27）から来たときは、登録後にその続き（登録完了や元のページ）へ
+      location.href = safeBackPath(new URLSearchParams(location.search).get('next')) ?? '/mypage/withdraw/detail/?method=bank_transfer&bank=saved';
     } catch (err) {
       const messages = err instanceof ApiError && err.status === 422 ? Object.values(err.errors).flat() : ['登録できませんでした。時間をおいてもう一度お試しください。'];
       errors.innerHTML = `<ul>${messages.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`;

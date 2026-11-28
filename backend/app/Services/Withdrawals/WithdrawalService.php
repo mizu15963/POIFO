@@ -35,6 +35,11 @@ class WithdrawalService
                 throw new WithdrawalException('現在このアカウントでは換金できません。');
             }
 
+            // 換金の連絡を送れるよう、確認済みのメールアドレスが必要（機能仕様 3.5）
+            if (! $user->hasVerifiedEmail()) {
+                throw new WithdrawalException('ポイント交換の申請には、メールアドレスの確認が必要です。登録情報から確認してください。', 'email');
+            }
+
             $exchange = $this->methods->acceptingOrFail($method);
             // 受け取り情報が未登録なら、ここで例外になる
             $recipient = $exchange->handler->recipientSnapshot($user);
