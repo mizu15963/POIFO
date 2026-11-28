@@ -67,7 +67,7 @@ erDiagram
 
 ### 4.1 `users`（会員）
 
-ログインは LINE だけ。退会しても行は消さず `status = withdrawn` にする（同じ LINE アカウントでの再登録を防ぐため）。
+ログインは LINE だけ（メールアドレスは連絡用で、ログインには使わない）。退会しても行は消さず `status = withdrawn` にする（同じ LINE アカウントでの再登録を防ぐため）。
 
 | カラム | 型 | NULL | 既定 | 説明 |
 |---|---|---|---|---|
@@ -77,6 +77,9 @@ erDiagram
 | `display_name` | VARCHAR(255) | ○ | | LINE の表示名。退会で消す |
 | `avatar_url` | VARCHAR(1024) | ○ | | LINE のアイコン URL。退会で消す |
 | `status` | VARCHAR(20) | | `active` | `active`（有効）／`suspended`（停止中）／`withdrawn`（退会済み） |
+| `email` | VARCHAR(255) | ○ | | 連絡用メールアドレス（確認済みのもの。未実装、機能仕様 3.5）。確認済みのものの中で一意。退会で消す |
+| `email_verified_at` | TIMESTAMP | ○ | | メールアドレスを確認した日時（未実装） |
+| `email_marketing_opt_in` | TINYINT(1) | | 0 | お得情報のメールを受け取る（未実装） |
 | `last_login_at` | TIMESTAMP | ○ | | 最終ログイン |
 | `news_seen_at` | TIMESTAMP | ○ | | 最後にお知らせ一覧を開いた日時。未読の数はこれより後に公開されたお知らせの件数（空なら登録日時から数える） |
 | `suspended_at` | TIMESTAMP | ○ | | 停止した日時 |
@@ -400,6 +403,21 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `created_at` / `updated_at` | TIMESTAMP | ○ | | |
 
 インデックス: `conversion_id` + `type`（一意。二重に付けない）、`referee_user_id` + `type`（初回特典を1回だけにするため、アプリで確かめる）、`referrer_user_id` + `created_at`。状態（判定中・確定・否認）は `point_transactions` の状態を使う。
+
+### 4.17 `email_verifications`（メールアドレスの確認、未実装・案）
+
+機能仕様 3.5。確認メールのリンクに使う。確認できたら `users.email` に移し、この行は消す。
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `id` | BIGINT UNSIGNED | | | 主キー |
+| `user_id` | BIGINT UNSIGNED | | | 会員（→ `users`） |
+| `email` | VARCHAR(255) | | | 確認中のアドレス |
+| `token_hash` | CHAR(64) | | | リンクのトークンの SHA-256（トークンそのものは持たない）。一意 |
+| `expires_at` | TIMESTAMP | | | 有効期限（送ってから24時間） |
+| `created_at` | TIMESTAMP | | | 送った日時（再送の回数制限に使う） |
+
+インデックス: `token_hash`（一意）、`user_id`
 
 ## 5. 気づいた点
 
