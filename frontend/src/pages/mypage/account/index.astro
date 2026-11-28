@@ -25,6 +25,22 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
           <dd id="registered">—</dd>
         </div>
         <div>
+          <dt>メールアドレス</dt>
+          <dd id="email-row">
+            <p id="email-status" class="email-status">読み込み中…</p>
+            <p id="email-message" class="notice email-message" role="status" hidden></p>
+            <button type="button" id="email-resend" class="btn btn--outline email-btn" hidden>確認メールを再送する</button>
+            <button type="button" id="email-change" class="more-link email-link" hidden>メールアドレスを変更する</button>
+            <form id="email-form" class="email-form" novalidate hidden>
+              <input id="email-input" name="email" type="email" inputmode="email" autocomplete="email" placeholder="例：mail@example.com" maxlength="255" aria-label="メールアドレス" aria-describedby="email-error" />
+              <p id="email-error" class="field-error" role="alert" hidden></p>
+              <button class="btn email-btn" type="submit">確認メールを送る</button>
+            </form>
+            <label class="email-optin"><input type="checkbox" id="email-optin" disabled /><span>お得な情報をメールで受け取る</span></label>
+            <small>ポイント交換の受付・振込の連絡や、重要なお知らせに使います。ログインはLINEのままです。</small>
+          </dd>
+        </div>
+        <div>
           <dt>振込先口座</dt>
           <dd><span id="bank">読み込み中…</span><a class="more-link account-list__link" href="/mypage/bank/">登録・変更する</a></dd>
         </div>
@@ -41,7 +57,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <script>
-  import { fetchBankAccount } from '../../../lib/api';
+  import { ApiError, fetchBankAccount, registerEmail, resendEmailVerification, saveEmailSettings, type EmailState } from '../../../lib/api';
   import { formatDate, safeUrl } from '../../../lib/format';
   import { whenMe } from '../../../lib/session';
 
@@ -62,10 +78,105 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
       row.querySelector('a')!.href = friend;
       row.hidden = false;
     }
+    renderEmail(me);
     const bank = document.getElementById('bank')!;
     fetchBankAccount()
       .then((b) => (bank.textContent = b ? `${b.bank_name ?? ''} ${b.account_type_label} ${b.account_number_masked}` : '未登録'))
       .catch(() => (bank.textContent = '読み込めませんでした'));
+  });
+
+  // メールアドレス（機能仕様 3.5）。確認済み・確認待ち・未登録で出し分ける
+  const status = document.getElementById('email-status')!;
+  const message = document.getElementById('email-message')!;
+  const resend = document.getElementById('email-resend') as HTMLButtonElement;
+  const change = document.getElementById('email-change') as HTMLButtonElement;
+  const emailForm = document.getElementById('email-form') as HTMLFormElement;
+  const emailInput = document.getElementById('email-input') as HTMLInputElement;
+  const emailError = document.getElementById('email-error')!;
+  const optin = document.getElementById('email-optin') as HTMLInputElement;
+
+  const showMessage = (text: string) => {
+    message.textContent = text;
+    message.hidden = false;
+  };
+  const errorText = (err: unknown, fallback: string) =>
+    err instanceof ApiError && err.status === 422 ? (Object.values(err.errors).flat()[0] ?? fallback) : fallback;
+
+  function renderEmail(state: EmailState) {
+    status.textContent = '';
+    message.hidden = true;
+    if (state.email) {
+      status.append(state.email, ' ');
+      const badge = document.createElement('span');
+      badge.className = 'email-badge';
+      badge.textContent = '確認済み';
+      status.append(badge);
+    }
+    if (state.pending_email) {
+      const p = document.createElement('span');
+      p.className = 'email-pending';
+      p.textContent = `確認待ち：${state.pending_email}`;
+      status.append(p);
+      showMessage('確認メールを送りました。メールのリンクを開いてください。');
+    } else if (!state.email) {
+      status.textContent = '未登録';
+    }
+    resend.hidden = !state.pending_email;
+    // 未登録なら入力欄をすぐ出す。登録済みなら「変更する」を押してから
+    emailForm.hidden = state.email_registered;
+    change.hidden = !state.email_registered;
+    optin.checked = state.email_marketing_opt_in;
+    optin.disabled = false;
+  }
+
+  change.addEventListener('click', () => {
+    emailForm.hidden = false;
+    change.hidden = true;
+    emailInput.focus();
+  });
+
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    emailError.hidden = true;
+    const value = emailInput.value.trim();
+    if (!value || !emailInput.checkValidity()) {
+      emailError.textContent = value ? 'メールアドレスの形式が正しくありません。' : 'メールアドレスを入力してください。';
+      emailError.hidden = false;
+      return;
+    }
+    const button = emailForm.querySelector('button')!;
+    button.disabled = true;
+    try {
+      renderEmail(await registerEmail(value));
+      emailInput.value = '';
+    } catch (err) {
+      emailError.textContent = errorText(err, '送れませんでした。時間をおいてもう一度お試しください。');
+      emailError.hidden = false;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  resend.addEventListener('click', async () => {
+    resend.disabled = true;
+    try {
+      renderEmail(await resendEmailVerification());
+      showMessage('確認メールを再送しました。メールのリンクを開いてください。');
+    } catch (err) {
+      showMessage(errorText(err, '送れませんでした。時間をおいてもう一度お試しください。'));
+    } finally {
+      resend.disabled = false;
+    }
+  });
+
+  optin.addEventListener('change', async () => {
+    optin.disabled = true;
+    try {
+      renderEmail(await saveEmailSettings(optin.checked));
+    } catch {
+      optin.checked = !optin.checked;
+      optin.disabled = false;
+    }
   });
 </script>
 
@@ -118,6 +229,63 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
   }
   .account-list__link {
     margin-top: 0;
+  }
+  .email-status {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .email-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 6px;
+    background: var(--color-brand-bg);
+    color: var(--color-brand-strong);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .email-pending {
+    display: block;
+    color: var(--color-accent-strong);
+    font-weight: 700;
+  }
+  .email-message {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+  .email-btn {
+    min-height: 40px;
+    font-size: 0.9rem;
+  }
+  .email-link {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+  }
+  .email-form {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+  }
+  .email-form input {
+    font: inherit;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+  .field-error {
+    margin: 0;
+    color: var(--color-danger);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .email-optin {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
   }
   .account-leave {
     margin-top: 32px;

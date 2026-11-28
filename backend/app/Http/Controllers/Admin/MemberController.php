@@ -31,6 +31,8 @@ class MemberController extends Controller
             ->when($status, fn ($q) => $q->where('status', $status))
             ->when($keyword !== '', fn ($q) => $q->where(fn ($q) => $q
                 ->where('uid', strtolower($keyword))
+                // 確認済みのメールアドレスは完全一致で探す（問い合わせの本人確認用）
+                ->orWhere('email', strtolower($keyword))
                 ->orWhere('display_name', 'like', '%'.addcslashes($keyword, '%_\\').'%')))
             ->latest('id')->paginate(50)->withQueryString();
 

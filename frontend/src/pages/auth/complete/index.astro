@@ -22,6 +22,7 @@ import { LINE_OFFICIAL_URL } from '../../../lib/config';
           )
         }
       </div>
+      <p id="email-sent" class="notice" hidden>確認メールを送りました。メールのリンクを開いてください（ポイント交換の申請に必要です）。</p>
       <p><a class="btn btn--block" href="/campaigns/">ポイントを貯める</a></p>
       <p><a class="more-link" href="/mypage/">マイページへ</a></p>
     </div>
@@ -52,7 +53,11 @@ import { LINE_OFFICIAL_URL } from '../../../lib/config';
   // 紹介コードは新しく登録するときだけ使うので、ログインが終わったら消す（同じブラウザで別の人が登録したときに付かないように）
   clearReferralCode();
 
-  if (new URLSearchParams(location.search).get('new') === '1') {
+  const params = new URLSearchParams(location.search);
+  // 初回登録（S27）でメールアドレスを入れたあと
+  if (params.get('email') === 'sent') document.getElementById('email-sent')!.hidden = false;
+
+  if (params.get('new') === '1') {
     document.getElementById('welcome')!.hidden = false;
     document.getElementById('complete-title')!.textContent = '会員登録が完了しました';
   }

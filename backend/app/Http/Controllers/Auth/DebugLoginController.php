@@ -53,7 +53,10 @@ class DebugLoginController extends Controller
         Auth::guard('web')->login($user, remember: true);
         $request->session()->regenerate();
 
-        return redirect()->away(config('poifo.front_url').'/auth/complete/'.($isNew ? '?new=1' : ''));
+        // 初回登録（S27）の確認もできるよう、LINE ログインと同じ行き先にする
+        $page = $user->hasRegisteredEmail() ? '/auth/complete/' : '/welcome/';
+
+        return redirect()->away(config('poifo.front_url').$page.($isNew ? '?new=1' : ''));
     }
 
     private function fail(string $reason): RedirectResponse

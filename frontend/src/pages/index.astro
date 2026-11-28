@@ -6,6 +6,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Mascot from '../components/Mascot.astro';
 import Visual from '../components/Visual.astro';
 import PointCard from '../components/PointCard.astro';
+import EmailWarning from '../components/EmailWarning.astro';
 import { CAMPAIGN_MENU, campaignMenuHref } from '../lib/campaign-menu';
 import { LINE_LOGIN_URL, LINE_OFFICIAL_URL } from '../lib/config';
 
@@ -25,6 +26,8 @@ const MENU_ROWS = [
        初めての人向けの説明（ファーストビュー・特徴・貯め方・しくみ・最後の登録導線）はログイン中は出さない -->
   <section class="member-top" data-show="member">
     <div class="container">
+      <!-- メールアドレス未登録のときだけ、一番上に警告の帯（機能仕様 3.5） -->
+      <EmailWarning />
       <!-- ポイントの帯: サイト共通のポイントカード（docs/brand/README.md「ポイント表示の共通カード」） -->
       <PointCard label="利用可能ポイント" valueId="member-available" sideId="member-pending" href="/mypage/" />
       <a id="important-news" class="important-news" href="#" hidden></a>

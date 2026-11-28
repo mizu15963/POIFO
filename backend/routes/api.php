@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\BankAccountController;
 use App\Http\Controllers\Api\CampaignController;
+use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\ExchangeMethodController;
 use App\Http\Controllers\Api\FavoriteController;
@@ -27,11 +28,19 @@ Route::prefix('v1')->middleware('throttle:member-api')->group(function () {
     // 紹介URLのコードが使えるか（紹介ページ S26。総当たりを抑えるため IP 単位でも絞る）
     Route::get('/referral/codes/{code}', [ReferralController::class, 'check'])->middleware('throttle:referral-check');
 
+    // メールアドレスの確認リンク（メールアプリで開かれるので、ログインなしで受ける。総当たりを抑えるため IP 単位で絞る）
+    Route::post('/email/verify', [EmailController::class, 'verify'])->middleware('throttle:email-verify');
+
     Route::middleware(['auth:sanctum', EnsureMemberIsActive::class])->group(function () {
         Route::get('/me', [MeController::class, 'show']);
         Route::get('/me/points', [MeController::class, 'pointHistory']);
         // 案件の利用履歴（マイページの通帳のタブ。docs/specs/functional-spec.md 3.3）
         Route::get('/me/clicks', [MeController::class, 'clicks']);
+        // メールアドレスの登録・確認メールの再送・受け取り設定（docs/specs/functional-spec.md 3.5）。
+        // 確認メールの送信回数（1時間3回）は、実際に送るときだけ数える（EmailVerificationService）
+        Route::post('/me/email', [EmailController::class, 'store']);
+        Route::post('/me/email/resend', [EmailController::class, 'resend']);
+        Route::put('/me/email/settings', [EmailController::class, 'settings'])->middleware('throttle:favorite-update');
         // お知らせ一覧を開いた日時（未読の数を0にする）
         Route::post('/me/news/seen', [NewsController::class, 'seen']);
 

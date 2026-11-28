@@ -40,7 +40,7 @@ class LineLoginTest extends TestCase
         $this->asApiHost()
             ->withSession(['line_login' => ['state' => 'st', 'nonce' => 'nn']])
             ->get('/auth/line/callback?code=c&state=st')
-            ->assertRedirect('https://poifo.test/auth/complete/?new=1');
+            ->assertRedirect('https://poifo.test/welcome/?new=1');
 
         $user = User::firstWhere('line_user_id', 'Uabc');
         $this->assertSame('ポイ太郎', $user->display_name);

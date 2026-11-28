@@ -11,6 +11,12 @@
     <div>登録日<br><strong>{{ $member->created_at?->format('Y/n/j') }}</strong></div>
     <div>最終ログイン<br><strong>{{ $member->last_login_at?->format('n/j H:i') ?? '-' }}</strong></div>
 </div>
+@php($pendingEmail = $member->pendingEmailVerification())
+<p class="muted">メールアドレス:
+    @if ($member->hasVerifiedEmail()){{ $member->email }}（確認済み）@else 未確認 @endif
+    @if ($pendingEmail) ／ 確認待ち: {{ $pendingEmail->email }}@endif
+    ／ お得情報のメール: {{ $member->email_marketing_opt_in ? '受け取る' : '受け取らない' }}
+</p>
 @if ($member->status === 'suspended')
     <p class="muted">停止日時: {{ $member->suspended_at?->format('Y/n/j H:i') }} ／ 理由: {{ $member->suspended_reason }}</p>
 @endif
