@@ -1,0 +1,61 @@
+---
+// メールアドレス未登録の会員だけに出す警告の帯（画面仕様 S01・S03）。帯全体を押すと初回登録（S27）へ移り、登録後はこのページに戻る
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<a class:list={['email-warning', className]} href="/welcome/" data-email-warning hidden>
+  <svg class="email-warning__icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 3.5 2.5 20h19Z"></path><path d="M12 10v4.5M12 17.5h.01"></path>
+  </svg>
+  <span class="email-warning__text">メールアドレスが未登録です。登録すると案件を利用できます。</span>
+  <span class="email-warning__btn">登録する</span>
+</a>
+
+<script>
+  import { needsEmail, welcomeUrl } from '../lib/email';
+  import { whenMe } from '../lib/session';
+
+  whenMe().then((me) => {
+    if (!needsEmail(me)) return;
+    document.querySelectorAll<HTMLAnchorElement>('[data-email-warning]').forEach((a) => {
+      a.href = welcomeUrl();
+      a.hidden = false;
+    });
+  });
+</script>
+
+<style>
+  .email-warning {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-accent);
+    border-radius: 14px;
+    background: var(--color-accent-bg);
+    color: var(--color-accent-strong);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .email-warning__icon {
+    flex-shrink: 0;
+  }
+  .email-warning__text {
+    flex: 1;
+  }
+  .email-warning__btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--color-accent-strong);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 800;
+  }
+</style>

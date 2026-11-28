@@ -112,6 +112,11 @@ class CampaignController extends Controller
         $user = $request->user();
         abort_unless($user->isActive(), 403);
 
+        // メールアドレスを入れるまで案件に進めない（機能仕様 3.5）。登録後は案件詳細に戻す
+        if (! $user->hasRegisteredEmail()) {
+            return redirect()->away(config('poifo.front_url').'/welcome/?'.http_build_query(['back' => '/campaigns/detail/?id='.$campaign->id]));
+        }
+
         CampaignClick::create([
             'user_id' => $user->id,
             'campaign_id' => $campaign->id,

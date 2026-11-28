@@ -1,50 +1,325 @@
 ---
+// はじめての方へ・ヘルプ（docs/specs/screen-spec.md S15）。2026-11-29 納品の見本 brand/redesign/guide/mockup-guide-b-get.png（ポイントGET版）に合わせた形。
+// 見出しの id（earn・status・exchange・support・events）はメニューなどからのリンク先なので変えない
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import HowToEarn from '../../components/HowToEarn.astro';
 import Mascot from '../../components/Mascot.astro';
 import Visual from '../../components/Visual.astro';
+
+// 見本に寄せた緑の線のアイコン
+const svg = (body: string, size = 44) =>
+  `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICON = {
+  search: svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>'),
+  clipboard: svg('<rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="m8 10.5 1.3 1.3 2.2-2.3M13.5 10.5H16M8 16l1.3 1.3 2.2-2.3M13.5 16H16"/>'),
+  bank: svg('<path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/>'),
+  chat: svg('<path d="M12 4c4.7 0 8.5 3 8.5 6.8s-3.8 6.8-8.5 6.8c-.9 0-1.8-.1-2.6-.3L5 19.5l1-3.6C4.5 14.6 3.5 12.8 3.5 10.8 3.5 7 7.3 4 12 4z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/>'),
+  calendar: svg('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 13.5h.01M12 13.5h.01M16 13.5h.01M8 17h.01M12 17h.01M16 17h.01"/>'),
+  company: svg('<rect x="5" y="3.5" width="14" height="17" rx="1"/><path d="M9 7.5h2M13 7.5h2M9 11h2M13 11h2M9 14.5h2M13 14.5h2M10.5 20.5v-3h3v3"/>', 48),
+  users: svg('<circle cx="12" cy="8" r="3"/><circle cx="5.5" cy="9.5" r="2.3"/><circle cx="18.5" cy="9.5" r="2.3"/><path d="M6.5 20v-1.5a5.5 5.5 0 0 1 11 0V20M1.5 19.5v-.8a4 4 0 0 1 5-3.9M22.5 19.5v-.8a4 4 0 0 0-5-3.9"/>', 48),
+};
+
+const steps = [
+  { no: '01', title: '案件を選ぶ', text: '案件詳細で獲得条件を確認します。', icon: ICON.search },
+  { no: '02', title: '案件を達成する', text: 'ポイフォ経由でサービスを利用します。', icon: ICON.clipboard },
+  { no: '03', title: '承認されたらポイントGET！', text: '確定したポイントは現金に交換できます。', icon: null },
+];
+
+// 状態名はマイページの通帳と同じ（判定中・確定・否認）
+const statuses = [
+  { label: '判定中', cls: 'pending', text: '条件を達成後、広告主が確認中の状態です。' },
+  { label: '確定', cls: 'confirmed', text: '承認が完了し、交換に使える状態です。' },
+  { label: '否認', cls: 'rejected', text: '条件を満たしていない場合の状態です。' },
+];
 ---
 
 <BaseLayout title="はじめての方へ・ヘルプ">
-  <section class="section">
+  <section class="section guide">
     <div class="container narrow">
-      <Visual
-        name="banner-wide-4-start"
-        alt="いつもの行動でポイントがたまる！ポイフォで、無理なくおトクなポイ活はじめよう！"
-        eager
-        class="page-banner"
-      />
-      <div class="with-mascot">
-        <div class="with-mascot__body">
-          <h1 class="section__title">はじめての方へ</h1>
-          <p class="lead">※ 文面は仮です。公開前に運営で確定します。</p>
-        </div>
-        <Mascot pose="cheer" width={150} eager />
+      <Visual name="guide-header" alt="はじめてのポイフォガイド。ポイントの貯め方から、現金交換まで。" eager class="guide-kv" />
+
+      <h1 class="section__title">はじめての方へ</h1>
+      <p class="guide-lead">ポイフォのポイントの貯め方から、交換までをまとめたガイドです。</p>
+
+      <h2 id="earn" class="section__title">ポイントの貯め方</h2>
+      <ol class="guide-box guide-steps">
+        {
+          steps.map((s) => (
+            <li class="guide-row">
+              <span class="guide-row__icon">
+                {s.icon ? <Fragment set:html={s.icon} /> : <Mascot pose="get" width={76} />}
+              </span>
+              <span class="guide-row__body">
+                <strong class="guide-step__title">
+                  <span class="guide-step__no">{s.no}</span>
+                  {s.title}
+                </strong>
+                <span>{s.text}</span>
+              </span>
+            </li>
+          ))
+        }
+      </ol>
+      <a class="btn btn--block guide-cta" href="/campaigns/">案件を探す</a>
+
+      <h2 class="section__title">なぜポイントが貯まるの？</h2>
+      <div class="guide-why">
+        <p>企業から支払われる広告費の一部を、<br />ポイントとして還元します。</p>
+        <ol class="guide-flow" aria-label="企業からポイフォ、ポイフォから利用者へ">
+          <li><span class="guide-flow__art" set:html={ICON.company} /><span class="guide-flow__label">企業</span></li>
+          <li class="guide-flow__arrow" aria-hidden="true"></li>
+          <li>
+            <span class="guide-flow__art guide-flow__pc">
+              <img src="/images/poifo-logo-header.png" alt="" width="56" height="24" />
+            </span>
+            <span class="guide-flow__label">ポイフォ</span>
+          </li>
+          <li class="guide-flow__arrow" aria-hidden="true"></li>
+          <li><span class="guide-flow__art" set:html={ICON.users} /><span class="guide-flow__label">利用者</span></li>
+        </ol>
       </div>
-      <h2 id="earn">ポイントの貯め方</h2>
-      <HowToEarn />
-      <p>LINEでログインし、「案件を探す」から気になる案件の「この案件に進む」を押して、条件を達成するとポイントが貯まります。</p>
-      <Visual
-        name="how-points-work"
-        class="guide-visual"
-        alt="ポイフォの登録は無料なのに、なぜポイントが貯まるの？ポイフォに掲載されている広告を利用すると、企業からポイフォへ広告費が支払われます。その広告費の一部をポイントとして還元しています。1. ユーザー様がポイフォを経由して広告を利用 2. 企業がポイフォに広告費を支払い 3. ポイフォがユーザー様にポイントとして還元"
-      />
-      <h2 id="status">ポイントの獲得条件・反映について</h2>
-      <p>条件を達成すると、ポイントはまず「判定中」として表示されます。広告主の承認後に「確定」となり、交換に使えるようになります。条件を満たしていない場合は「否認」となります。</p>
-      <h2 id="exchange">ポイントの交換方法</h2>
-      <p>マイページの「振込先口座の登録」で口座を登録し、「ポイント交換（銀行振込）」から申請します。申請内容を確認したうえで、登録した口座に振り込みます。交換できるのは「確定」したポイントです。</p>
-      <h2 id="support">担当サポートの利用方法</h2>
-      <p>ポイフォ公式LINEを友だち追加すると、担当スタッフに相談できます。</p>
-      <h2 id="events">イベントへの参加方法</h2>
-      <p>イベント詳細の「オープンチャットで参加する」から、LINEオープンチャットに参加してください。</p>
+
+      <h2 id="status" class="section__title">ポイントの獲得条件・反映について</h2>
+      <dl class="guide-box guide-status">
+        {
+          statuses.map((s) => (
+            <div class="guide-status__row">
+              <dt>
+                <span class={`guide-chip guide-chip--${s.cls}`}>{s.label}</span>
+              </dt>
+              <dd>{s.text}</dd>
+            </div>
+          ))
+        }
+      </dl>
+
+      <h2 id="exchange" class="section__title">ポイントの交換方法</h2>
+      <div class="guide-box guide-row">
+        <span class="guide-row__icon" set:html={ICON.bank} />
+        <p class="guide-row__body">振込先口座を登録し、マイページから銀行振込を申請します。</p>
+      </div>
+
+      <h2 id="support" class="section__title">担当サポートの利用方法</h2>
+      <div class="guide-box guide-row">
+        <span class="guide-row__icon" set:html={ICON.chat} />
+        <p class="guide-row__body">
+          公式LINEで担当スタッフに相談できます。利用は任意です。<br /><a class="guide-link" href="/support/">担当スタッフに相談</a>
+        </p>
+      </div>
+
+      <h2 id="events" class="section__title">イベントへの参加方法</h2>
+      <div class="guide-box guide-row">
+        <span class="guide-row__icon" set:html={ICON.calendar} />
+        <p class="guide-row__body">
+          イベント詳細からオープンチャットへの参加方法を確認できます。<br /><a class="guide-link" href="/events/">イベントを見る</a>
+        </p>
+      </div>
     </div>
   </section>
+
+  <!-- ページの一番下: トップと同じく、フッターの上の縁からのぞき込むポイフォックス（yamada さん 2026-11-29。1画面1体の例外） -->
+  <div class="page-end" aria-hidden="true">
+    <Mascot pose="peek" width={120} class="peek peek--end" />
+  </div>
 </BaseLayout>
 
 <style>
-  /* 説明画像は白地なので、本文と区別できるよう枠で囲む */
-  .section :global(.guide-visual) {
+  .guide {
+    padding-bottom: 72px;
+  }
+  .guide-kv {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-bottom: 24px;
+    border-radius: 16px;
+  }
+  .guide h2.section__title {
+    margin-top: 32px;
+  }
+  .guide-lead {
+    margin: -6px 0 0;
+    padding-left: 16px;
+  }
+  /* 白い枠 */
+  .guide-box {
+    margin: 0;
+    padding: 0 14px;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius);
+    border-radius: 14px;
+    background: #fff;
+    list-style: none;
+  }
+  /* アイコン｜区切り線｜文 */
+  .guide-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+  }
+  .guide-steps .guide-row + .guide-row {
+    border-top: 1px solid var(--color-border);
+  }
+  .guide-row__icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 76px;
+    padding-right: 16px;
+    border-right: 1px solid var(--color-border);
+    color: var(--color-brand-strong);
+  }
+  .guide-row__body {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .guide-step__title {
+    font-size: 1rem;
+    font-weight: 800;
+  }
+  .guide-step__no {
+    margin-right: 8px;
+    color: var(--color-brand-strong);
+  }
+  .guide-cta {
+    margin-top: 14px;
+  }
+  /* なぜ貯まるの: 水色の囲みに説明と 企業 → ポイフォ → 利用者 の図 */
+  .guide-why {
+    padding: 18px 12px 20px;
+    border-radius: 16px;
+    background: var(--color-brand-bg);
+    text-align: center;
+  }
+  .guide-why p {
+    margin: 0 0 14px;
+    line-height: 1.7;
+  }
+  .guide-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .guide-flow li:not(.guide-flow__arrow) {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    width: 88px;
+  }
+  .guide-flow__art {
+    display: grid;
+    place-items: center;
+    height: 56px;
+    color: var(--color-brand-strong);
+  }
+  /* ノートパソコンの画面の中にロゴ（書き出し済みのロゴ画像を使う） */
+  .guide-flow__pc {
+    position: relative;
+    width: 76px;
+    height: 48px;
+    margin-bottom: 8px;
+    border: 2.5px solid var(--color-brand-strong);
+    border-radius: 6px 6px 2px 2px;
+    background: #fff;
+  }
+  .guide-flow__pc::after {
+    content: '';
+    position: absolute;
+    left: -10px;
+    right: -10px;
+    bottom: -9px;
+    height: 5px;
+    border-radius: 0 0 4px 4px;
+    background: var(--color-brand-strong);
+  }
+  .guide-flow__label {
+    padding: 2px 12px;
+    border-radius: 999px;
+    background: var(--color-brand-strong);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+  .guide-flow__arrow {
+    width: 0;
+    height: 0;
+    margin-bottom: 26px;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 12px solid var(--color-brand);
+  }
+  /* 状態のチップと説明の表 */
+  .guide-status__row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+  }
+  .guide-status__row + .guide-status__row {
+    border-top: 1px solid var(--color-border);
+  }
+  .guide-status dt {
+    flex-shrink: 0;
+    width: 76px;
+    padding-right: 16px;
+    border-right: 1px solid var(--color-border);
+  }
+  .guide-status dd {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .guide-chip {
+    display: block;
+    padding: 3px 0;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-align: center;
+  }
+  .guide-chip--pending {
+    background: var(--color-brand-bg);
+    color: var(--color-brand-strong);
+  }
+  .guide-chip--confirmed {
+    background: #dff5e6;
+    color: #1d7a45;
+  }
+  .guide-chip--rejected {
+    background: #eceeef;
+    color: var(--color-muted);
+  }
+  .guide-link {
+    font-weight: 700;
+    color: var(--color-brand-strong);
+  }
+  .guide-link::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-left: 8px;
+    border-top: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    transform: rotate(45deg);
+    vertical-align: 2px;
+  }
+  /* ページの一番下: 高さ0の箱の右下にポイフォックスを置き、手をフッターの上の縁に乗せる（トップと同じ） */
+  .page-end {
+    position: relative;
+    height: 0;
+  }
+  .page-end :global(.peek--end) {
+    position: absolute;
+    right: 16px;
+    bottom: -2px;
   }
 </style>

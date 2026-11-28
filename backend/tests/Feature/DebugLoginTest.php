@@ -26,7 +26,7 @@ class DebugLoginTest extends TestCase
     public function test_creates_a_debug_member_and_logs_in(): void
     {
         $this->asApiHost()->get('/auth/debug/login?user=alice')
-            ->assertRedirect(config('poifo.front_url').'/auth/complete/?new=1');
+            ->assertRedirect(config('poifo.front_url').'/welcome/?new=1');
 
         $user = User::firstWhere('line_user_id', 'debug:alice');
         $this->assertNotNull($user);
@@ -40,7 +40,7 @@ class DebugLoginTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         $this->asApiHost()->get('/auth/debug/login')
-            ->assertRedirect(config('poifo.front_url').'/auth/complete/');
+            ->assertRedirect(config('poifo.front_url').'/welcome/');
 
         $this->assertSame(1, User::where('line_user_id', 'debug:tester')->count());
     }

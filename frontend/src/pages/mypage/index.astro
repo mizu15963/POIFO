@@ -40,7 +40,8 @@ import PointCard from '../../components/PointCard.astro';
 
 <script>
   import { fetchClicks, fetchNews, fetchPointHistory, fetchWithdrawals, logout, type ClickItem, type PointHistoryItem, type WithdrawalItem } from '../../lib/api';
-  import { escapeHtml, formatDate, formatDateTime, formatPoints, formatPointsNumber, safeUrl } from '../../lib/format';
+  import { escapeHtml, formatDate, formatDateTime, formatPoints, safeUrl } from '../../lib/format';
+  import { setPointCardSide, setPointCardValue } from '../../lib/point-card';
   import { emptyState, loadError } from '../../lib/render';
   import { whenMe } from '../../lib/session';
 
@@ -151,8 +152,8 @@ import PointCard from '../../components/PointCard.astro';
   whenMe().then((me) => {
     if (!me) return;
     document.getElementById('greeting')!.textContent = `${me.display_name ?? '会員'} さん`;
-    document.getElementById('available')!.textContent = formatPointsNumber(me.points.available);
-    document.getElementById('pending')!.textContent = formatPoints(me.points.pending);
+    setPointCardValue(document.getElementById('available')!, me.points.available);
+    setPointCardSide(document.getElementById('pending')!, me.points.pending);
     const friend = safeUrl(me.line_friend_url);
     if (friend) {
       const li = document.getElementById('line-friend')!;

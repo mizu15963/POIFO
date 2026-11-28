@@ -4,7 +4,7 @@
 <h1>会員</h1>
 <div class="card">
     <form method="get" action="{{ route('admin.members.index') }}" class="inline">
-        <div><label for="q">会員ID・表示名</label><input id="q" type="text" name="q" value="{{ $keyword }}"></div>
+        <div><label for="q">会員ID・表示名・メール</label><input id="q" type="text" name="q" value="{{ $keyword }}"></div>
         <div>
             <label for="status">状態</label>
             <select id="status" name="status">

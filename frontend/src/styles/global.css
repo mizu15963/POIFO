@@ -365,6 +365,112 @@ a.card:hover {
   text-underline-offset: 4px;
 }
 
+/* イベント一覧（S04）の1件（render.ts の eventRow）。左にサムネイルと区切り線、右に日時・タイトル・チップ・ボタン */
+.event-row {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--color-text);
+  text-decoration: none;
+}
+.event-row:hover {
+  border-color: var(--color-brand);
+}
+.event-row__thumb {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 80px;
+  padding-right: 14px;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-brand-strong);
+}
+.event-row__thumb img {
+  width: 80px;
+  height: 80px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.event-row__nothumb {
+  width: 64px;
+  height: 64px;
+}
+.event-row__body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.event-row__icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-brand-strong);
+}
+.event-row__date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.event-row__title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.event-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.event-row__chip {
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: var(--color-brand-bg);
+  color: var(--color-brand-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+/* 参加ポイント・残り枠はチップの横に小さく（2026-11-29 yamada さん） */
+.event-row__extra {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-accent-strong);
+}
+.event-row__more {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--color-brand-strong);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.event-row__more::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+/* 終了したイベントは薄く */
+.event-row--ended {
+  opacity: 0.6;
+  background: #f7f8f8;
+}
+.event-row--ended .event-row__more {
+  background: var(--color-muted);
+}
+
 .badge {
   display: inline-block;
   margin-left: 8px;
@@ -852,17 +958,26 @@ body[data-auth='guest'][data-sticky-cta='true'] {
   white-space: nowrap;
 }
 .point-card__num {
-  font-size: 1.9rem;
+  /* 基本の大きさ。ドロワーのように幅が狭い場所では --point-card-num を小さくする */
+  font-size: calc(var(--point-card-num, 1.9rem) * var(--point-card-scale, 1));
   letter-spacing: 0.01em;
+}
+/* 桁が増えたら文字を小さくして1行に収める（data-len はカンマを含む文字数。setPointCardValue / pointCardHtml が付ける）。
+   7文字（999,999）までそのまま、9文字（1,000,000）から段階的に小さくする */
+.point-card__num[data-len='9'] {
+  --point-card-scale: 0.8;
+}
+.point-card__num[data-len='10'] {
+  --point-card-scale: 0.72;
+}
+.point-card__num[data-len='11'],
+.point-card__num[data-len='12'],
+.point-card__num[data-len='13'] {
+  --point-card-scale: 0.56;
 }
 .point-card__unit {
   margin-left: 2px;
   font-size: 1.1rem;
-}
-.point-card__sparkle {
-  align-self: flex-start;
-  flex-shrink: 0;
-  margin: -4px 0 0 2px;
 }
 /* 区切り線の右: 薄い水色の囲みで判定中ポイントと ＞ */
 .point-card__side {
@@ -903,4 +1018,12 @@ a.point-card .point-card__side::after {
 .point-card__side-value {
   font-size: 1rem;
   font-weight: 800;
+}
+/* 判定中も「1,000,000P」（10文字）以上は小さくする */
+.point-card__side-value[data-len='10'],
+.point-card__side-value[data-len='11'],
+.point-card__side-value[data-len='12'],
+.point-card__side-value[data-len='13'],
+.point-card__side-value[data-len='14'] {
+  font-size: 0.82rem;
 }

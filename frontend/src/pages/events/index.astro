@@ -1,27 +1,100 @@
 ---
+// みんなでポイ活（イベント一覧、docs/specs/screen-spec.md S04）。2026-11-29 納品の見本 brand/redesign/events/mockup-events-mobile.png に合わせた形
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Mascot from '../../components/Mascot.astro';
+import Visual from '../../components/Visual.astro';
 ---
 
 <BaseLayout title="イベント">
-  <section class="section">
+  <section class="section events-page">
     <div class="container">
-      <h1 class="section__title">みんなでポイ活！イベント</h1>
-      <div class="with-mascot">
-        <p class="lead with-mascot__body">イベントへの参加は、各イベントの「オープンチャットで参加する」から。会話や案内はオープンチャットで行います。</p>
-        <Mascot pose="event" width={150} eager />
+      <!-- 見出しと説明は文字入りの納品画像 -->
+      <Visual name="events-header" alt="みんなでポイ活！イベントで、一緒にポイ活を楽しもう。" eager class="events-kv" />
+      <h1 class="sr-only">みんなでポイ活！イベント</h1>
+
+      <h2 class="events-band">開催予定のイベント</h2>
+      <div id="events" class="events-list" aria-live="polite"><p class="loading">読み込み中…</p></div>
+
+      <p class="events-howto">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"
+          ><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg
+        >
+        <span><strong>参加方法：</strong>イベント詳細から、オープンチャットへの参加方法を確認できます。</span>
+      </p>
+
+      <!-- 終了したイベントは下に分けて薄く残す（2026-11-29 yamada さん）。なければ見出しごと出さない -->
+      <div id="ended-wrap" hidden>
+        <h2 class="events-band events-band--ended">終了したイベント</h2>
+        <div id="ended" class="events-list"></div>
       </div>
-      <div id="events" class="grid grid--2" aria-live="polite"><p class="loading">読み込み中…</p></div>
     </div>
   </section>
 </BaseLayout>
 
 <script>
   import { fetchEvents } from '../../lib/api';
-  import { emptyState, eventCard } from '../../lib/render';
+  import { emptyState, eventRow } from '../../lib/render';
 
   const list = document.getElementById('events')!;
   fetchEvents()
-    .then((items) => (list.innerHTML = items.length ? items.map(eventCard).join('') : emptyState('イベントは準備中です。')))
+    .then((items) => {
+      const upcoming = items.filter((e) => e.status !== 'ended');
+      // 終了したものは新しい順
+      const ended = items.filter((e) => e.status === 'ended').sort((a, b) => b.starts_at.localeCompare(a.starts_at));
+      list.innerHTML = upcoming.length ? upcoming.map(eventRow).join('') : emptyState('開催予定のイベントは準備中です。');
+      if (ended.length) {
+        document.getElementById('ended')!.innerHTML = ended.map(eventRow).join('');
+        document.getElementById('ended-wrap')!.hidden = false;
+      }
+    })
     .catch(() => (list.innerHTML = emptyState('イベントを読み込めませんでした。')));
 </script>
+
+<style>
+  .events-page {
+    padding-top: 12px;
+  }
+  .events-kv {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+    border-radius: 16px;
+  }
+  /* 緑の帯の見出し */
+  .events-band {
+    margin: 0 0 12px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: var(--color-brand-strong);
+    color: #fff;
+    font-size: 1.2rem;
+  }
+  .events-band--ended {
+    margin-top: 28px;
+    background: var(--color-muted);
+  }
+  .events-list {
+    display: grid;
+    gap: 12px;
+  }
+  /* 参加方法の囲み（i マーク・区切り線） */
+  .events-howto {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 20px 0 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--color-brand-bg);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .events-howto svg {
+    flex-shrink: 0;
+    color: var(--color-brand-strong);
+  }
+  .events-howto span {
+    padding-left: 14px;
+    border-left: 2px solid var(--color-brand);
+  }
+</style>

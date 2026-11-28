@@ -23,6 +23,12 @@ import Mascot from '../../../../components/Mascot.astro';
         <dl class="terms card" id="terms"></dl>
         <p id="stopped" class="notice" hidden>現在、受付を停止しています。</p>
 
+        <!-- 換金の連絡を送れるよう、確認済みのメールアドレスが必要（機能仕様 3.5） -->
+        <div id="email-missing" hidden>
+          <p>ポイント交換の申請には、メールアドレスの確認が必要です。登録情報で確認メールのリンクを開いてください。</p>
+          <a class="btn btn--block" href="/mypage/account/">登録情報でメールアドレスを確認する</a>
+        </div>
+
         <div id="bank-missing" hidden>
           <p>換金するには、先に振込先口座を登録してください。</p>
           <a class="btn btn--block" href="/mypage/bank/">振込先口座を登録する</a>
@@ -95,6 +101,8 @@ import Mascot from '../../../../components/Mascot.astro';
 
       if (!method.accepting) {
         document.getElementById('stopped')!.hidden = false;
+      } else if (!me.email_verified) {
+        document.getElementById('email-missing')!.hidden = false;
       } else if (isBank) {
         const bank = await fetchBankAccount();
         if (!bank) {

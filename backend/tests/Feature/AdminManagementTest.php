@@ -105,12 +105,13 @@ class AdminManagementTest extends TestCase
 
     public function test_member_search_and_detail(): void
     {
-        $user = User::factory()->create(['display_name' => 'ポイ活太郎']);
+        $user = User::factory()->create(['display_name' => 'ポイ活太郎', 'email' => 'taro@example.com']);
         User::factory()->create(['display_name' => '別の人']);
 
         $this->admin()->get('/members?q=活太')->assertSee('ポイ活太郎')->assertDontSee('別の人');
         $this->admin()->get('/members?q='.strtoupper($user->uid))->assertSee('ポイ活太郎');
-        $this->admin()->get("/members/{$user->id}")->assertOk()->assertSee($user->uid);
+        $this->admin()->get('/members?q=Taro@Example.com')->assertSee('ポイ活太郎')->assertDontSee('別の人');
+        $this->admin()->get("/members/{$user->id}")->assertOk()->assertSee($user->uid)->assertSee('taro@example.com（確認済み）');
     }
 
     public function test_suspending_a_member_ends_their_session_and_resume_restores_it(): void

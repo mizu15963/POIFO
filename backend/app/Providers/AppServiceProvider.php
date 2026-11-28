@@ -94,6 +94,9 @@ class AppServiceProvider extends ServiceProvider
         // 紹介コードの確認（未ログインで呼ぶ）: コードを総当たりで探すのを抑える
         RateLimiter::for('referral-check', fn (Request $request) => Limit::perMinute(20)->by('referral-check:'.(ClientIp::trusted($request) ?? 'unknown')));
 
+        // 確認リンクのトークン（未ログインで呼ぶ）: 総当たりを抑える
+        RateLimiter::for('email-verify', fn (Request $request) => Limit::perMinute(10)->by('email-verify:'.(ClientIp::trusted($request) ?? 'unknown')));
+
         // 振込先口座の登録・変更: 他人の口座を総当たりで試す・頻繁に付け替えるのを抑える
         RateLimiter::for('bank-account-update', fn (Request $request) => [
             Limit::perMinute(3)->by('bank-min:'.$key($request)),

@@ -87,7 +87,10 @@ class LineLoginController extends Controller
         Auth::guard('web')->login($user, remember: true);
         $request->session()->regenerate();
 
-        return redirect()->away(config('poifo.front_url').'/auth/complete/'.($isNew ? '?new=1' : ''));
+        // メールアドレスを入れていない会員は、ログインのたびに初回登録（S27）へ（機能仕様 3.5）
+        $page = $user->hasRegisteredEmail() ? '/auth/complete/' : '/welcome/';
+
+        return redirect()->away(config('poifo.front_url').$page.($isNew ? '?new=1' : ''));
     }
 
     private function fail(string $reason): RedirectResponse

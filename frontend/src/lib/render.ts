@@ -59,3 +59,45 @@ export const newsRow = (n: NewsSummary) => `
       <span class="news-row__title">${escapeHtml(n.title)}</span>
     </a>
   </li>`;
+
+// イベント一覧（S04）の行で使う線のアイコン（見本 brand/redesign/events/ に寄せた緑の線）
+const lineIcon = (body: string, cls: string) =>
+  `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const EVENT_ICON = {
+  calendar: lineIcon('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>', 'event-row__icon'),
+  online: lineIcon('<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/>', 'event-row__icon'),
+  place: lineIcon('<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 'event-row__icon'),
+  // サムネイルがないイベントの絵（見本の2枚目と同じ吹き出し2つ）
+  noThumb: lineIcon(
+    '<path d="M3 9.5C3 7 5.2 5 8 5h1c2.8 0 5 2 5 4.5S11.8 14 9 14H7.5L4.5 16.5l.7-3.1C3.9 12.6 3 11.1 3 9.5z"/><path d="M10.5 15.6c.6 1.6 2.3 2.9 4.5 2.9h1.5l3 2.5-.7-3.1c1.3-.8 2.2-2.3 2.2-3.9 0-2.2-1.7-4-4-4.4"/><path d="M6.5 9.5h.01M8.5 9.5h.01M10.5 9.5h.01"/>',
+    'event-row__nothumb',
+  ),
+};
+
+/**
+ * イベント一覧（S04）の1件。左にサムネイル（ないときは吹き出しの絵）、右に日時・タイトル・開催方法のチップと
+ * 参加ポイント・残り枠（2026-11-29 yamada さん）・「詳しく見る」。終了したイベントは薄く出す（CSS の .event-row--ended）。
+ * トップのイベントカード（eventCard）とは別の形。
+ */
+export function eventRow(e: EventSummary): string {
+  const thumb = safeUrl(e.thumbnail_url);
+  const online = (e.format ?? '').includes('オンライン');
+  // 終了したイベントは参加ポイント・残り枠を出さない
+  const extras = (e.status === 'ended' ? [] : [
+    e.reward_points > 0 ? `参加で${formatPoints(e.reward_points)}` : '',
+    e.accepting && e.remaining_seats !== null ? (e.remaining_seats === 0 ? '満員' : `残り${e.remaining_seats}人`) : '',
+  ]).filter(Boolean);
+  return `
+    <a class="event-row${e.status === 'ended' ? ' event-row--ended' : ''}" href="/events/detail/?id=${e.id}">
+      <span class="event-row__thumb">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" width="96" height="96">` : EVENT_ICON.noThumb}</span>
+      <span class="event-row__body">
+        <span class="event-row__date">${EVENT_ICON.calendar}${escapeHtml(formatDateTime(e.starts_at))}${e.status === 'ended' ? '<span class="badge badge--muted">終了</span>' : ''}</span>
+        <span class="event-row__title">${escapeHtml(e.title)}</span>
+        <span class="event-row__meta">
+          ${e.format ? `${online ? EVENT_ICON.online : EVENT_ICON.place}<span class="event-row__chip">${escapeHtml(e.format)}</span>` : ''}
+          ${extras.length ? `<span class="event-row__extra">${escapeHtml(extras.join('・'))}</span>` : ''}
+        </span>
+        <span class="event-row__more">詳しく見る</span>
+      </span>
+    </a>`;
+}

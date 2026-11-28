@@ -97,7 +97,7 @@ class ReferralTest extends TestCase
         ]);
 
         $this->asApiHost()->withSession(['line_login' => ['state' => 'st', 'nonce' => 'nn', 'ref' => $code]])
-            ->get('/auth/line/callback?code=c&state=st')->assertRedirect('https://poifo.test/auth/complete/?new=1');
+            ->get('/auth/line/callback?code=c&state=st')->assertRedirect('https://poifo.test/welcome/?new=1');
         $this->assertSame($referrer->id, User::firstWhere('line_user_id', 'Unew')->referred_by_user_id);
 
         // すでに会員の人には後から付けない

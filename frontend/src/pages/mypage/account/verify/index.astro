@@ -1,0 +1,61 @@
+---
+// メールアドレスの確認リンクの行き先（docs/specs/screen-spec.md S21、機能仕様 3.5）。/mypage/account/verify/?token=
+// リンクはメールアプリの中のブラウザで開かれることが多く、そこではログインしていないので requireLogin にしない
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import Mascot from '../../../../components/Mascot.astro';
+---
+
+<BaseLayout title="メールアドレスの確認" noindex>
+  <section class="section">
+    <div class="container narrow verify">
+      <p id="verifying" class="loading">確認しています…</p>
+      <div id="verified" class="done" hidden>
+        <Mascot pose="get" width={120} class="state-mascot" />
+        <p class="done__title">メールアドレスを確認しました</p>
+        <p class="lead">ポイント交換の申請ができるようになりました。</p>
+        <a class="btn btn--block" href="/mypage/">マイページへ</a>
+      </div>
+      <div id="failed" class="done" hidden>
+        <Mascot pose="sorry" width={120} class="state-mascot" />
+        <p class="done__title" id="failed-title">リンクの有効期限が切れています</p>
+        <p class="lead">ログインして「登録情報」から確認メールを送り直してください。</p>
+        <a class="btn btn--block" href="/mypage/account/">登録情報へ</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { ApiError, verifyEmail } from '../../../../lib/api';
+
+  const token = new URLSearchParams(location.search).get('token') ?? '';
+  const show = (id: 'verified' | 'failed', title?: string) => {
+    document.getElementById('verifying')!.hidden = true;
+    document.getElementById(id)!.hidden = false;
+    if (title) document.getElementById('failed-title')!.textContent = title;
+  };
+
+  if (!token) {
+    show('failed', 'リンクが無効です');
+  } else {
+    // トークンをアドレスバーや履歴に残さない
+    history.replaceState(null, '', location.pathname);
+    verifyEmail(token)
+      .then(() => show('verified'))
+      .catch((err) => {
+        const message = err instanceof ApiError && err.status === 422 ? err.errors.token?.[0] : undefined;
+        show('failed', message ? message.replace(/。$/, '') : '確認できませんでした');
+      });
+  }
+</script>
+
+<style>
+  .verify {
+    text-align: center;
+  }
+  .done__title {
+    margin: 0 0 8px;
+    font-weight: 700;
+    font-size: 1.15rem;
+  }
+</style>
