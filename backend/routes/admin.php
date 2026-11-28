@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\CampaignCategoryController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\HomeController;
@@ -41,6 +42,10 @@ Route::name('admin.')->group(function () {
         // 動作確認用のダミー案件（機能仕様 4.6、公開前に消す）
         Route::post('/campaigns/dummies', [CampaignController::class, 'storeDummies'])->name('campaigns.dummies.store');
         Route::delete('/campaigns/dummies', [CampaignController::class, 'destroyDummies'])->name('campaigns.dummies.destroy');
+
+        // カテゴリの表示（メニューのボタンの表示名・並び・出すかどうか。機能仕様 4.7）
+        Route::get('/campaign-categories', [CampaignCategoryController::class, 'index'])->name('campaign-categories.index');
+        Route::put('/campaign-categories', [CampaignCategoryController::class, 'update'])->name('campaign-categories.update');
 
         // イベントと参加者
         Route::resource('events', EventController::class);
