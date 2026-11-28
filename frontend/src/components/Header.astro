@@ -1,9 +1,9 @@
 ---
 // ヘッダーとハンバーガーメニュー（右から出るドロワー）。
-// メニューは大手ポイントサイトの作りを参考に、会員状態（ポイント）・アイコン付きのタイル・カテゴリ・
-// キャラクター入りの案内バナー・リンク一覧の順に並べ、「開けば一通り行き先がわかる」情報量にしている。
+// メニューは 2026-11-28 納品の見本（共有フォルダ brand/redesign/menu/）に合わせ、上から
+// ポイント（ログイン中）か登録・ログイン（未ログイン）→ アイコンのタイル → カテゴリのボタン → リンクの行、の順に並べる（画面仕様 1.2）。
 import { LINE_LOGIN_URL } from '../lib/config';
-import Mascot from './Mascot.astro';
+import PointCard from './PointCard.astro';
 
 // 線のアイコン（24×24、stroke で描く）。画像ファイルを増やさないためインライン SVG にする
 const icons = {
@@ -23,41 +23,31 @@ const icons = {
   bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   star: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 13.5h.01M12 13.5h.01M16 13.5h.01M8 17h.01M12 17h.01M16 17h.01"/>',
+  chatDots: '<path d="M12 4c4.7 0 8.5 3 8.5 6.8s-3.8 6.8-8.5 6.8c-.9 0-1.8-.1-2.6-.3L5 19.5l1-3.6C4.5 14.6 3.5 12.8 3.5 10.8 3.5 7 7.3 4 12 4z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/>',
+  coins: '<ellipse cx="9" cy="7" rx="5.5" ry="2.5"/><path d="M3.5 7v3.5c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V7"/><path d="M3.5 10.5V14c0 1.4 2.5 2.5 5.5 2.5"/><ellipse cx="15" cy="15" rx="5.5" ry="2.5"/><path d="M9.5 15v3.5c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V15"/>',
+  beginner: '<path d="M12 7.5 5 4v12.5l7 4 7-4V4Z"/><path d="M12 7.5v13"/>',
   gift: '<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8c-1.5-3-5-3.5-5-1.2C7 8 9.5 8 12 8zM12 8c1.5-3 5-3.5 5-1.2C17 8 14.5 8 12 8z"/>',
 } as const;
 type Icon = keyof typeof icons;
 
-const tiles: { href: string; label: string; icon: Icon }[] = [
+// メニューのタイル（3×2）。ログイン中は「お気に入り」、未ログインは「はじめての方へ」を出す
+const tiles: { href: string; label: string; icon: Icon; show?: 'member' | 'guest' }[] = [
   { href: '/campaigns/', label: '案件を探す', icon: 'search' },
-  { href: '/events/', label: 'イベント', icon: 'flag' },
-  { href: '/support/', label: '担当サポート', icon: 'chat' },
-  { href: '/guide/#earn', label: '貯め方', icon: 'book' },
-  { href: '/mypage/withdraw/', label: 'ポイント交換', icon: 'coin' },
+  { href: '/events/', label: 'イベント', icon: 'calendar' },
+  { href: '/support/', label: '担当サポート', icon: 'chatDots' },
+  { href: '/guide/', label: 'はじめての方へ', icon: 'beginner', show: 'guest' },
+  { href: '/guide/#earn', label: 'ポイントの\n貯め方', icon: 'coins' },
+  { href: '/mypage/favorites/', label: 'お気に入り', icon: 'star', show: 'member' },
   { href: '/guide/', label: 'ヘルプ', icon: 'help' },
 ];
 
-const banners = [
-  { href: '/guide/', pose: 'guide', title: 'はじめての方へ', text: 'ポイントの貯め方・交換方法をチェック' },
-  { href: '/events/', pose: 'event', title: 'みんなでポイ活！', text: 'イベントにみんなで挑戦しよう' },
-  { href: '/support/', pose: 'line', title: '担当スタッフに相談', text: '困ったらLINEで気軽に相談できます' },
-] as const;
-
-// 会員メニュー（docs/specs/screen-spec.md 1.2）。ポイント履歴はマイページの通帳に入れたので置かない
-const myLinks: { href: string; label: string; icon: Icon }[] = [
-  { href: '/mypage/', label: 'マイページ（ポイント通帳）', icon: 'home' },
-  { href: '/mypage/favorites/', label: 'お気に入り', icon: 'star' },
-  { href: '/mypage/withdraw/', label: 'ポイント交換', icon: 'coin' },
-  { href: '/mypage/referral/', label: '友達紹介', icon: 'gift' },
-  { href: '/mypage/account/', label: '登録情報', icon: 'user' },
-];
-
-const otherLinks: { href: string; label: string; icon: Icon }[] = [
-  { href: '/news/', label: 'お知らせ', icon: 'bell' },
-  { href: '/guide/', label: 'サービスについて・ヘルプ', icon: 'help' },
-  { href: '/contact/', label: 'お問い合わせ', icon: 'mail' },
-  { href: '/terms/', label: '利用規約', icon: 'doc' },
-  { href: '/privacy/', label: 'プライバシーポリシー', icon: 'shield' },
-  { href: '/company/', label: '運営者情報', icon: 'building' },
+// 下のリンクの行。利用規約・プライバシーポリシー・運営者情報はフッターにあるのでメニューには置かない（2026-11-28 yamada さん）
+const links: { href: string; label: string; show?: 'member' }[] = [
+  { href: '/news/', label: 'お知らせ' },
+  { href: '/mypage/account/', label: '登録情報', show: 'member' },
+  { href: '/mypage/referral/', label: '友達紹介', show: 'member' },
+  { href: '/contact/', label: 'お問い合わせ' },
 ];
 ---
 
@@ -99,30 +89,26 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
       </button>
     </div>
 
-    <!-- 未ログイン: 登録の案内 / ログイン中: ポイント残高 -->
-    <div class="drawer__status drawer__status--guest" data-show="guest">
-      <Mascot pose="wave" width={84} />
-      <div>
-        <p class="drawer__status-title">登録無料！<br />LINEですぐ始められます</p>
-        <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>LINEで無料で始める</a>
+    <!-- ログイン中: サイト共通のポイントカード＋交換・通帳 / 未ログイン: 登録・ログイン（どちらも LINE ログイン） -->
+    <div class="drawer__member" data-show="member">
+      <PointCard label="利用可能ポイント" valueId="menu-points" sideId="menu-pending" href="/mypage/" />
+      <div class="drawer__actions">
+        <a class="btn" href="/mypage/withdraw/">ポイント交換</a>
+        <a class="btn btn--outline" href="/mypage/">ポイント通帳</a>
       </div>
     </div>
-    <div class="drawer__status drawer__status--member" data-show="member">
-      <p class="drawer__hello"><span id="menu-name">会員</span> さん</p>
-      <p class="drawer__points-label">交換できるポイント</p>
-      <p class="drawer__points" id="menu-points">—</p>
-      <p class="drawer__pending">判定中 <span id="menu-pending">—</span></p>
-      <div class="drawer__status-actions">
-        <a class="btn btn--block" href="/mypage/withdraw/">ポイント交換</a>
-        <a class="btn btn--outline btn--block" href="/mypage/">ポイント通帳</a>
+    <div class="drawer__guest" data-show="guest">
+      <div class="drawer__actions">
+        <a class="btn" href={LINE_LOGIN_URL}>無料会員登録</a>
+        <a class="btn btn--outline" href={LINE_LOGIN_URL}>ログイン</a>
       </div>
     </div>
 
-    <p class="drawer__label">メニュー</p>
+    <h2 class="drawer__label">メニュー</h2>
     <ul class="drawer__tiles">
       {
         tiles.map((t) => (
-          <li>
+          <li data-show={t.show}>
             <a href={t.href}>
               <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons[t.icon]} />
               <span>{t.label}</span>
@@ -132,51 +118,16 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
       }
     </ul>
 
-    <p class="drawer__label">カテゴリから探す</p>
-    <ul class="drawer__chips" id="menu-categories">
-      <li><a href="/campaigns/">すべての案件</a></li>
-    </ul>
+    <!-- カテゴリのボタン: ゲーム（特集の印）は2番目に固定、ほかは API の並び（管理画面 A18 で表示名・並び・出すかを決める） -->
+    <h2 class="drawer__label">カテゴリから探す</h2>
+    <ul class="drawer__cats" id="menu-categories"></ul>
+    <a class="drawer__all" href="/campaigns/">すべての案件</a>
 
-    <p class="drawer__label">ポイフォの楽しみ方</p>
-    <ul class="drawer__banners">
-      {
-        banners.map((b) => (
-          <li>
-            <a href={b.href}>
-              <Mascot pose={b.pose} width={72} />
-              <span>
-                <strong>{b.title}</strong>
-                <small>{b.text}</small>
-              </span>
-            </a>
-          </li>
-        ))
-      }
-    </ul>
-
-    <p class="drawer__label" data-show="member">マイページ</p>
-    <ul class="drawer__list" data-show="member">
-      {
-        myLinks.map((l) => (
-          <li>
-            <a href={l.href}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons[l.icon]} />
-              {l.label}
-            </a>
-          </li>
-        ))
-      }
-    </ul>
-
-    <p class="drawer__label">サポート・その他</p>
     <ul class="drawer__list">
       {
-        otherLinks.map((l) => (
-          <li>
-            <a href={l.href}>
-              <svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons[l.icon]} />
-              {l.label}
-            </a>
+        links.map((l) => (
+          <li data-show={l.show}>
+            <a href={l.href}>{l.label}</a>
           </li>
         ))
       }
@@ -186,7 +137,7 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
 
 <script>
   import { fetchCampaignCategories } from '../lib/api';
-  import { escapeHtml, formatPoints } from '../lib/format';
+  import { escapeHtml, formatPoints, formatPointsNumber } from '../lib/format';
   import { whenMe } from '../lib/session';
 
   const drawer = document.getElementById('site-menu')!;
@@ -223,21 +174,24 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
     if (ev.key === 'Escape' && !drawer.hidden) close();
   });
 
-  // カテゴリは開いたときに1回だけ取得する（全ページで毎回 API を呼ばないため）
+  // カテゴリは開いたときに1回だけ取得する（全ページで毎回 API を呼ばないため）。
+  // ボタンの名前は管理画面で決めた短い表示名（label）、絞り込みは ASP のカテゴリ名（name）で行う
+  const GAME = '<li><a href="/campaigns/?tag=game">ゲーム</a></li>';
   function loadCategories() {
     if (categoriesLoaded) return;
     categoriesLoaded = true;
     const list = document.getElementById('menu-categories')!;
     fetchCampaignCategories()
       .then((items) => {
-        const chips = items
-          .slice(0, 8)
-          .map((c) => `<li><a href="/campaigns/?category=${encodeURIComponent(c.name)}">${escapeHtml(c.name)}</a></li>`)
-          .join('');
-        list.insertAdjacentHTML('afterbegin', chips);
+        const buttons = items
+          .filter((c) => c.in_menu)
+          .map((c) => `<li><a href="/campaigns/?category=${encodeURIComponent(c.name)}">${escapeHtml(c.label)}</a></li>`);
+        buttons.splice(1, 0, GAME);
+        list.innerHTML = buttons.join('');
       })
       .catch(() => {
-        // 取れなくても「すべての案件」は出ているので、そのままにする
+        // 取れなくても「すべての案件」があるので、ゲームだけ出しておく
+        list.innerHTML = GAME;
       });
   }
 
@@ -253,8 +207,7 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
       badge.hidden = false;
       badge.parentElement!.setAttribute('aria-label', `お知らせ（未読 ${me.unread_news_count}件）`);
     }
-    document.getElementById('menu-name')!.textContent = me.display_name ?? '会員';
-    document.getElementById('menu-points')!.textContent = formatPoints(me.points.available);
+    document.getElementById('menu-points')!.textContent = formatPointsNumber(me.points.available);
     document.getElementById('menu-pending')!.textContent = formatPoints(me.points.pending);
   });
 </script>
@@ -403,7 +356,7 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
     top: 0;
     bottom: 0;
     right: max(0px, calc((100% - var(--shell-width)) / 2));
-    width: min(88%, 400px);
+    width: min(92%, 400px);
     overflow-y: auto;
     overscroll-behavior: contain;
     background: #fff;
@@ -465,74 +418,44 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
     stroke-linecap: round;
   }
 
-  .drawer__status {
-    margin-top: 16px;
-    padding: 14px;
-    border-radius: var(--radius);
-    background: var(--color-accent-bg);
-    border: 1px solid var(--color-accent);
+  /* 上の囲み: ログイン中はポイントカード＋ボタン2つ、未ログインは淡い水色の囲みにボタン2つ */
+  .drawer__member {
+    margin-top: 12px;
   }
-  .drawer__status--guest {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  /* ドロワーはページより幅が狭いので、数字と判定中の囲みを少し小さくして1行に収める */
+  .drawer__member :global(.point-card__num) {
+    font-size: 1.5rem;
   }
-  .drawer__status--guest > div {
-    flex: 1;
-    min-width: 0;
+  .drawer__member :global(.point-card__unit) {
+    font-size: 0.95rem;
   }
-  .drawer__status--guest :global(.mascot) {
-    flex-shrink: 0;
+  .drawer__member :global(.point-card__side) {
+    padding: 6px 20px 6px 8px;
   }
-  .drawer__status-title {
-    margin: 0 0 8px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    line-height: 1.5;
+  .drawer__guest {
+    margin-top: 12px;
+    padding: 24px 14px;
+    border-radius: 18px;
+    background: var(--color-brand-bg);
   }
-  .drawer__status--guest .btn {
-    min-height: 40px;
-    font-size: 0.9rem;
-    padding: 0 8px;
-  }
-  .drawer__hello {
-    margin: 0;
-    font-weight: 700;
-  }
-  .drawer__points-label {
-    margin: 8px 0 0;
-    font-size: 0.8rem;
-    color: var(--color-muted);
-  }
-  .drawer__points {
-    margin: 0;
-    font-size: 1.6rem;
-    font-weight: 700;
-    line-height: 1.3;
-    color: var(--color-accent-strong);
-  }
-  .drawer__pending {
-    margin: 0 0 12px;
-    font-size: 0.8rem;
-    color: var(--color-muted);
-  }
-  .drawer__status-actions {
+  .drawer__actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 10px;
   }
-  .drawer__status-actions .btn {
-    min-height: 40px;
+  .drawer__actions .btn {
+    min-height: 44px;
     padding: 0 8px;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
   }
 
+  /* 見出し（左の線） */
   .drawer__label {
-    margin: 20px 0 8px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--color-muted);
-    letter-spacing: 0.05em;
+    margin: 22px 0 10px;
+    padding-left: 10px;
+    border-left: 4px solid var(--color-brand);
+    font-size: 1.05rem;
+    line-height: 1.3;
   }
 
   /* アイコン付きのタイル（3列） */
@@ -545,26 +468,29 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
     list-style: none;
   }
   .drawer__tiles a {
-    display: grid;
-    justify-items: center;
-    gap: 4px;
-    padding: 12px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 100%;
+    min-height: 92px;
+    padding: 10px 4px;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius);
+    border-radius: 12px;
     text-decoration: none;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 700;
+    line-height: 1.3;
     text-align: center;
+    /* 「ポイントの／貯め方」は見本どおりの位置で折り返す */
+    white-space: pre-line;
   }
   .drawer__tiles svg {
-    width: 28px;
-    height: 28px;
-    padding: 6px;
-    box-sizing: content-box;
-    border-radius: 50%;
-    background: var(--color-brand-bg);
+    width: 32px;
+    height: 32px;
     fill: none;
-    stroke: var(--color-text);
+    stroke: var(--color-brand-strong);
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -573,102 +499,79 @@ const otherLinks: { href: string; label: string; icon: Icon }[] = [
     border-color: var(--color-brand);
   }
 
-  /* カテゴリのチップ（API から差し込むので :global） */
-  .drawer__chips {
-    display: flex;
-    flex-wrap: wrap;
+  /* カテゴリのボタン（2列。API から差し込むので :global） */
+  .drawer__cats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  .drawer__chips :global(a) {
-    display: inline-block;
-    padding: 6px 12px;
+  .drawer__cats :global(a) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 4px 8px;
     border: 1px solid var(--color-border);
-    border-radius: 999px;
-    font-size: 0.85rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-align: center;
     text-decoration: none;
   }
-  .drawer__chips :global(a:hover) {
+  .drawer__cats :global(a:hover) {
     border-color: var(--color-brand);
     background: var(--color-brand-bg);
   }
-
-  /* キャラクター入りの案内バナー */
-  .drawer__banners {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .drawer__banners a {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: var(--radius);
-    background: var(--color-brand-bg);
+  .drawer__all {
+    display: inline-block;
+    margin: 14px 0 18px;
+    font-weight: 700;
+    color: var(--color-brand-strong);
     text-decoration: none;
   }
-  .drawer__banners li:nth-child(2) a {
-    background: var(--color-accent-bg);
-  }
-  .drawer__banners :global(.mascot) {
-    flex-shrink: 0;
-  }
-  .drawer__banners strong {
-    display: block;
-    font-weight: 700;
-  }
-  .drawer__banners small {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--color-muted);
-    line-height: 1.5;
+  .drawer__all::after {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 8px;
+    border-top: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    transform: rotate(45deg);
+    vertical-align: 2px;
   }
 
-  /* アイコン付きのリンク一覧 */
+  /* 下のリンクの行（線で区切り、右に ＞） */
   .drawer__list {
     margin: 0;
     padding: 0;
     list-style: none;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .drawer__list li + li {
     border-top: 1px solid var(--color-border);
+  }
+  .drawer__list li {
+    border-bottom: 1px solid var(--color-border);
   }
   .drawer__list a {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    padding: 14px 4px;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-weight: 700;
   }
   .drawer__list a::after {
     content: '';
     margin-left: auto;
+    margin-right: 6px;
     width: 7px;
     height: 7px;
-    border-top: 2px solid var(--color-muted);
-    border-right: 2px solid var(--color-muted);
+    border-top: 2px solid var(--color-text);
+    border-right: 2px solid var(--color-text);
     transform: rotate(45deg);
   }
   .drawer__list a:hover {
     background: var(--color-brand-bg);
-  }
-  .drawer__list svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    fill: none;
-    stroke: var(--color-text);
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
   }
 </style>

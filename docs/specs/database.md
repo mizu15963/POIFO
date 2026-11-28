@@ -26,6 +26,7 @@
 | 13 | `favorites` | お気に入り | 4.5 |
 | 14 | `news` | お知らせ | 11.1 |
 | 15 | `campaign_tags` | 案件の特集の印 | 4.3 |
+| 16 | `campaign_category_settings` | カテゴリの表示設定（メニューのボタンの表示名・並び・出すか） | 4.7 |
 | — | `sessions` `cache` `cache_locks` `jobs` `job_batches` `failed_jobs` | Laravel の仕組み用（セッション・キャッシュ・ロック・キュー）。API サーバを増やせるよう、すべて DB に置く | — |
 
 ## 2. テーブルのつながり
@@ -49,6 +50,7 @@ erDiagram
     users ||--o{ favorites : "お気に入り"
     campaigns ||--o{ favorites : ""
     campaigns ||--o{ campaign_tags : "特集の印"
+    campaigns }o..o| campaign_category_settings : "カテゴリ名で突き合わせ"
     admins ||--o{ news : "登録"
     admins ||--o{ point_transactions : "手動調整"
 ```
@@ -400,6 +402,20 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `created_at` / `updated_at` | TIMESTAMP | ○ | | |
 
 インデックス: `conversion_id` + `type`（一意。二重に付けない）、`referee_user_id` + `type`（初回特典を1回だけにするため、アプリで確かめる）、`referrer_user_id` + `created_at`。状態（判定中・確定・否認）は `point_transactions` の状態を使う。
+
+### 4.17 `campaign_category_settings`（カテゴリの表示設定）
+
+機能仕様 4.7。ハンバーガーメニューの「カテゴリから探す」のボタンに出す短い表示名・並び・出すかどうかを、ASP のカテゴリ名ごとに1行持つ（管理画面 A18、2026-11-28）。行がないカテゴリは「ASP の名前のまま・件数順・出す」。`campaigns` とは外部キーでつながず、カテゴリ名で突き合わせる（カテゴリは ASP の文字列で、表がないため）。作ったときに見本の名前の9行を入れる。
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `id` | BIGINT UNSIGNED | | | 主キー |
+| `category` | VARCHAR(64) | | | ASP のカテゴリ名（`campaigns.category` と同じ値） |
+| `label` | VARCHAR(32) | ○ | | メニューのボタンに出す表示名。NULL なら ASP の名前のまま |
+| `sort_order` | INT | ○ | | 並び順（小さいほど前）。NULL のものは決めたもののあとに掲載中の件数の多い順 |
+| `in_menu` | BOOLEAN | | true | メニューに出すか |
+
+インデックス: `category`（一意）
 
 ## 5. 気づいた点
 
