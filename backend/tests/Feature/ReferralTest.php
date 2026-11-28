@@ -201,6 +201,10 @@ class ReferralTest extends TestCase
         $rank = $this->service()->rankFor($referrer);
         $this->assertSame(['gold', 800, 1], [$rank['code'], $rank['rate_bps'], $rank['valid_referrals']]);
         $this->assertSame([30, 20, 160], $this->referralRows($referrer)->pluck('points')->all());
+
+        // 紹介された側の紹介を無効にすると、有効紹介人数から外れてランクも戻る
+        $this->service()->disable($friend);
+        $this->assertSame(['regular', 0], [$this->service()->rankFor($referrer)['code'], $this->service()->rankFor($referrer)['valid_referrals']]);
     }
 
     public function test_initial_bonus_not_given_after_deadline(): void

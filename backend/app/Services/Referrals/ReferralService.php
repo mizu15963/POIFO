@@ -113,7 +113,7 @@ class ReferralService
 
     /**
      * 有効な紹介の人数（紹介した友達のうち、初回特典の条件を満たした人。退会・停止中の人は数えない）。
-     * 初回特典の報酬が否認（紹介の無効化など）になった人も数えない。
+     * 運営が紹介を無効にした友達（サブアカウントでの自己紹介など）も数えない。
      */
     public function validReferralCount(User $user): int
     {
@@ -122,6 +122,7 @@ class ReferralService
             ->where('referral_rewards.type', ReferralReward::TYPE_INITIAL)
             ->join('users', 'users.id', '=', 'referral_rewards.referee_user_id')
             ->where('users.status', User::STATUS_ACTIVE)
+            ->whereNull('users.referral_disabled_at')
             ->join('point_transactions', 'point_transactions.id', '=', 'referral_rewards.point_transaction_id')
             ->where('point_transactions.status', PointTransaction::STATUS_CONFIRMED)
             ->count();
