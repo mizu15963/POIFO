@@ -363,6 +363,39 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 インデックス: `campaign_id` + `tag`（一意）、`tag`（特集ごとの一覧）
 
+### 4.16 友達紹介のためのテーブル・カラム（未実装・案）
+
+機能仕様 15章。条件が決まってからマイグレーションを作る。
+
+`users` に足すカラム:
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `referral_code` | VARCHAR(16) | ○ | | 紹介コード（一意。初めて紹介ページを開いたときに発行） |
+| `referred_by_user_id` | BIGINT UNSIGNED | ○ | | 紹介元（→ `users`）。登録のときだけ入れ、あとで変えない |
+| `referral_disabled_at` | TIMESTAMP | ○ | | 管理者が紹介を無効にした日時（理由は操作ログ） |
+| `referral_partner_rate` | DECIMAL(5,2) | ○ | | 特別パートナーの率（%）。空なら一般のランク |
+
+`campaigns` に足すカラム: `referral_excluded`（TINYINT(1)、既定0、紹介報酬の対象外）、`referral_rate_cap`（DECIMAL(5,2)、NULL 可、率の上限 %）。
+
+`referral_rewards`（紹介報酬。ポイントの増減そのものは `point_transactions` に入れ、ここは計算の根拠を残す）:
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `id` | BIGINT UNSIGNED | | | 主キー |
+| `referrer_user_id` | BIGINT UNSIGNED | | | 紹介した人（→ `users`） |
+| `referee_user_id` | BIGINT UNSIGNED | | | 紹介した友達（→ `users`） |
+| `type` | VARCHAR(16) | | | `ongoing`（紹介報酬）／`initial`（初回特典） |
+| `conversion_id` | BIGINT UNSIGNED | ○ | | 元の成果（→ `conversions`。初回特典は空） |
+| `base_points` | INT UNSIGNED | | 0 | 元にしたポイント |
+| `rate` | DECIMAL(5,2) | ○ | | 使った率（%。初回特典は空） |
+| `rank` | VARCHAR(16) | | | そのときのランク（`regular`／`gold`／`platinum`／`partner`） |
+| `points` | INT UNSIGNED | | | 付けたポイント |
+| `point_transaction_id` | BIGINT UNSIGNED | ○ | | 台帳の行（→ `point_transactions`） |
+| `created_at` / `updated_at` | TIMESTAMP | ○ | | |
+
+インデックス: `conversion_id` + `type`（一意。二重に付けない）、`referee_user_id` + `type`（初回特典を1回だけにするため、アプリで確かめる）、`referrer_user_id` + `created_at`。状態（判定中・確定・否認）は `point_transactions` の状態を使う。
+
 ## 5. 気づいた点
 
 - `events` を作ったマイグレーションのコメントに「参加管理はしない」とあるが、2026-11-20 の方針変更で参加を管理するようになっている（`event_participants`）。動きには関係ない
