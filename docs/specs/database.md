@@ -378,6 +378,10 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 
 `campaigns` に足すカラム: `referral_excluded`（TINYINT(1)、既定0、紹介報酬の対象外）、`referral_rate_cap`（DECIMAL(5,2)、NULL 可、率の上限 %）。
 
+`referral_ranks`（ランク。管理画面 A17 で変える）: `id`、`code`（VARCHAR(16)、一意。`partner` は特別パートナー用で消せない）、`name`（表示名）、`rate`（DECIMAL(5,2)、%。特別パートナーは上限）、`min_valid_referrals`（INT UNSIGNED、必要な有効紹介人数。特別パートナーは使わない）、`sort_order`、`created_at` / `updated_at`。
+
+`referral_settings`（初回特典など1つだけの設定。1行のテーブルか、キーと値の表）: 初回特典のポイント（100）、条件のポイント（1,000）、期限の日数（180）。
+
 `referral_rewards`（紹介報酬。ポイントの増減そのものは `point_transactions` に入れ、ここは計算の根拠を残す）:
 
 | カラム | 型 | NULL | 既定 | 説明 |
