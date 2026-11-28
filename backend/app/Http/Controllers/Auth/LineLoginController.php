@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Line\LineLoginClient;
+use App\Services\Referrals\ReferralService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,16 +18,24 @@ use Throwable;
  *
  * フロントの「LINEでログイン」→ GET /auth/line/redirect → LINE → GET /auth/line/callback
  * → セッションを作ってフロントへ戻す（/auth/complete/ または /auth/error/）。
+ *
+ * 紹介URLから来た人は、フロントが入口に ?ref=<紹介コード> を付ける。新しく会員になったときだけ紹介元として記録する（機能仕様 15.2）。
  */
 class LineLoginController extends Controller
 {
-    public function __construct(private LineLoginClient $line) {}
+    public function __construct(private LineLoginClient $line, private ReferralService $referrals) {}
 
     public function redirect(Request $request): RedirectResponse
     {
         $state = Str::random(40);
         $nonce = Str::random(40);
-        $request->session()->put('line_login', ['state' => $state, 'nonce' => $nonce]);
+        $ref = ReferralService::normalizeCode((string) $request->query('ref', ''));
+        $request->session()->put('line_login', [
+            'state' => $state,
+            'nonce' => $nonce,
+            // 形の合わないコードは捨てる（存在するかは登録のときに確かめる）
+            'ref' => ReferralService::isValidCodeFormat($ref) ? $ref : null,
+        ]);
 
         return redirect()->away($this->line->authorizeUrl($state, $nonce));
     }
@@ -70,6 +79,10 @@ class LineLoginController extends Controller
             'avatar_url' => $profile['picture'] ?? $user->avatar_url,
             'last_login_at' => now(),
         ])->save();
+
+        if ($isNew && ! empty($saved['ref'])) {
+            $this->referrals->attachOnRegistration($user, $saved['ref']);
+        }
 
         Auth::guard('web')->login($user, remember: true);
         $request->session()->regenerate();

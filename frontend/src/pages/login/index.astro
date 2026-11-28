@@ -11,10 +11,40 @@ import { LINE_LOGIN_URL } from '../../lib/config';
       <p>ポイフォはLINEアカウントでログインします。初めての方は、そのまま会員登録になります。</p>
       <Mascot pose="wave" width={120} eager class="state-mascot" />
       <a class="btn btn--line btn--block" href={LINE_LOGIN_URL}>LINEでログイン</a>
+      <!-- 口頭で紹介コードを伝えられた人のため（任意。新しく会員になるときだけ使う。docs/specs/functional-spec.md 15.2） -->
+      <details class="referral-input" id="referral-input">
+        <summary>友達から紹介コードを聞いた方</summary>
+        <label for="referral-code">紹介コード（8文字・任意）</label>
+        <input id="referral-code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="8" placeholder="例: ABCD2345" />
+        <p class="referral-input__note" id="referral-note">入力してから「LINEでログイン」を押してください。紹介は新しく登録する方だけが対象です。</p>
+      </details>
       <p class="lead">メールアドレスやパスワードの登録はありません。ログイン画面で公式LINEの友だち追加も案内されますが、追加は任意です。</p>
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  import { isReferralCodeFormat, loadReferralCode, normalizeReferralCode, saveReferralCode } from '../../lib/referral';
+
+  const input = document.getElementById('referral-code') as HTMLInputElement;
+  const note = document.getElementById('referral-note')!;
+  const saved = loadReferralCode();
+  if (saved) {
+    input.value = saved;
+    (document.getElementById('referral-input') as HTMLDetailsElement).open = true;
+  }
+  // 保存しておけば、BaseLayout が「LINEでログイン」を押したときに入口に付ける
+  input.addEventListener('input', () => {
+    const code = normalizeReferralCode(input.value);
+    input.value = code;
+    if (isReferralCodeFormat(code)) {
+      saveReferralCode(code);
+      note.textContent = '紹介コードを入れました。このまま「LINEでログイン」を押してください。';
+    } else {
+      note.textContent = code.length === 8 ? '紹介コードの形が正しくありません（0・O・1・I は使われていません）。' : '入力してから「LINEでログイン」を押してください。紹介は新しく登録する方だけが対象です。';
+    }
+  });
+</script>
 
 <style is:global>
   .narrow {
@@ -23,5 +53,37 @@ import { LINE_LOGIN_URL } from '../../lib/config';
   /* ログイン・登録完了は中身が短いので、画面の高さいっぱいまで伸ばして下端に波（bg-aqua-wave）を見せる */
   .auth-page {
     min-height: 70vh;
+  }
+  .referral-input {
+    margin: 16px 0;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .referral-input summary {
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .referral-input label {
+    display: block;
+    margin: 10px 0 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .referral-input input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font: inherit;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .referral-input__note {
+    margin: 6px 0 0;
+    font-size: 0.8rem;
+    color: var(--color-muted);
   }
 </style>

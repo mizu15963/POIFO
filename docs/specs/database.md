@@ -223,7 +223,7 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 |---|---|---|---|---|
 | `id` | BIGINT UNSIGNED | | | 主キー |
 | `user_id` | BIGINT UNSIGNED | | | 会員（→ `users`） |
-| `type` | VARCHAR(32) | | | 種類: `conversion`（案件の成果）／`adjustment`（運営による調整）／`withdrawal`（換金）／`withdrawal_refund`（換金の取り消し・返却）／`event_reward`（イベント参加）／`expiry`（失効） |
+| `type` | VARCHAR(32) | | | 種類: `conversion`（案件の成果）／`adjustment`（運営による調整）／`withdrawal`（換金）／`withdrawal_refund`（換金の取り消し・返却）／`event_reward`（イベント参加）／`referral`（紹介報酬）／`referral_initial`（紹介の初回特典）／`expiry`（失効） |
 | `status` | VARCHAR(16) | | | `pending`（判定中）／`confirmed`（確定）／`rejected`（否認） |
 | `points` | INT | | | ポイント。付与は正、換金・失効は負 |
 | `description` | VARCHAR(255) | ○ | | 履歴に出す説明（案件名、調整の理由、「ポイント交換（銀行振込）」など） |
@@ -362,6 +362,44 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `created_at` | TIMESTAMP | | 現在時刻 | 付けた日時 |
 
 インデックス: `campaign_id` + `tag`（一意）、`tag`（特集ごとの一覧）
+
+### 4.16 友達紹介のためのテーブル・カラム
+
+機能仕様 15章。マイグレーション `2026_11_28_000100_create_referral_tables`（ランクと初回特典の仮の値もここで入れる）。
+
+`users` に足すカラム:
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `referral_code` | VARCHAR(16) | ○ | | 紹介コード（一意。初めて紹介ページを開いたときに発行） |
+| `referred_by_user_id` | BIGINT UNSIGNED | ○ | | 紹介元（→ `users`）。登録のときだけ入れ、あとで変えない |
+| `referral_disabled_at` | TIMESTAMP | ○ | | 管理者が紹介を無効にした日時（理由は操作ログ） |
+| `referral_partner_rate` | DECIMAL(5,2) | ○ | | 特別パートナーの率（%）。空なら一般のランク |
+
+`campaigns` に足すカラム: `referral_excluded`（TINYINT(1)、既定0、紹介報酬の対象外）、`referral_rate_cap`（DECIMAL(5,2)、NULL 可、率の上限 %）。
+
+`referral_ranks`（ランク。管理画面 A17 で変える）: `id`、`code`（VARCHAR(16)、一意。`partner` は特別パートナー用で消せない）、`name`（表示名）、`rate`（DECIMAL(5,2)、%。特別パートナーは上限）、`min_valid_referrals`（INT UNSIGNED、必要な有効紹介人数。特別パートナーは使わない）、`sort_order`、`created_at` / `updated_at`。
+
+`referral_settings`（1行だけ）: `initial_bonus_points`（初回特典のポイント、仮100）、`initial_threshold_points`（条件のポイント、仮1,000）、`initial_days`（期限の日数、仮180）、`created_at` / `updated_at`。
+
+`referral_rewards`（紹介報酬。ポイントの増減そのものは `point_transactions` に入れ、ここは計算の根拠を残す）:
+
+| カラム | 型 | NULL | 既定 | 説明 |
+|---|---|---|---|---|
+| `id` | BIGINT UNSIGNED | | | 主キー |
+| `referrer_user_id` | BIGINT UNSIGNED | | | 紹介した人（→ `users`） |
+| `referee_user_id` | BIGINT UNSIGNED | | | 紹介した友達（→ `users`） |
+| `type` | VARCHAR(16) | | | `ongoing`（紹介報酬）／`initial`（初回特典） |
+| `conversion_id` | BIGINT UNSIGNED | ○ | | 元の成果（→ `conversions`。初回特典は空） |
+| `base_points` | INT UNSIGNED | | 0 | 元にしたポイント |
+| `rate` | DECIMAL(5,2) | ○ | | 使った率（%。初回特典は空） |
+| `rank` | VARCHAR(16) | ○ | | そのときのランクの `referral_ranks.code` |
+| `rank_name` | VARCHAR(32) | ○ | | そのときのランクの表示名（ランクは消せるので残す） |
+| `points` | INT UNSIGNED | | | 付けたポイント |
+| `point_transaction_id` | BIGINT UNSIGNED | ○ | | 台帳の行（→ `point_transactions`） |
+| `created_at` / `updated_at` | TIMESTAMP | ○ | | |
+
+インデックス: `conversion_id` + `type`（一意。二重に付けない）、`referee_user_id` + `type`（初回特典を1回だけにするため、アプリで確かめる）、`referrer_user_id` + `created_at`。状態（判定中・確定・否認）は `point_transactions` の状態を使う。
 
 ## 5. 気づいた点
 

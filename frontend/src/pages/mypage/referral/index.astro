@@ -1,0 +1,816 @@
+---
+// 友達紹介（docs/specs/screen-spec.md S25、機能仕様 15章）。
+// 並びは先方のデザイン案（共有フォルダ brand/redesign/referral/）に合わせ、画像は貼らずに HTML/CSS で寄せる。
+// 金額の単位は P。数字（率・人数・初回特典）は管理画面で変わるので、すべて API から入れる。
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const icon = {
+  people:
+    '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0"/><path d="M10.5 19a5.5 5.5 0 0 1 11 0"/>',
+  check: '<circle cx="10" cy="8" r="3.5"/><path d="M3 20a7 7 0 0 1 11-5.7"/><circle cx="17.5" cy="17" r="4"/><path d="m15.8 17 1.2 1.2 2.3-2.4"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M7.5 14h2M11 14h2M14.5 14h2M7.5 17h2M11 17h2"/>',
+  coin: '<ellipse cx="10" cy="7" rx="6" ry="2.5"/><path d="M4 7v4c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V7"/><path d="M4 11v4c0 1.4 2.7 2.5 6 2.5"/><circle cx="17" cy="16" r="4"/><path d="M16 14.3h1.5a1.1 1.1 0 0 1 0 2.2H16v-2.2zM16 16.5v2"/>',
+  hand: '<path d="M2 12l4-4 4 2 3-1 4 3"/><path d="M22 12l-4-4-5 3"/><path d="M6 8l7 7 2-1M9 11l4 4M12 10l4 4 2-2"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/>',
+} as const;
+const svg = (name: keyof typeof icon, size = 28) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon[name]}</svg>`;
+---
+
+<BaseLayout title="友達紹介" requireLogin noindex>
+  <div class="referral" id="referral">
+    <!-- 1. 見出しと紹介の流れ -->
+    <section class="ref-hero">
+      <h1 class="ref-hero__title">友達紹介</h1>
+      <p class="ref-hero__catch">友達と一緒に、楽しく<span>ポイ活。</span></p>
+      <p class="ref-hero__lead">紹介した友達がポイントを獲得すると、<br />あなたにも紹介報酬がもらえます。</p>
+      <div class="ref-flow" aria-hidden="true">
+        <span class="ref-flow__circle" set:html={svg('people', 44)} />
+        <span class="ref-flow__arrow"></span>
+        <span class="ref-flow__phone"><span>POIFO</span><b>P</b></span>
+        <span class="ref-flow__arrow"></span>
+        <span class="ref-flow__circle" set:html={svg('people', 44)} />
+      </div>
+    </section>
+
+    <div class="container">
+      <p id="ref-loading" class="loading">読み込み中…</p>
+      <div id="ref-error" hidden></div>
+      <p id="ref-disabled" class="notice" hidden>現在、紹介報酬の対象外になっています。くわしくはお問い合わせください。</p>
+
+      <div id="ref-body" hidden>
+        <!-- 2. 今すぐ友達を紹介する -->
+        <section class="ref-section">
+          <h2 class="ref-title">今すぐ友達を<span>紹介する</span></h2>
+          <div class="ref-share">
+            <div class="ref-field">
+              <span class="ref-field__label">紹介コード</span>
+              <span class="ref-field__value" id="ref-code"></span>
+              <button type="button" class="ref-field__copy" data-copy="code" aria-label="紹介コードをコピー" set:html={svg('copy', 20)} />
+            </div>
+            <div class="ref-field">
+              <span class="ref-field__label">紹介URL</span>
+              <span class="ref-field__value ref-field__value--url" id="ref-url"></span>
+              <button type="button" class="ref-field__copy" data-copy="url" aria-label="紹介URLをコピー" set:html={svg('copy', 20)} />
+            </div>
+            <div class="ref-share__buttons">
+              <a class="btn btn--line ref-share__line" id="ref-line" href="#" target="_blank" rel="noopener">LINEで送る</a>
+              <button type="button" class="btn btn--outline" data-copy="url"><Fragment set:html={svg('copy', 18)} />URLをコピー</button>
+              <button type="button" class="btn btn--outline" data-copy="text"><Fragment set:html={svg('chat', 18)} />紹介文をコピー</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. あなたの紹介状況 -->
+        <section class="ref-section">
+          <h2 class="ref-title">あなたの<span>紹介状況</span></h2>
+          <div class="ref-stats">
+            <div class="ref-stat"><span class="ref-stat__icon" set:html={svg('people')} /><span class="ref-stat__label">累計紹介人数</span><span class="ref-stat__value"><b id="s-total">0</b>人</span></div>
+            <div class="ref-stat"><span class="ref-stat__icon" set:html={svg('check')} /><span class="ref-stat__label">有効紹介人数</span><span class="ref-stat__value"><b id="s-valid">0</b>人</span></div>
+            <div class="ref-stat"><span class="ref-stat__icon" set:html={svg('calendar')} /><span class="ref-stat__label">今月の紹介人数</span><span class="ref-stat__value"><b id="s-month">0</b>人</span></div>
+            <div class="ref-stat"><span class="ref-stat__icon ref-stat__icon--accent" set:html={svg('coin')} /><span class="ref-stat__label">今月の確定紹介報酬</span><span class="ref-stat__value ref-stat__value--points"><b id="s-confirmed">0</b>P</span></div>
+          </div>
+          <p class="ref-note">判定中の紹介報酬: <b id="s-pending">0P</b>（友達の成果が承認されると確定します）</p>
+        </section>
+
+        <!-- 4. 現在の紹介ランク -->
+        <section class="ref-section">
+          <h2 class="ref-title">現在の<span>紹介ランク</span></h2>
+          <div class="ref-rank">
+            <div class="ref-rank__top">
+              <div class="ref-rank__badge">
+                <svg class="ref-rank__crown" width="64" height="48" viewBox="0 0 64 48" aria-hidden="true"><path d="M6 14l14 12L32 4l12 22 14-12-6 30H12z" fill="var(--color-accent)" stroke="var(--color-accent-strong)" stroke-width="2" stroke-linejoin="round"></path><circle cx="32" cy="4" r="3.5" fill="var(--color-accent)"></circle><circle cx="6" cy="14" r="3.5" fill="var(--color-accent)"></circle><circle cx="58" cy="14" r="3.5" fill="var(--color-accent)"></circle></svg>
+                <span class="ref-rank__name" id="r-name"></span>
+              </div>
+              <div class="ref-rank__rate">
+                <span class="ref-rank__rate-label">現在の紹介料率</span>
+                <span class="ref-rank__rate-value"><b id="r-rate"></b>%</span>
+              </div>
+            </div>
+            <div class="ref-rank__progress" id="r-progress">
+              <div class="ref-rank__progress-text">
+                <span id="r-next"></span>
+                <span class="ref-rank__count">有効紹介人数 <b id="r-valid"></b> / <span id="r-target"></span>人</span>
+              </div>
+              <div class="ref-rank__bar" role="progressbar" aria-label="次のランクまでの進み具合" aria-valuemin="0" id="r-bar"><span id="r-bar-fill"></span></div>
+            </div>
+            <p class="ref-rank__invite" id="r-partner" hidden>特別パートナー（招待制）です。紹介報酬の率は個別に決めています。</p>
+          </div>
+        </section>
+
+        <!-- 5. 紹介報酬のしくみ -->
+        <section class="ref-section">
+          <h2 class="ref-title">紹介報酬の<span>しくみ</span></h2>
+          <ol class="ref-how">
+            <li><span class="ref-how__icon" set:html={svg('hand')} /><span class="ref-how__label">初回特典</span><b id="h-initial"></b></li>
+            <li><span class="ref-how__icon" set:html={svg('coin')} /><span class="ref-how__label">継続報酬</span><b id="h-range"></b></li>
+            <li><span class="ref-how__icon" set:html={svg('calendar')} /><span class="ref-how__label">成果承認後に</span><b>反映</b></li>
+          </ol>
+          <ul class="ref-how__notes">
+            <li id="h-initial-note"></li>
+            <li>継続報酬は、紹介した友達が案件で<strong>確定</strong>したポイントにランクの率をかけたポイントです（1P未満は切り捨て）。友達の成果が判定中の間は、紹介報酬も判定中です。</li>
+            <li>一部、紹介報酬の対象外・率の上限がある案件があります。友達を登録しただけでは紹介報酬は付きません。</li>
+          </ul>
+        </section>
+
+        <!-- 6. 紹介ランク一覧 -->
+        <section class="ref-section">
+          <h2 class="ref-title">紹介ランク<span>一覧</span></h2>
+          <ul class="ref-ranks" id="rank-list"></ul>
+        </section>
+
+        <!-- 7. 紹介報酬履歴 -->
+        <section class="ref-section">
+          <div class="section__head">
+            <h2 class="ref-title">紹介報酬<span>履歴</span></h2>
+            <button type="button" class="ref-more-link" id="h-all" hidden>すべて見る</button>
+          </div>
+          <ul class="history ref-history" id="history" aria-live="polite"></ul>
+          <p><button id="h-more" class="btn btn--outline btn--block" type="button" hidden>もっと見る</button></p>
+        </section>
+
+        <!-- 8. よくある質問 -->
+        <section class="ref-section">
+          <h2 class="ref-title">よくある<span>質問</span></h2>
+          <div class="ref-faq">
+            <details>
+              <summary>紹介コードはどこで確認できますか？</summary>
+              <p>このページの「今すぐ友達を紹介する」に出ています。紹介URLから登録してもらうと、紹介コードの入力は要りません。口頭で伝えるときは、友達にログイン画面の「紹介コード」欄に入れてもらってください。</p>
+            </details>
+            <details>
+              <summary>紹介した友達が有効になる条件は？</summary>
+              <p id="faq-valid"></p>
+            </details>
+            <details>
+              <summary>紹介報酬はいつ反映されますか？</summary>
+              <p>友達の案件の成果が広告主に承認されたときに確定します。それまでは「判定中」と表示されます。成果が否認された場合、その紹介報酬も付きません。</p>
+            </details>
+            <details>
+              <summary>紹介ランクはどうやって上がりますか？</summary>
+              <p>有効紹介人数が、上のランクに必要な人数に届くと自動で上がります。率は友達の成果が確定した時点のランクで決まり、確定した紹介報酬はあとから変わりません。特別パートナーは運営からのご招待です。</p>
+            </details>
+            <details>
+              <summary>してはいけないことはありますか？</summary>
+              <p>自分自身を紹介する、複数のアカウントを作る、事実と違う内容で勧誘する、といった行為は禁止です。見つかった場合は紹介報酬を取り消し、紹介を無効にすることがあります。</p>
+            </details>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { fetchReferral, fetchReferralRewards, type ReferralInfo, type ReferralRewardItem } from '../../../lib/api';
+  import { toast } from '../../../lib/favorite';
+  import { escapeHtml, formatDate, formatPoints, formatPointsNumber } from '../../../lib/format';
+  import { emptyState, loadError } from '../../../lib/render';
+  import { whenMe } from '../../../lib/session';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const status = { pending: '判定中', confirmed: '確定', rejected: '否認' } as const;
+  const rate = (n: number) => `${Number(n.toFixed(2))}`;
+  let info: ReferralInfo;
+
+  const shareText = () => `ポイ活サイト『ポイフォ』を一緒に始めませんか？この URL から登録できます。\n${info.url}`;
+
+  async function copy(text: string, done: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(done);
+    } catch {
+      // コピーが許可されていない（古いブラウザなど）ときは、表示されている文字を長押しでコピーしてもらう
+      toast('コピーできませんでした。表示されている文字を長押ししてコピーしてください。');
+    }
+  }
+
+  function render(d: ReferralInfo) {
+    info = d;
+    $('ref-code').textContent = d.code;
+    $('ref-url').textContent = d.url;
+    ($('ref-line') as HTMLAnchorElement).href = `https://line.me/R/share?text=${encodeURIComponent(shareText())}`;
+    $('ref-disabled').hidden = !d.disabled;
+
+    $('s-total').textContent = d.summary.total.toLocaleString('ja-JP');
+    $('s-valid').textContent = d.summary.valid.toLocaleString('ja-JP');
+    $('s-month').textContent = d.summary.this_month.toLocaleString('ja-JP');
+    $('s-confirmed').textContent = formatPointsNumber(d.summary.confirmed_this_month);
+    $('s-pending').textContent = formatPoints(d.summary.pending);
+
+    $('r-name').textContent = d.rank.name;
+    $('r-rate').textContent = rate(d.rank.rate);
+    const next = d.next_rank;
+    $('r-progress').hidden = !next;
+    $('r-partner').hidden = !d.rank.is_partner;
+    if (next) {
+      $('r-next').innerHTML = `${escapeHtml(next.name)}まであと<b>${next.remaining.toLocaleString('ja-JP')}</b>人`;
+      $('r-valid').textContent = d.summary.valid.toLocaleString('ja-JP');
+      $('r-target').textContent = next.min_valid_referrals.toLocaleString('ja-JP');
+      const pct = next.min_valid_referrals > 0 ? Math.min(100, (d.summary.valid / next.min_valid_referrals) * 100) : 0;
+      ($('r-bar-fill') as HTMLElement).style.width = `${pct}%`;
+      $('r-bar').setAttribute('aria-valuemax', String(next.min_valid_referrals));
+      $('r-bar').setAttribute('aria-valuenow', String(d.summary.valid));
+    } else if (!d.rank.is_partner) {
+      $('r-partner').hidden = false;
+      $('r-partner').textContent = 'いちばん上のランクです。';
+    }
+
+    const ib = d.initial_bonus;
+    $('h-initial').textContent = formatPoints(ib.points);
+    $('h-range').textContent = d.rate_range.min === d.rate_range.max ? `${rate(d.rate_range.max)}%` : `${rate(d.rate_range.min)}%〜${rate(d.rate_range.max)}%`;
+    const cond = `紹介した友達が、登録から${ib.days}日以内に案件で${formatPoints(ib.threshold_points)}以上確定したとき`;
+    $('h-initial-note').textContent = `初回特典は、${cond}に一度だけ${formatPoints(ib.points)}もらえます。`;
+    $('faq-valid').textContent = `${cond}に「有効紹介」になります（初回特典が付くのと同じ条件です）。退会・利用停止になった友達は数えません。`;
+
+    $('rank-list').innerHTML = d.ranks
+      .map((r) => {
+        const partner = r.min_valid_referrals === null;
+        const current = r.code === d.rank.code;
+        return `<li class="ref-ranks__item${current ? ' ref-ranks__item--current' : ''}">
+          ${current ? '<span class="ref-ranks__now">現在</span>' : ''}
+          <span class="ref-ranks__name">${escapeHtml(r.name)}</span>
+          <span class="ref-ranks__label">紹介料率</span>
+          <span class="ref-ranks__rate">${partner ? '<em>最大</em>' : ''}${rate(r.rate)}<small>%</small></span>
+          <span class="ref-ranks__cond">${partner ? '<span class="ref-ranks__invite">招待制</span>' : r.min_valid_referrals ? `有効${r.min_valid_referrals.toLocaleString('ja-JP')}人〜` : '全会員'}</span>
+        </li>`;
+      })
+      .join('');
+  }
+
+  // 紹介報酬履歴: はじめは3件、「すべて見る」で20件ずつ
+  const history = $('history');
+  const more = $('h-more') as HTMLButtonElement;
+  const all = $('h-all') as HTMLButtonElement;
+  let page = 1;
+  let items: ReferralRewardItem[] = [];
+  let lastPage = 1;
+  let expanded = false;
+
+  const row = (t: ReferralRewardItem) => `
+    <li class="history__item history__item--${t.status}">
+      <span class="history__date">${escapeHtml(formatDate(t.created_at))}</span>
+      <span class="history__desc">${escapeHtml(t.type_label)}</span>
+      <span class="history__points">+${escapeHtml(formatPoints(t.points))}</span>
+      <span class="badge">${status[t.status]}</span>
+    </li>`;
+
+  function renderHistory() {
+    if (!items.length) {
+      history.innerHTML = emptyState('まだ紹介報酬はありません。', 'point', 'li');
+      return;
+    }
+    history.innerHTML = (expanded ? items : items.slice(0, 3)).map(row).join('');
+    all.hidden = expanded || (items.length <= 3 && lastPage <= 1);
+    more.hidden = !expanded || page >= lastPage;
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetchReferralRewards(page);
+      items = items.concat(res.data);
+      lastPage = res.meta.last_page;
+      renderHistory();
+    } catch {
+      history.innerHTML = loadError('紹介報酬の履歴を読み込めませんでした。', 'li');
+    }
+  }
+
+  all.addEventListener('click', () => {
+    expanded = true;
+    renderHistory();
+  });
+  more.addEventListener('click', () => {
+    page += 1;
+    loadHistory();
+  });
+
+  document.getElementById('referral')!.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>('[data-copy]');
+    if (!b || !info) return;
+    const kind = b.dataset.copy;
+    if (kind === 'code') copy(info.code, '紹介コードをコピーしました。');
+    else if (kind === 'url') copy(info.url, '紹介URLをコピーしました。');
+    else copy(shareText(), '紹介文をコピーしました。');
+  });
+
+  whenMe().then(async (me) => {
+    if (!me) return;
+    try {
+      render(await fetchReferral());
+      $('ref-body').hidden = false;
+      loadHistory();
+    } catch {
+      $('ref-error').hidden = false;
+      $('ref-error').innerHTML = loadError('友達紹介の情報を読み込めませんでした。時間をおいて再度お試しください。');
+    } finally {
+      $('ref-loading').hidden = true;
+    }
+  });
+</script>
+
+<!-- ランク一覧などスクリプトで作る要素にも効くよう global にする（クラスは ref- で始めて他の画面とぶつけない） -->
+<style is:global>
+  .ref-hero {
+    position: relative;
+    padding: 28px 16px 24px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--color-brand-bg), #fff);
+    overflow: hidden;
+  }
+  /* 見本の四隅の斜めの水色（波模様は使わない） */
+  .ref-hero::before,
+  .ref-hero::after {
+    content: '';
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    background: var(--color-brand-soft);
+    opacity: 0.45;
+  }
+  .ref-hero::before {
+    top: 0;
+    left: 0;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .ref-hero::after {
+    right: 0;
+    bottom: 0;
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+  .ref-hero__title {
+    position: relative;
+    margin: 0;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+  }
+  .ref-hero__catch {
+    position: relative;
+    margin: 6px 0 4px;
+    font-weight: 800;
+    font-size: 1.15rem;
+  }
+  .ref-hero__catch span,
+  .ref-title span {
+    color: var(--color-brand-strong);
+  }
+  .ref-hero__lead {
+    position: relative;
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+  .ref-flow {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    color: var(--color-brand-strong);
+  }
+  .ref-flow__circle {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #bfeeed;
+  }
+  .ref-flow__arrow {
+    width: 18px;
+    height: 18px;
+    border-top: 3px solid var(--color-brand);
+    border-right: 3px solid var(--color-brand);
+    transform: rotate(45deg);
+  }
+  .ref-flow__phone {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    width: 58px;
+    padding: 10px 0;
+    border-radius: 12px;
+    border: 3px solid var(--color-brand);
+    background: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--color-text);
+  }
+  .ref-flow__phone b {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--color-brand-strong);
+    color: #fff;
+  }
+
+  .ref-section {
+    margin: 28px 0;
+  }
+  /* 見本の見出し（左上に小さな斜めの水色） */
+  .ref-title {
+    position: relative;
+    margin: 0 0 12px;
+    padding-left: 18px;
+    font-size: 1.2rem;
+  }
+  .ref-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -4px;
+    width: 14px;
+    height: 14px;
+    background: var(--color-brand);
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  .section__head .ref-title {
+    margin-bottom: 0;
+  }
+
+  .ref-share {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 16px;
+    background: var(--color-brand-bg);
+  }
+  .ref-field {
+    display: grid;
+    grid-template-columns: 76px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 10px;
+    border-radius: 999px;
+    background: #fff;
+  }
+  .ref-field__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+  .ref-field__value {
+    min-width: 0;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    overflow-wrap: anywhere;
+  }
+  .ref-field__value--url {
+    font-size: 0.8rem;
+    letter-spacing: 0;
+  }
+  .ref-field__copy {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--color-brand-bg);
+    color: var(--color-brand-strong);
+    cursor: pointer;
+  }
+  .ref-share__buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ref-share__buttons .btn {
+    min-height: 44px;
+    padding: 0 10px;
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+  .ref-share__line {
+    grid-column: 1 / -1;
+  }
+
+  .ref-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ref-stat {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 8px;
+    padding: 12px 10px;
+    border: 1px solid #dff3f3;
+    border-radius: 14px;
+    background: linear-gradient(90deg, #fff 40%, #f3fcfc);
+  }
+  .ref-stat__icon {
+    grid-row: 1 / 3;
+    color: var(--color-brand-strong);
+  }
+  .ref-stat__icon--accent {
+    color: var(--color-accent-strong);
+  }
+  .ref-stat__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-muted);
+  }
+  .ref-stat__value {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .ref-stat__value b {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+  .ref-stat__value--points b {
+    color: var(--color-brand-strong);
+  }
+  .ref-note {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .ref-rank {
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--color-brand-bg);
+  }
+  .ref-rank__top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+  .ref-rank__badge {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding-right: 12px;
+    border-right: 1px solid #bfeeed;
+  }
+  .ref-rank__name {
+    padding: 2px 18px;
+    background: var(--color-accent-bg);
+    border: 1px solid var(--color-accent);
+    border-radius: 6px;
+    color: var(--color-accent-strong);
+    font-weight: 800;
+  }
+  .ref-rank__rate {
+    display: grid;
+    justify-items: center;
+  }
+  .ref-rank__rate-label {
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--color-brand-strong);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .ref-rank__rate-value {
+    color: var(--color-brand-strong);
+    font-weight: 800;
+    font-size: 1.4rem;
+  }
+  .ref-rank__rate-value b {
+    font-size: 3rem;
+    line-height: 1.1;
+  }
+  .ref-rank__progress {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .ref-rank__progress-text {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .ref-rank__progress-text b {
+    color: var(--color-brand-strong);
+    font-size: 1.2rem;
+  }
+  .ref-rank__count {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+  .ref-rank__bar {
+    height: 10px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: var(--color-border);
+    overflow: hidden;
+  }
+  .ref-rank__bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-brand-strong);
+  }
+  .ref-rank__invite {
+    margin: 12px 0 0;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  .ref-how {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .ref-how li {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 2px;
+    padding: 12px 4px;
+    border: 1px solid #dff3f3;
+    border-radius: 14px;
+    background: #f6fdfd;
+    text-align: center;
+  }
+  .ref-how li + li::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    border: 5px solid transparent;
+    border-left: 7px solid var(--color-brand);
+    transform: translateY(-50%);
+  }
+  .ref-how__icon {
+    color: var(--color-brand-strong);
+  }
+  .ref-how__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .ref-how b {
+    color: var(--color-brand-strong);
+    font-size: 1.15rem;
+    font-weight: 800;
+  }
+  .ref-how__notes {
+    margin: 12px 0 0;
+    padding-left: 1.2em;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .ref-ranks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .ref-ranks__item {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 14px 2px 10px;
+    border: 1px solid #dff3f3;
+    border-radius: 14px;
+    background: #f6fdfd;
+    text-align: center;
+  }
+  .ref-ranks__item--current {
+    border: 2px solid var(--color-accent);
+    background: var(--color-accent-bg);
+  }
+  .ref-ranks__now {
+    position: absolute;
+    top: -9px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--color-accent-strong);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+  .ref-ranks__name {
+    font-weight: 800;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+  .ref-ranks__label {
+    font-size: 0.68rem;
+    color: var(--color-muted);
+  }
+  .ref-ranks__rate {
+    color: var(--color-brand-strong);
+    font-weight: 800;
+    font-size: 1.4rem;
+    line-height: 1.1;
+  }
+  .ref-ranks__rate em {
+    font-style: normal;
+    font-size: 0.7rem;
+  }
+  .ref-ranks__rate small {
+    font-size: 0.9rem;
+  }
+  .ref-ranks__cond {
+    font-size: 0.68rem;
+    color: var(--color-muted);
+  }
+  .ref-ranks__invite {
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--color-brand-strong);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .ref-more-link {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-size: 0.9rem;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+  .ref-history {
+    padding: 0 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+  }
+  .ref-history .history__item:last-child {
+    border-bottom: 0;
+  }
+  .ref-history .history__item--confirmed .history__points,
+  .ref-history .history__item--pending .history__points {
+    color: var(--color-brand-strong);
+  }
+
+  .ref-faq {
+    display: grid;
+    gap: 8px;
+  }
+  .ref-faq details {
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: #fff;
+  }
+  .ref-faq summary {
+    position: relative;
+    padding: 12px 40px 12px 44px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    list-style: none;
+    cursor: pointer;
+  }
+  .ref-faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .ref-faq summary::before {
+    content: 'Q';
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--color-brand);
+    color: var(--color-brand-strong);
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+  .ref-faq summary::after {
+    content: '+';
+    position: absolute;
+    right: 16px;
+    top: 10px;
+    color: var(--color-brand-strong);
+    font-size: 1.2rem;
+  }
+  .ref-faq details[open] summary::after {
+    content: '−';
+  }
+  .ref-faq details p {
+    margin: 0;
+    padding: 0 16px 14px 44px;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+</style>

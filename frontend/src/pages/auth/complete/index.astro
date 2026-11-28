@@ -47,6 +47,11 @@ import { LINE_OFFICIAL_URL } from '../../../lib/config';
 </style>
 
 <script>
+  import { clearReferralCode } from '../../../lib/referral';
+
+  // 紹介コードは新しく登録するときだけ使うので、ログインが終わったら消す（同じブラウザで別の人が登録したときに付かないように）
+  clearReferralCode();
+
   if (new URLSearchParams(location.search).get('new') === '1') {
     document.getElementById('welcome')!.hidden = false;
     document.getElementById('complete-title')!.textContent = '会員登録が完了しました';

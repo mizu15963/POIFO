@@ -50,6 +50,65 @@
     </div>
     @endif
     <div class="card">
+        <h2>友達紹介</h2>
+        @php($rank = $referral['rank'])
+        <p>紹介コード: {{ $member->referral_code ?? '（未発行）' }}<br>
+        紹介元: @if ($member->referrer)<a href="{{ route('admin.members.show', $member->referrer) }}">{{ $member->referrer->display_name ?? '（表示名なし）' }}</a> <span class="muted">{{ $member->referrer->uid }}</span>@else なし @endif<br>
+        紹介した人数: {{ number_format($referral['total']) }}人（有効 {{ number_format($rank['valid_referrals']) }}人）<br>
+        ランク: {{ $rank['name'] }}（{{ \App\Models\ReferralRank::formatBps($rank['rate_bps']) }}%）</p>
+        @if ($member->referral_disabled_at)
+            <p class="muted">紹介は無効です（{{ $member->referral_disabled_at->format('Y/n/j H:i') }}〜。理由は操作ログ）。</p>
+        @endif
+        @if ($member->status !== 'withdrawn')
+        <form method="post" action="{{ route('admin.members.referral.partner', $member) }}">
+            @csrf
+            @if ($member->referral_partner_rate !== null)
+                <input type="hidden" name="partner" value="0">
+                <label for="partner_reason">特別パートナーを外す理由</label>
+                <input id="partner_reason" type="text" name="reason" maxlength="255" required>
+                <p><button type="submit" class="btn-outline" onclick="return confirm('特別パートナーを外します。よろしいですか？')">特別パートナーを外す</button></p>
+            @else
+                <input type="hidden" name="partner" value="1">
+                <label for="partner_rate">特別パートナーにする（率 %、上限 {{ $referral['partner_cap'] !== null ? \App\Models\ReferralRank::formatBps($referral['partner_cap']) : '-' }}%）</label>
+                <input id="partner_rate" type="number" name="rate" min="0" max="100" step="0.01" required value="{{ old('rate') }}">
+                <label for="partner_reason">理由</label>
+                <input id="partner_reason" type="text" name="reason" maxlength="255" required>
+                <p><button type="submit" class="btn-outline">特別パートナーにする</button></p>
+            @endif
+        </form>
+        @if ($member->referral_partner_rate !== null)
+            <form method="post" action="{{ route('admin.members.referral.partner', $member) }}">
+                @csrf
+                <input type="hidden" name="partner" value="1">
+                <label for="partner_rate_change">特別パートナーの率を変える（%）</label>
+                <input id="partner_rate_change" type="number" name="rate" min="0" max="100" step="0.01" required value="{{ rtrim(rtrim((string) $member->referral_partner_rate, '0'), '.') }}">
+                <label for="partner_rate_reason">理由</label>
+                <input id="partner_rate_reason" type="text" name="reason" maxlength="255" required>
+                <p><button type="submit" class="btn-outline">率を変える</button></p>
+            </form>
+        @endif
+        <form method="post" action="{{ route($member->referral_disabled_at ? 'admin.members.referral.enable' : 'admin.members.referral.disable', $member) }}">
+            @csrf
+            <label for="referral_reason">{{ $member->referral_disabled_at ? '紹介の無効を取り消す理由' : '紹介を無効にする理由' }}</label>
+            <input id="referral_reason" type="text" name="reason" maxlength="255" required>
+            @if ($member->referral_disabled_at)
+                <p><button type="submit" class="btn-outline">無効を取り消す</button></p>
+            @else
+                <p class="muted">この会員が紹介した人・紹介された人のどちらとしても、これからの紹介報酬が付かなくなり、判定中の紹介報酬は否認になります。</p>
+                <p><button type="submit" class="btn-danger" onclick="return confirm('紹介を無効にします。判定中の紹介報酬は否認になります。よろしいですか？')">紹介を無効にする</button></p>
+            @endif
+        </form>
+        @endif
+        @if ($referral['referees']->isNotEmpty())
+            <p class="muted" style="margin-bottom:4px">紹介した友達（新しい順・20人まで。<a href="{{ route('admin.referrals.rewards', ['referrer' => $member->uid]) }}">紹介報酬を見る</a>）</p>
+            <ul style="margin:0;padding-left:1.2em">
+            @foreach ($referral['referees'] as $f)
+                <li><a href="{{ route('admin.members.show', $f) }}">{{ $f->display_name ?? '（表示名なし）' }}</a> <span class="muted">{{ $f->created_at?->format('Y/n/j') }} {{ \App\Models\User::STATUS_LABELS[$f->status] ?? '' }}</span></li>
+            @endforeach
+            </ul>
+        @endif
+    </div>
+    <div class="card">
         <h2>振込先口座</h2>
         @if ($bank)
             <p>{{ $bank->holder_name }}（{{ $bank->account_holder_kana }}）<br>

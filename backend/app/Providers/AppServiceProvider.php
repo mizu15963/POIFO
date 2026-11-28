@@ -91,6 +91,9 @@ class AppServiceProvider extends ServiceProvider
         // お気に入りの登録・解除: 連打で DB を叩き続けるのを抑える（ふつうの使い方では届かない値）
         RateLimiter::for('favorite-update', fn (Request $request) => Limit::perMinute(60)->by('favorite:'.$key($request)));
 
+        // 紹介コードの確認（未ログインで呼ぶ）: コードを総当たりで探すのを抑える
+        RateLimiter::for('referral-check', fn (Request $request) => Limit::perMinute(20)->by('referral-check:'.(ClientIp::trusted($request) ?? 'unknown')));
+
         // 振込先口座の登録・変更: 他人の口座を総当たりで試す・頻繁に付け替えるのを抑える
         RateLimiter::for('bank-account-update', fn (Request $request) => [
             Limit::perMinute(3)->by('bank-min:'.$key($request)),

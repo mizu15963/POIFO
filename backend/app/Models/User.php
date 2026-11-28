@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -46,6 +47,7 @@ class User extends Authenticatable
             'news_seen_at' => 'datetime',
             'suspended_at' => 'datetime',
             'withdrawn_at' => 'datetime',
+            'referral_disabled_at' => 'datetime',
         ];
     }
 
@@ -85,6 +87,18 @@ class User extends Authenticatable
         $since = $this->news_seen_at ?? $this->created_at;
 
         return News::visible()->when($since, fn ($q) => $q->where('published_at', '>', $since))->count();
+    }
+
+    /** 紹介元（登録のときだけ入れ、あとで変えない） */
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'referred_by_user_id');
+    }
+
+    /** 紹介した友達 */
+    public function referees(): HasMany
+    {
+        return $this->hasMany(self::class, 'referred_by_user_id');
     }
 
     public function bankAccount(): HasOne

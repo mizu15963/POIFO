@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * 案件の表示設定（非表示・おすすめ・特集の印・並び順）。案件の中身は ASP から取り込むので変えない（仕様書 2章）。
+ * 案件の表示設定（非表示・おすすめ・特集の印・並び順）と紹介報酬の設定（対象外・率の上限）。案件の中身は ASP から取り込むので変えない（仕様書 2章）。
  */
 class CampaignController extends Controller
 {
@@ -66,13 +66,18 @@ class CampaignController extends Controller
             'sort_order' => ['required', 'integer', 'between:-9999,9999'],
             'tags' => ['array'],
             'tags.*' => ['string', Rule::in(array_keys(Campaign::TAGS))],
-        ]);
+            // 紹介報酬（機能仕様 15.3）: 対象外、率の上限（%）
+            'referral_excluded' => ['boolean'],
+            'referral_rate_cap' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,2'],
+        ], [], ['referral_rate_cap' => '紹介報酬の率の上限']);
+        $data['referral_excluded'] = $request->boolean('referral_excluded');
+        $data['referral_rate_cap'] = $request->filled('referral_rate_cap') ? $data['referral_rate_cap'] : null;
         $data['is_hidden'] = $request->boolean('is_hidden');
         $data['is_featured'] = $request->boolean('is_featured');
         $tags = $data['tags'] ?? [];
         unset($data['tags']);
 
-        $before = $campaign->only(['is_hidden', 'is_featured', 'sort_order']) + ['tags' => $campaign->tagKeys()];
+        $before = $campaign->only(['is_hidden', 'is_featured', 'sort_order', 'referral_excluded', 'referral_rate_cap']) + ['tags' => $campaign->tagKeys()];
         DB::transaction(function () use ($campaign, $data, $tags) {
             $campaign->update($data);
             $campaign->syncTags($tags);
