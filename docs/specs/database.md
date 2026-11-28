@@ -204,12 +204,13 @@ GF Rewards の案件連携 API から15分ごとに取り込む。運営の表�
 | `cv_id` | VARCHAR(128) | | | ASP の成果ID |
 | `user_id` | BIGINT UNSIGNED | ○ | | 会員（→ `users`）。会員が見つからないときは NULL |
 | `external_user_id` | VARCHAR(128) | | | 通知に入っていた会員ID（`uid`） |
+| `entry` | VARCHAR(16) | | `list` | 入口（未実装、機能仕様 4.8）: `list`（案件一覧）／`ow`（オファーウォール）。通知の `media_session_1` から決める |
 | `external_campaign_id` | VARCHAR(64) | ○ | | 通知に入っていた案件ID |
 | `campaign_name` | VARCHAR(255) | ○ | | 案件名 |
 | `cv_action_id` | VARCHAR(64) | ○ | | 成果地点ID |
 | `cv_action_name` | VARCHAR(255) | ○ | | 成果地点名 |
 | `status` | VARCHAR(16) | | | `pending`（未承認）／`approved`（承認）／`rejected`（否認） |
-| `hold_reason` | VARCHAR(32) | ○ | | 保留の理由（NULL なら保留していない）: `unknown_user`／`unknown_campaign`／`unknown_action`／`amount_mismatch`／`amount_over_limit` |
+| `hold_reason` | VARCHAR(32) | ○ | | 保留の理由（NULL なら保留していない）: `unknown_user`／`unknown_campaign`／`unknown_action`／`amount_mismatch`／`amount_over_limit`／`ow_over_limit`（未実装） |
 | `held_at` | TIMESTAMP | ○ | | 保留にした日時 |
 | `points` | INT UNSIGNED | | | 通知のポイント（承認で付与する数） |
 | `expected_points` | INT UNSIGNED | ○ | | 取り込み済みの案件情報でのポイント（定額案件の突き合わせ用） |
