@@ -40,7 +40,7 @@
 | poifox-point.webp | 指さし | 貯め方 STEP1、404 |
 | poifox-guide.webp | チェックリストで説明 | 貯め方 STEP2 |
 | poifox-get.webp | 「ポイントGET!」 | 貯め方 STEP3 |
-| poifox-line.webp | 「LINEで相談」 | 担当サポート |
+| poifox-line.webp | 「LINEで相談」 | 担当サポート（2026-11-28 の S14 新デザインでは使っていない） |
 | poifox-event.webp | 「イベント参加」 | イベント |
 | poifox-sorry.webp | 謝る（2026-11-21 追加納品、透過PNG） | エラーページ（404・500、サーバ側のエラー画面） |
 | poifox-maintenance.webp | 整備士（2026-11-21 追加納品、透過PNG。横長なので長辺640px） | メンテナンス画面（フロント `/maintenance/`、サーバ側の 503） |
@@ -64,7 +64,7 @@
 | サイトのファイル | 元の画像 | 加工 |
 | --- | --- | --- |
 | `visuals/how-points-work.webp` | how-points-work | 下の余白を切り詰め（高さ1312→1010）て縮小 |
-| `visuals/banner-wide-3-shopping.webp`・`banner-wide-4-start.webp`・`kv-tall-follow-b.webp` | 同じ名前 | 縮小のみ |
+| `visuals/banner-wide-3-shopping.webp`・`banner-wide-4-start.webp` | 同じ名前 | 縮小のみ |
 | `visuals/bg-aqua-wave.webp` | bg-aqua-wave | 幅720px（背景なので軽くする） |
 | `ogp.jpg` | banner-wide-1-easy | 上下を31pxずつ切って 1200×630 の JPEG（WebP を読めない SNS があるため） |
 
@@ -84,7 +84,7 @@
 
 | 共有フォルダのファイル名 | 納品時の名前 | 内容 | 使う場所（画面仕様） | 注意 |
 | --- | --- | --- | --- | --- |
-| `kv-tall-follow-b.png` | 25_キービジュアル_縦長フォロー | 「みんなでポイ活、はじめてからもしっかりフォロー」＋特徴3つ（かんたんにポイントが貯まる／はじめてでも安心／困ったときはサポート!）（1024×1536） | **S14 担当サポートの上部** | `alt` にコピーを入れる |
+| `kv-tall-follow-b.png` | 25_キービジュアル_縦長フォロー | 「みんなでポイ活、はじめてからもしっかりフォロー」＋特徴3つ（かんたんにポイントが貯まる／はじめてでも安心／困ったときはサポート!）（1024×1536） | 使っていない（S14 の上部は 2026-11-28 に `support-header` へ差し替え） | — |
 | `kv-tall-follow-a.png` | 24_キービジュアル_縦長みんなでポイ活 | 上とほぼ同じで、読点なし・「フォロー!」の版 | 予備 | b と a のどちらを使うかは好みで差し替えてよい |
 | `banner-wide-1-easy.png` | 31_キービジュアル_横長案1 | 「ポイフォでかんたんポイ活」（1672×941） | **OGP 画像**（SNS で共有されたときの画像。1200×630 に上下を少し切って書き出す） | サービス名が入っているのはこの1枚だけ |
 | `banner-wide-4-start.png` | 35_キービジュアル_横長案4 | 「いつもの行動でポイントがたまる! ポイフォで、無理なくおトクなポイ活はじめよう!」（1672×941） | **S15 はじめての方へ・ヘルプの上部** | |
@@ -128,6 +128,23 @@ S01 のファーストビューは 2026-11-27 のデザイン更新で `kv-hitor
 
 - 切り出しは共有フォルダ `brand/redesign/member_cut.py`（縁につながる白〜淡い水色を透明にする）。人々の後ろの淡い水色の丸も透明になる
 - カテゴリのアイコンは見本に寄せた線のアイコンを `src/lib/category-icon.ts` に SVG で持つ
+
+## ハンバーガーメニュー（2026-11-28 納品）
+
+見本（共有フォルダ `brand/redesign/menu/menu-member.png`・`menu-guest.png`）に HTML/CSS で寄せた（`src/components/Header.astro`）。画像は使わない。
+
+- ログイン中は上に共通のポイントカード（ドロワーは幅が狭いので数字を少し小さくする）、未ログインは淡い水色の囲みに「無料会員登録」「ログイン」
+- タイルのアイコンは見本に寄せた緑の線のアイコン（Header.astro の中に SVG で持つ）
+- 以前のメニューにいたキャラクター（登録の案内の wave、案内バナーの guide・event・line）は外した
+
+## 担当サポート（2026-11-28 納品）
+
+| サイトのファイル | 元の画像 | 使う場所 |
+| --- | --- | --- |
+| `visuals/support-header.webp` | 共有フォルダ `brand/redesign/support/header-kv.png`（1774×887、文字入り） | S14 担当サポートの上部。`alt` に画像内の文言を入れる |
+
+- 幅960px に縮小しただけ。見本 `support/mockup-support-mobile.png` ではスマホの中に会話文が入っているが、素材の「…」の吹き出しのまま使う
+- 「こんなときに相談できます」のアイコンは見本に寄せた線のアイコンをページの中に SVG で持つ
 
 ## ポイント表示の共通カード（2026-11-28 yamada 指示）
 

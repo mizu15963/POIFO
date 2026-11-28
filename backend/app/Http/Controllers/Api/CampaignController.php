@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\CampaignCategorySetting;
 use App\Models\CampaignClick;
 use App\Models\Favorite;
 use App\Models\User;
@@ -58,14 +59,27 @@ class CampaignController extends Controller
         ]);
     }
 
-    /** 掲載中の案件のカテゴリ（件数つき）。一覧のタブに使う */
+    /**
+     * 掲載中の案件があるカテゴリの一覧。name は ASP のカテゴリ名（案件一覧の category= に渡す値）、label はメニューのボタンに出す表示名、in_menu はメニューに出すか（機能仕様 4.7）。
+     * 並びは管理画面の並び順（決めたものが先、小さい順）→ 件数の多い順 → 名前順。
+     */
     public function categories(): JsonResponse
     {
         $rows = Campaign::listed()->whereNotNull('category')->where('category', '!=', '')
-            ->selectRaw('category, COUNT(*) as count')->groupBy('category')->orderByDesc('count')->orderBy('category')
+            ->selectRaw('category, COUNT(*) as count')->groupBy('category')
             ->get();
+        $settings = CampaignCategorySetting::whereIn('category', $rows->pluck('category'))->get()->keyBy('category');
+        $order = fn ($r) => [$settings->get($r->category)?->sort_order === null, $settings->get($r->category)?->sort_order, -$r->count, $r->category];
 
-        return response()->json(['data' => $rows->map(fn ($r) => ['name' => $r->category, 'count' => (int) $r->count])]);
+        $data = $rows->sort(fn ($a, $b) => $order($a) <=> $order($b))->values()
+            ->map(fn ($r) => [
+                'name' => (string) $r->category,
+                'label' => (string) ($settings->get($r->category)?->label ?: $r->category),
+                'count' => (int) $r->count,
+                'in_menu' => (bool) ($settings->get($r->category)?->in_menu ?? true),
+            ]);
+
+        return response()->json(['data' => $data]);
     }
 
     /** 案件の詳細。ログイン中なら is_favorite（お気に入り登録済みか）を返す */

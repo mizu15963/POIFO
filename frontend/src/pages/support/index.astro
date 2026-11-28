@@ -1,25 +1,172 @@
 ---
+// 担当サポート（docs/specs/screen-spec.md S14。2026-11-28 納品の見本 brand/redesign/support/mockup-support-mobile.png に合わせた形）
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Mascot from '../../components/Mascot.astro';
 import Visual from '../../components/Visual.astro';
 import { LINE_OFFICIAL_URL } from '../../lib/config';
+
+// 線のアイコン（見本に寄せた緑の線。カテゴリのアイコンと同じ描き方）
+const svg = (body: string) =>
+  `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
+// 「こんなときに相談できます」。押すと下に説明が開く（2026-11-28 yamada さん）。説明文は先方から届いていないので案
+const topics = [
+  {
+    icon: svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>'),
+    title: '自分に合う案件を探したい',
+    body: '「スマホだけで終わるものがいい」「無料でできるものがいい」など、ご希望を伝えていただければ、担当スタッフが掲載中の案件から合いそうなものをご案内します。',
+  },
+  {
+    icon: svg('<rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3h6v1.5"/><path d="m8 10.5 1.3 1.3 2.2-2.3M13.5 10.5H16M8 16l1.3 1.3 2.2-2.3M13.5 16H16"/>'),
+    title: '獲得条件を確認したい',
+    body: '「どこまで進めればポイントが付くか」「対象外になる条件はないか」など、案件ページの獲得条件でわかりにくいところを一緒に確認します。始める前に確認しておくと安心です。',
+  },
+  {
+    icon: svg('<path d="M12 7.5 5 4v12.5l7 4 7-4V4Z"/><path d="M12 7.5v13"/>'),
+    title: '最初の進め方を聞きたい',
+    body: '会員登録のあとに何から始めればいいか、ポイントが付くまでの流れ（判定中 → 確定 → 交換）を順番にご説明します。はじめての方も気軽にどうぞ。',
+  },
+];
 ---
 
 <BaseLayout title="担当サポート">
-  <section class="section">
+  <!-- 上部の画像は文字入りの納品素材をそのまま使う（画面の端まで） -->
+  <Visual name="support-header" alt="担当スタッフに相談。ポイ活の疑問を、LINEで気軽に。" eager class="support-kv" />
+  <h1 class="sr-only">担当スタッフに相談</h1>
+
+  <div class="container narrow support-cta">
+    {
+      LINE_OFFICIAL_URL ? (
+        <a class="btn btn--block support-cta__btn" href={LINE_OFFICIAL_URL} rel="noopener">
+          公式LINEで相談する
+        </a>
+      ) : (
+        <p class="lead support-cta__soon">公式LINEは準備中です。</p>
+      )
+    }
+    <p class="support-cta__note">サポートの利用は任意です。</p>
+  </div>
+
+  <section class="support-topics" aria-labelledby="support-topics-title">
+    <h2 id="support-topics-title" class="support-topics__band">こんなときに相談できます</h2>
     <div class="container narrow">
-      <Visual
-        name="kv-tall-follow-b"
-        alt="みんなでポイ活、はじめてからもしっかりフォロー。かんたんにポイントが貯まる。はじめてでも安心。困ったときはサポート！"
-        eager
-        class="page-banner"
-      />
-      <h1 class="section__title">困ったときは、担当スタッフに相談。</h1>
-      <div class="with-mascot">
-        <p class="with-mascot__body">ポイントの貯め方や案件の進め方を、ポイフォ公式LINEで担当スタッフに気軽に相談できます。初回面談の日程調整もLINEで行います。</p>
-        <Mascot pose="line" width={150} eager />
-      </div>
-      {LINE_OFFICIAL_URL ? <a class="btn btn--line btn--block" href={LINE_OFFICIAL_URL} rel="noopener">公式LINEで相談する</a> : <p class="lead">公式LINEは準備中です。</p>}
+      {
+        topics.map((t) => (
+          <details class="support-topic">
+            <summary>
+              <span class="support-topic__icon" set:html={t.icon} />
+              <span class="support-topic__title">{t.title}</span>
+            </summary>
+            <p class="support-topic__body">{t.body}</p>
+          </details>
+        ))
+      }
+      <p class="support-faq"><a href="/guide/">よくある質問を見る</a></p>
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  .support-kv {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .support-cta {
+    padding-top: 20px;
+    text-align: center;
+  }
+  /* 黒い大きなボタン。右に ＞ */
+  .support-cta__btn {
+    position: relative;
+    min-height: 56px;
+    font-size: 1.15rem;
+  }
+  .support-cta__btn::after {
+    content: '';
+    position: absolute;
+    right: 22px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    border-top: 2.5px solid currentColor;
+    border-right: 2.5px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+  }
+  .support-cta__soon {
+    margin: 0;
+  }
+  .support-cta__note {
+    margin: 10px 0 20px;
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+  /* 緑の帯の見出し（画面の端まで） */
+  .support-topics__band {
+    margin: 0;
+    padding: 12px 16px;
+    background: var(--color-brand-strong);
+    color: #fff;
+    font-size: 1.25rem;
+  }
+  .support-topic {
+    border-bottom: 1px solid var(--color-border);
+  }
+  .support-topic summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 4px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .support-topic summary::-webkit-details-marker {
+    display: none;
+  }
+  /* 右の ＞。開いたら下向き */
+  .support-topic summary::after {
+    content: '';
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-top: 2px solid var(--color-brand-strong);
+    border-right: 2px solid var(--color-brand-strong);
+    transform: rotate(45deg);
+    transition: transform 0.2s;
+  }
+  .support-topic[open] summary::after {
+    transform: rotate(135deg);
+  }
+  .support-topic__icon {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--color-brand-strong);
+  }
+  .support-topic__title {
+    flex: 1;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .support-topic__body {
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--color-brand-bg);
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+  .support-faq {
+    margin: 24px 0 32px;
+    text-align: center;
+  }
+  .support-faq a {
+    font-weight: 700;
+    color: var(--color-brand-strong);
+  }
+  .support-faq a::after {
+    content: ' ＞';
+    text-decoration: none;
+    display: inline-block;
+    margin-left: 4px;
+  }
+</style>
