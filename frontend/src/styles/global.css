@@ -867,7 +867,7 @@ body[data-auth='guest'][data-sticky-cta='true'] {
 .point-card__num[data-len='11'],
 .point-card__num[data-len='12'],
 .point-card__num[data-len='13'] {
-  --point-card-scale: 0.62;
+  --point-card-scale: 0.56;
 }
 .point-card__unit {
   margin-left: 2px;
