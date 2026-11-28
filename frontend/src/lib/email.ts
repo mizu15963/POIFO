@@ -4,14 +4,15 @@ import type { Me } from './api';
 /**
  * ?back= / ?next= に入れてよいのはこのサイトの中のページだけ（外部サイトへ飛ばされるのを防ぐ）。
  * 文字列の見た目で判定すると、タブや改行（ブラウザが URL から取り除く）を挟んだ "/\t/evil.example/" などをすり抜けるので、
- * ブラウザと同じく URL として解釈してから origin を比べ、同じサイトのパス部分だけを返す（メンテナンス画面の ?back= と同じ考え方）。
+ * ブラウザと同じく URL として解釈してから origin を比べ、同じサイトの完全な URL（href）を返す（メンテナンス画面の ?back= と同じ）。
+ * パス部分だけを返すと、"/.//evil.example/" が整理されて "//evil.example/"（プロトコル相対）になり外部へ飛ぶので、必ず href にする。
  */
 export function safeBackPath(value: string | null | undefined, origin = location.origin): string | null {
   if (!value) return null;
   try {
     const url = new URL(value, origin);
     if (url.origin !== origin) return null;
-    return url.pathname + url.search + url.hash;
+    return url.href;
   } catch {
     return null;
   }
